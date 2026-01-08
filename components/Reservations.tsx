@@ -21,7 +21,8 @@ const Reservations = () => {
         } finally { setIsLoading(false); }
     };
 
-    const handleSave = async (e: React.FormEvent) => {
+    // FIX: Use any to bypass namespace 'React' error
+    const handleSave = async (e: any) => {
         e.preventDefault();
         setIsSaving(true);
         setError('');

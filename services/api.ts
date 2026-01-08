@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 
 const api = axios.create({
@@ -38,7 +39,6 @@ export const authService = {
     register: (data: any) => api.post('/auth/register', data),
 };
 
-// FIX: Added getSustainabilityStats to systemService to resolve property missing error in Sustainability.tsx
 export const systemService = {
     getInfo: () => api.get('/settings/system'),
     updateInfo: (data: any) => api.put('/settings/system', data),

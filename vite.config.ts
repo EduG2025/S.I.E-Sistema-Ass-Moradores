@@ -8,18 +8,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * S.I.E PRO - Optimized Vite Config (SRE PRODUCTION BRANCH V23.0)
- * FIX DEFINITIVO: Interop ESM/CJS para React & Lucide-React.
+ * S.I.E PRO - Optimized Vite Config (SRE PRODUCTION BRANCH V24.0)
+ * FIX DEFINITIVO: Resolve erro "isElement of undefined" em produção.
+ * Protocolo de Resiliência para builds em VPS (Ubuntu/PM2).
  */
 export default defineConfig({
   plugins: [react()],
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('production'),
+    'global': 'window',
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
-      // Força o bundler a usar a versão local do node_modules para evitar conflitos de CDN
-      'react': path.resolve(__dirname, 'node_modules/react'),
-      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
-      'react-is': path.resolve(__dirname, 'node_modules/react-is'),
     },
   },
   optimizeDeps: {
@@ -55,8 +56,6 @@ export default defineConfig({
     minify: 'esbuild',
     target: 'es2020',
     commonjsOptions: {
-      // CRÍTICO: Transforma TODOS os módulos CJS em ESM para garantir que 
-      // exportações como 'forwardRef' sejam encontradas pelo Lucide e Recharts.
       include: [/node_modules/],
       transformMixedEsModules: true,
     },
@@ -64,24 +63,27 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // Kernel Unitário: Mantém React e dependências fundamentais juntas
+            // Kernel Unitário Crítico
             if (
-              id.includes('react') || 
-              id.includes('react-dom') || 
-              id.includes('react-is') || 
-              id.includes('scheduler') ||
-              id.includes('lucide-react')
+              id.includes('react/') || 
+              id.includes('react-dom/') || 
+              id.includes('react-is/') || 
+              id.includes('scheduler/')
             ) {
-              return 'vendor-kernel';
+              return 'vendor-core';
             }
-            // Recharts tem muitas subdependências, mantemos em chunk separado
+            // Visualização e Gráficos
             if (id.includes('recharts') || id.includes('d3') || id.includes('react-smooth')) {
               return 'vendor-charts';
+            }
+            // Ícones
+            if (id.includes('lucide-react')) {
+              return 'vendor-icons';
             }
             return 'vendor-utils';
           }
         },
-        entryFileNames: 'assets/sie-[name]-[hash].js',
+        entryFileNames: 'assets/sie-kernel-[hash].js',
         chunkFileNames: 'assets/core-[name]-[hash].js',
         assetFileNames: 'assets/res-[name]-[hash].[ext]'
       }
