@@ -12,7 +12,6 @@ const Dashboard = lazy(() => import('./components/Dashboard')) as any;
 const Finance = lazy(() => import('./components/Finance')) as any;
 const Communication = lazy(() => import('./components/Communication')) as any;
 const Settings = lazy(() => import('./components/Settings')) as any;
-// FIX: Cast lazy result to any to bypass construct/call signature errors
 const UserManagement = lazy(() => import('./components/UserManagement')) as any;
 const Surveys = lazy(() => import('./components/Surveys')) as any;
 const Timeline = lazy(() => import('./components/Timeline')) as any;
@@ -26,9 +25,9 @@ const Assets = lazy(() => import('./components/Assets')) as any;
 const DocumentHub = lazy(() => import('./components/DocumentHub')) as any;
 const AssemblyManager = lazy(() => import('./components/AssemblyManager')) as any;
 const ChatAssistant = lazy(() => import('./components/ChatAssistant')) as any;
-// FIX: Cast lazy result to any to bypass construct/call signature errors
 const SuggestionBox = lazy(() => import('./components/SuggestionBox')) as any;
 const Reservations = lazy(() => import('./components/Reservations')) as any;
+const Sustainability = lazy(() => import('./components/Sustainability')) as any;
 
 const App = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -75,7 +74,6 @@ const App = () => {
         initKernel();
     }, []);
 
-    // FIX: Use any to bypass namespace 'React' error
     const handleGlobalSearch = async (e: any) => {
         e.preventDefault();
         if (!searchQuery.trim()) return;
@@ -129,7 +127,6 @@ const App = () => {
 
                 <nav className="flex-1 overflow-y-auto px-6 py-4 space-y-2 custom-scrollbar">
                     {MENU_ITEMS.map((item) => {
-                        // Role-based Access Control (RBAC) Filter
                         if (currentUser && !item.roles.includes(currentUser.role as any)) return null;
                         
                         const Icon = item.icon;
@@ -211,7 +208,6 @@ const App = () => {
                 </header>
 
                 <main className="flex-1 overflow-y-auto p-6 lg:p-12 bg-[#f8fafc] custom-scrollbar relative">
-                    {/* IA Search Response Overlay */}
                     {searchResult && (
                         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] w-full max-w-2xl px-8">
                              <div className="bg-slate-900 text-white p-10 rounded-[2.5rem] shadow-2xl border border-indigo-500/30 animate-scale-in relative">
@@ -250,6 +246,7 @@ const App = () => {
                             {activeTab === 'timeline' && <Timeline />}
                             {activeTab === 'demographics' && <DemographicAnalysis systemInfo={systemInfo} />}
                             {activeTab === 'digital_watch' && <DigitalWatch />}
+                            {activeTab === 'sustainability' && <Sustainability />}
                         </Suspense>
                     </div>
                 </main>

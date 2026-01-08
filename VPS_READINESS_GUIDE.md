@@ -1,7 +1,6 @@
-
 # 🚀 GUIA DE DEPLOY S.I.E PRO - PROTOCOLO SRE V45.0
 
-Este documento descreve as etapas para instalar o Kernel S.I.E em uma VPS Linux (Ubuntu Server).
+Este documento descreve as etapas para instalar o Kernel S.I.E na VPS Linux (Ubuntu Server) configurada.
 
 ## 1. REQUISITOS DE HARDWARE (MÍNIMO)
 - 2 vCPU
@@ -23,57 +22,77 @@ CREATE USER 'siecacaria'@'localhost' IDENTIFIED BY 'Gegerminal180';
 GRANT ALL PRIVILEGES ON siecacaria.* TO 'siecacaria'@'localhost';
 FLUSH PRIVILEGES;
 ```
-*Importante: Aplique o conteúdo do arquivo `Schema.md` e `seed.md` após criar a base.*
 
 ## 4. INSTALAÇÃO DA APLICAÇÃO
 ```bash
-cd /var/www
-git clone <seu-repositorio> sie-pro
-cd sie-pro
+cd /home/jennyai-admcacaria/htdocs/admcacaria.jennyai.space
+git clone https://github.com/EduG2025/S.I.E-Sistema-Ass-Moradores.git .
 npm install
 npm run build
 ```
 
 ## 5. INICIALIZAÇÃO DO KERNEL (PM2)
-O PM2 garante que o sistema reinicie automaticamente em caso de falha ou reboot da VPS:
 ```bash
 pm2 start server.js --name "sie-kernel"
 pm2 save
 pm2 startup
 ```
 
-## 6. CONFIGURAÇÃO NGINX (PROXY REVERSO)
-Crie o arquivo `/etc/nginx/sites-available/sie-pro`:
+## 6. CONFIGURAÇÃO NGINX & SSL (VHOST)
+Arquivo: `/etc/nginx/sites-available/admcacaria.jennyai.space`
+
 ```nginx
 server {
     listen 80;
-    server_name seu_dominio.com;
+    listen [::]:80;
+    server_name admcacaria.jennyai.space;
 
-    client_max_body_size 50M;
-
-    location / {
-        root /var/www/sie-pro/dist;
-        try_files $uri $uri/ /index.html;
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
     }
 
-    location /api {
-        proxy_pass http://localhost:3001;
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name admcacaria.jennyai.space;
+
+    root /home/jennyai-admcacaria/htdocs/admcacaria.jennyai.space/dist;
+    index index.html;
+
+    ssl_certificate /etc/letsencrypt/live/admcacaria.jennyai.space/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/admcacaria.jennyai.space/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    # API (PRIORIDADE)
+    location ^~ /api/ {
+        proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Frontend SPA
+    location / {
+        try_files $uri $uri/ /index.html;
     }
 }
 ```
+
 Ative o site e reinicie o Nginx:
 ```bash
-ln -s /etc/nginx/sites-available/sie-pro /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/admcacaria.jennyai.space /etc/nginx/sites-enabled/
 nginx -t && systemctl restart nginx
 ```
 
 ## 7. MONITORAMENTO
-Acompanhe os logs em tempo real:
 ```bash
 pm2 logs sie-kernel
 ```

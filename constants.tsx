@@ -1,9 +1,8 @@
-
 import { SocialTag, IdCardTemplate } from './types';
 import { 
   LayoutDashboard, Wallet, Users, Bell, ShieldAlert, CalendarClock, 
   Settings, ClipboardList, BarChart3, Map as MapIcon, Briefcase, ShoppingBag,
-  Landmark, Shield, FileText, Gavel, MessageSquareText, MessageSquare, Calendar, History, Camera, Activity
+  Landmark, Shield, FileText, Gavel, MessageSquareText, MessageSquare, Calendar, History, Camera, Activity, Leaf
 } from 'lucide-react';
 
 export const MENU_ITEMS = [
@@ -12,6 +11,7 @@ export const MENU_ITEMS = [
   { id: 'demographics', label: 'Observatório Social', icon: BarChart3, roles: ['ADMIN', 'PRESIDENT', 'COUNCIL'] },
   { id: 'map', label: 'Mapa Inteligente', icon: MapIcon, roles: ['ADMIN', 'PRESIDENT', 'VICE_PRESIDENT', 'SINDIC', 'CONCIERGE'] },
   { id: 'digital_watch', label: 'Vigia Digital', icon: Camera, roles: ['ADMIN', 'PRESIDENT', 'CONCIERGE'] },
+  { id: 'sustainability', label: 'Gestão ESG', icon: Leaf, roles: ['ADMIN', 'PRESIDENT'] },
   { id: 'finance', label: 'Financeiro', icon: Wallet, roles: ['ADMIN', 'PRESIDENT', 'VICE_PRESIDENT', 'SINDIC', 'RESIDENT'] },
   { id: 'operations', label: 'Ocorrências (Watchdog)', icon: ShieldAlert, roles: ['ADMIN', 'PRESIDENT', 'SINDIC', 'CONCIERGE', 'RESIDENT'] },
   { id: 'documents', label: 'Hub de Documentos', icon: FileText, roles: ['ADMIN', 'PRESIDENT', 'SINDIC', 'COUNCIL'] },
@@ -46,6 +46,7 @@ export const SYSTEM_PERMISSIONS = [
   { id: 'manage_documents', label: 'Gerir Documentos', module: 'GOVERNANÇA' },
   { id: 'manage_assemblies', label: 'Gerir Assembleias', module: 'GOVERNANÇA' },
   { id: 'view_demographics', label: 'Ver Observatório Social', module: 'SOCIAL' },
+  { id: 'manage_sustainability', label: 'Gerir ESG', module: 'MEIO AMBIENTE' },
 ];
 
 export const DEFAULT_SYSTEM_INFO = {
