@@ -1,11 +1,16 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { UnitData, SocialTag } from '../types';
+import { UnitData, SocialTag, SystemInfo } from '../types';
 import { mapService } from '../services/api';
 import { Home, X, Loader2, Map as MapIcon } from 'lucide-react';
 import * as L from 'leaflet';
 
-const SmartMap = () => {
+// FIX: Added systemInfo prop to satisfy caller in DemographicAnalysis and resolve type assignment error
+interface SmartMapProps {
+  systemInfo?: SystemInfo;
+}
+
+const SmartMap = ({ systemInfo }: SmartMapProps) => {
   const [allUnits, setAllUnits] = useState([] as UnitData[]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUnit, setSelectedUnit] = useState(null as UnitData | null);

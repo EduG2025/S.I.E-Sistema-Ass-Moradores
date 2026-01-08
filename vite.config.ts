@@ -8,20 +8,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * S.I.E PRO - Optimized Vite Config (SRE PRODUCTION BRANCH V24.0)
- * FIX DEFINITIVO: Resolve erro "isElement of undefined" em produção.
- * Protocolo de Resiliência para builds em VPS (Ubuntu/PM2).
+ * S.I.E PRO - SRE Optimized Vite Config V25.0
+ * FIX: Resolve conflitos de JSX Transform e redundância de importmaps.
  */
 export default defineConfig({
   plugins: [react()],
-  define: {
-    'process.env.NODE_ENV': JSON.stringify('production'),
-    'global': 'window',
-  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
     },
+  },
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+    'global': 'window',
   },
   optimizeDeps: {
     include: [
@@ -30,24 +29,8 @@ export default defineConfig({
       'react-is', 
       'recharts', 
       'lucide-react', 
-      'axios', 
-      'scheduler'
+      'axios'
     ],
-  },
-  server: {
-    host: true,
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        secure: false,
-      },
-      '/uploads': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-      }
-    }
   },
   build: {
     outDir: 'dist',
@@ -63,29 +46,23 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // Kernel Unitário Crítico
-            if (
-              id.includes('react/') || 
-              id.includes('react-dom/') || 
-              id.includes('react-is/') || 
-              id.includes('scheduler/')
-            ) {
-              return 'vendor-core';
-            }
-            // Visualização e Gráficos
-            if (id.includes('recharts') || id.includes('d3') || id.includes('react-smooth')) {
-              return 'vendor-charts';
-            }
-            // Ícones
-            if (id.includes('lucide-react')) {
-              return 'vendor-icons';
-            }
+            if (id.includes('react')) return 'vendor-react';
+            if (id.includes('recharts')) return 'vendor-charts';
+            if (id.includes('lucide-react')) return 'vendor-icons';
             return 'vendor-utils';
           }
-        },
-        entryFileNames: 'assets/sie-kernel-[hash].js',
-        chunkFileNames: 'assets/core-[name]-[hash].js',
-        assetFileNames: 'assets/res-[name]-[hash].[ext]'
+        }
+      }
+    }
+  },
+  server: {
+    host: true,
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
       }
     }
   }
