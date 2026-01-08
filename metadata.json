@@ -1,0 +1,9 @@
+{
+  "name": "S.I.E-Sistema-Ass-Moradores",
+  "description": "S.I.E-Sistema-Ass-Moradores . Versão consolidada V22.0  com IA Ativa.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
