@@ -182,18 +182,18 @@ const LoginScreen = ({ onLoginSuccess, systemInfo }: LoginScreenProps) => {
                                 <div className="space-y-3">
                                     <div className="space-y-1">
                                         <label className="block text-[10px] font-black text-slate-400 uppercase ml-1">Nome Completo</label>
-                                        <input type="text" value={regName} onChange={e => setRegName(e.target.value)} required className="w-full bg-slate-50 border-slate-200 focus:border-indigo-500" placeholder="Nome Completo"/>
+                                        <input type="text" value={regName} onChange={(e: any) => setRegName(e.target.value)} required className="w-full bg-slate-50 border-slate-200 focus:border-indigo-500" placeholder="Nome Completo"/>
                                     </div>
                                     <div className="space-y-1">
                                         <label className="block text-[10px] font-black text-slate-400 uppercase ml-1">E-mail Corporativo</label>
-                                        <input type="email" value={regEmail} onChange={e => setRegEmail(e.target.value)} required className="w-full bg-slate-50 border-slate-200 focus:border-indigo-500" placeholder="seu@email.com"/>
+                                        <input type="email" value={regEmail} onChange={(e: any) => setRegEmail(e.target.value)} required className="w-full bg-slate-50 border-slate-200 focus:border-indigo-500" placeholder="seu@email.com"/>
                                     </div>
                                     <div className="space-y-1 relative">
                                         <label className="block text-[10px] font-black text-slate-400 uppercase ml-1">CPF Oficial</label>
                                         <input 
                                             type="text" 
                                             value={regCPF} 
-                                            onChange={e => setRegCPF(formatCPF(e.target.value))} 
+                                            onChange={(e: any) => setRegCPF(formatCPF(e.target.value))} 
                                             required 
                                             maxLength={14} 
                                             className={`w-full bg-slate-50 border-slate-200 transition-all ${cpfValidation === 'VALID' ? 'border-emerald-500' : cpfValidation === 'INVALID' ? 'border-rose-500' : ''}`} 
@@ -206,7 +206,7 @@ const LoginScreen = ({ onLoginSuccess, systemInfo }: LoginScreenProps) => {
                                     </div>
                                     <div className="space-y-1">
                                         <label className="block text-[10px] font-black text-slate-400 uppercase ml-1">Senha de Acesso</label>
-                                        <input type="password" value={regPass} onChange={e => setRegPass(e.target.value)} required className="w-full bg-slate-50 border-slate-200 focus:border-indigo-500" placeholder="••••••••"/>
+                                        <input type="password" value={regPass} onChange={(e: any) => setRegPass(e.target.value)} required className="w-full bg-slate-50 border-slate-200 focus:border-indigo-500" placeholder="••••••••"/>
                                     </div>
                                 </div>
 
@@ -261,7 +261,7 @@ const LoginScreen = ({ onLoginSuccess, systemInfo }: LoginScreenProps) => {
                                         </div>
                                         <div className="relative group">
                                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={20}/>
-                                            <input type="password" value={loginPass} onChange={e => setLoginPass(e.target.value)} placeholder="••••••••" required className="w-full pl-12 pr-4 py-4.5 bg-white border border-slate-200 rounded-2xl font-bold shadow-inner focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none" />
+                                            <input type="password" value={loginPass} onChange={(e: any) => setLoginPass(e.target.value)} placeholder="••••••••" required className="w-full pl-12 pr-4 py-4.5 bg-white border border-slate-200 rounded-2xl font-bold shadow-inner focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none" />
                                         </div>
                                     </div>
                                 </div>

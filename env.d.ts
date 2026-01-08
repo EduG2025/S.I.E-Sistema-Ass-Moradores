@@ -9,6 +9,7 @@ declare module 'react' {
   export type FC<P = {}> = any;
   export type FormEvent<T = any> = any;
   export type ChangeEvent<T = any> = any;
+  export type MouseEvent<T = any> = any;
   export type ReactElement = any;
   export function useState<S>(initialState: S | (() => S)): [S, (newState: S | ((prevState: S) => S)) => void];
   export function useEffect(effect: () => any, deps?: any[]): void;
@@ -30,6 +31,7 @@ declare module 'react' {
   export default React;
 }
 
+declare module 'react-is';
 declare module 'react-dom';
 declare module 'react-dom/client';
 declare module 'react/jsx-runtime';

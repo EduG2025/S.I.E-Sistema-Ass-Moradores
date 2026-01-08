@@ -37,6 +37,16 @@ pm2 start server.js --name "sie-kernel"
 pm2 save
 pm2 startup
 ```
+## - 5.1 Atualizar do Ghithub
+```bash
+
+git pull origin main
+npm install
+npm run build
+pm2 restart all
+pm2 log
+
+```
 
 ## 6. CONFIGURAÇÃO NGINX & SSL (VHOST)
 Arquivo: `/etc/nginx/sites-available/admcacaria.jennyai.space`

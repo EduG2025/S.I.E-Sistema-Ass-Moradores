@@ -1,16 +1,16 @@
-import React, { useState, Suspense, lazy, useEffect, useMemo, useCallback } from 'react';
+
+import React, { useState, Suspense, lazy, useEffect } from 'react';
 import { MENU_ITEMS, DEFAULT_SYSTEM_INFO, DEFAULT_ID_CARD_TEMPLATE } from './constants';
 import { SystemInfo, User, IdCardTemplate } from './types';
 import {
-    LogOut, Menu, Loader2, Settings as SettingsIcon, Shield, Activity, 
-    Bell, User as UserIcon, Zap, Search, Sparkles, X, ChevronRight, History
+    LogOut, Menu, Loader2, Settings as SettingsIcon, Shield,
+    Bell, Zap, Search, Sparkles, X
 } from 'lucide-react';
 import { systemService, authService, templateService, aiService } from './services/api';
 
 // Lazy loading modules for performance optimization
 const Dashboard = lazy(() => import('./components/Dashboard')) as any;
 const Finance = lazy(() => import('./components/Finance')) as any;
-const Communication = lazy(() => import('./components/Communication')) as any;
 const Settings = lazy(() => import('./components/Settings')) as any;
 const UserManagement = lazy(() => import('./components/UserManagement')) as any;
 const Surveys = lazy(() => import('./components/Surveys')) as any;
@@ -31,9 +31,9 @@ const Sustainability = lazy(() => import('./components/Sustainability')) as any;
 
 const App = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [currentUser, setCurrentUser] = useState(null as User | null);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [systemInfo, setSystemInfo] = useState(DEFAULT_SYSTEM_INFO as SystemInfo);
+    const [systemInfo, setSystemInfo] = useState<SystemInfo>(DEFAULT_SYSTEM_INFO);
     const [activeTab, setActiveTab] = useState('dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(false);
     
@@ -74,8 +74,9 @@ const App = () => {
         initKernel();
     }, []);
 
+    // FIX: Garantia de tipagem explícita 'any' para evitar erro de implicit any em ambientes restritos
     const handleGlobalSearch = async (e: any) => {
-        e.preventDefault();
+        if (e && e.preventDefault) e.preventDefault();
         if (!searchQuery.trim()) return;
         setIsSearching(true);
         try {
@@ -108,7 +109,6 @@ const App = () => {
 
     return (
         <div className="h-screen w-screen overflow-hidden flex bg-[#f8fafc] font-sans">
-            {/* Master Sidebar V82.5 */}
             <aside className={`fixed lg:static inset-y-0 left-0 z-[60] w-80 bg-slate-950 border-r border-white/5 flex flex-col shrink-0 transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="p-8 flex items-center justify-between lg:justify-start gap-4">
                     <div className="flex items-center gap-4">
@@ -176,7 +176,6 @@ const App = () => {
                 </div>
             </aside>
 
-            {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
                 <header className="h-24 bg-white border-b border-slate-200 flex items-center justify-between px-8 lg:px-12 shrink-0 z-50">
                     <div className="flex items-center gap-6 flex-1">
@@ -187,7 +186,7 @@ const App = () => {
                             <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={18}/>
                             <input 
                                 value={searchQuery} 
-                                onChange={e => setSearchQuery(e.target.value)} 
+                                onChange={(e: any) => setSearchQuery(e.target.value)} 
                                 className="w-full pl-14 pr-16 py-4 bg-slate-50 border border-slate-200 rounded-[1.5rem] text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-inner" 
                                 placeholder="Consultar Kernel S.I.E (IA Search)..."
                             />
@@ -252,7 +251,6 @@ const App = () => {
                 </main>
             </div>
             
-            {/* Mobile Sidebar Overlay */}
             {sidebarOpen && (
                 <div 
                     onClick={() => setSidebarOpen(false)} 
