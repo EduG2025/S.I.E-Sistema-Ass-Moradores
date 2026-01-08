@@ -8,18 +8,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * S.I.E PRO - Optimized Vite Config (SRE PRODUCTION BRANCH V22.8)
- * Focus: Stabilize React-Is and Recharts interop.
+ * S.I.E PRO - Optimized Vite Config (SRE PRODUCTION BRANCH V22.9)
+ * FIX DEFINITIVO: Erro 'isElement' undefined em Recharts/React-Is interop.
  */
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
+      // Força a resolução do react-is para a versão que o bundler consegue processar melhor
+      'react-is': path.resolve(__dirname, 'node_modules/react-is'),
     },
   },
   optimizeDeps: {
-    include: ['react', 'react-dom', 'react-is', 'recharts', 'lucide-react', 'axios'],
+    // Força o pré-bundle destas dependências para garantir interop ESM/CJS
+    include: ['react', 'react-dom', 'react-is', 'recharts', 'lucide-react', 'axios', 'scheduler'],
   },
   server: {
     host: true,
@@ -43,18 +46,27 @@ export default defineConfig({
     minify: 'esbuild',
     target: 'es2020',
     commonjsOptions: {
-      include: [/node_modules/],
+      // Crucial: Inclui explicitamente o react-is na transformação de CommonJS para ESM
+      include: [/node_modules\/react-is/, /node_modules\/recharts/],
       transformMixedEsModules: true,
     },
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // Unificamos o core do vendor para evitar falhas de 'undefined' entre subdependências
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-is') || id.includes('scheduler') || id.includes('recharts') || id.includes('react-smooth')) {
-              return 'vendor-kernel';
+            // UNIFICAÇÃO DE KERNEL: Mantemos Recharts e React-Is no mesmo chunk 'vendor-core'
+            // Isso evita falhas de referência entre arquivos JS diferentes (chunks separados)
+            if (
+              id.includes('react') || 
+              id.includes('react-dom') || 
+              id.includes('react-is') || 
+              id.includes('scheduler') ||
+              id.includes('recharts') ||
+              id.includes('react-smooth')
+            ) {
+              return 'vendor-core';
             }
-            return 'vendor-utils';
+            return 'vendor-lib';
           }
         },
         entryFileNames: 'assets/sie-[name]-[hash].js',
