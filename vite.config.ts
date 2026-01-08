@@ -8,8 +8,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * S.I.E PRO - Optimized Vite Config (SRE PRODUCTION BRANCH V22.6)
- * Focus: Resolve CJS/ESM Interop for 'react-is' and 'recharts'.
+ * S.I.E PRO - Optimized Vite Config (SRE PRODUCTION BRANCH V22.7)
+ * Focus: Fix 'isElement' undefined by keeping react-is within vendor core.
  */
 export default defineConfig({
   plugins: [react()],
@@ -19,7 +19,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['react-is', 'recharts', 'lucide-react', 'axios'],
+    include: ['react', 'react-dom', 'react-is', 'recharts', 'lucide-react', 'axios'],
   },
   server: {
     host: true,
@@ -42,27 +42,22 @@ export default defineConfig({
     sourcemap: false,
     minify: 'esbuild',
     target: 'es2020',
-    cssCodeSplit: true,
-    assetsInlineLimit: 4096,
-    chunkSizeWarningLimit: 1500,
     commonjsOptions: {
-      include: [/node_modules/],
+      include: [/node_modules/, /react-is/],
       transformMixedEsModules: true,
     },
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-is')) {
+            // Mantemos react-is junto com react para evitar falhas de referência
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-is') || id.includes('scheduler')) {
               return 'vendor-core';
             }
-            if (id.includes('recharts') || id.includes('d3')) {
+            if (id.includes('recharts') || id.includes('d3') || id.includes('victory') || id.includes('react-smooth')) {
               return 'vendor-viz';
             }
-            if (id.includes('lucide-react')) {
-              return 'vendor-icons';
-            }
-            return 'vendor-others';
+            return 'vendor-lib';
           }
         },
         entryFileNames: 'assets/sie-[name]-[hash].js',
