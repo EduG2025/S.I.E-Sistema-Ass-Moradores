@@ -8,8 +8,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * S.I.E PRO - Optimized Vite Config (SRE PRODUCTION BRANCH V22.7)
- * Focus: Fix 'isElement' undefined by keeping react-is within vendor core.
+ * S.I.E PRO - Optimized Vite Config (SRE PRODUCTION BRANCH V22.8)
+ * Focus: Stabilize React-Is and Recharts interop.
  */
 export default defineConfig({
   plugins: [react()],
@@ -43,21 +43,18 @@ export default defineConfig({
     minify: 'esbuild',
     target: 'es2020',
     commonjsOptions: {
-      include: [/node_modules/, /react-is/],
+      include: [/node_modules/],
       transformMixedEsModules: true,
     },
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // Mantemos react-is junto com react para evitar falhas de referência
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-is') || id.includes('scheduler')) {
-              return 'vendor-core';
+            // Unificamos o core do vendor para evitar falhas de 'undefined' entre subdependências
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-is') || id.includes('scheduler') || id.includes('recharts') || id.includes('react-smooth')) {
+              return 'vendor-kernel';
             }
-            if (id.includes('recharts') || id.includes('d3') || id.includes('victory') || id.includes('react-smooth')) {
-              return 'vendor-viz';
-            }
-            return 'vendor-lib';
+            return 'vendor-utils';
           }
         },
         entryFileNames: 'assets/sie-[name]-[hash].js',
