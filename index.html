@@ -14,36 +14,37 @@
     <script>
       window.process = { env: { NODE_ENV: 'production' } };
     </script>
-
+    
+    <!-- Nota SRE: O importmap abaixo é mantido apenas para desenvolvimento "no-build" ou 
+         como fallback. Em produção (VPS), o Vite substitui as referências pelo bundle gerado. -->
   <script type="importmap">
 {
   "imports": {
-    "lucide-react": "https://esm.sh/lucide-react@0.454.0?external=react",
-    "react-dom": "https://esm.sh/react-dom@18.3.1",
-    "react-dom/": "https://esm.sh/react-dom@18.3.1/",
-    "recharts": "https://esm.sh/recharts@2.10.3?bundle",
-    "jspdf": "https://esm.sh/jspdf@2.5.1",
     "react": "https://esm.sh/react@18.3.1",
     "react/": "https://esm.sh/react@18.3.1/",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/": "https://esm.sh/react-dom@18.3.1/",
     "react-is": "https://esm.sh/react-is@18.3.1?bundle",
-    "path": "https://esm.sh/path-browserify@1.0.1",
-    "@google/genai": "https://esm.sh/@google/genai@1.31.0",
-    "vite": "https://esm.sh/vite@5.0.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@4.2.0",
-    "leaflet": "https://esm.sh/leaflet@1.9.4",
-    "fs": "https://esm.sh/browserify-fs",
-    "jsonwebtoken": "https://esm.sh/jsonwebtoken@9.0.2",
-    "dotenv": "https://esm.sh/dotenv@16.3.1",
-    "multer": "https://esm.sh/multer@1.4.5-lts.1",
-    "url": "https://esm.sh/url@0.11.4",
-    "html2canvas": "https://esm.sh/html2canvas@1.4.1",
+    "lucide-react": "https://esm.sh/lucide-react@0.454.0?external=react",
+    "recharts": "https://esm.sh/recharts@2.10.3?bundle",
     "axios": "https://esm.sh/axios@1.6.2",
-    "mysql2/": "https://esm.sh/mysql2@3.6.5/",
-    "cors": "https://esm.sh/cors@2.8.5",
-    "bcryptjs": "https://esm.sh/bcryptjs@2.4.3",
-    "express": "https://esm.sh/express@4.18.2",
-    "dotenv/": "https://esm.sh/dotenv@16.3.1/",
-    "date-fns": "https://esm.sh/date-fns@4.1.0"
+    "@google/genai": "https://esm.sh/@google/genai@1.31.0",
+    "leaflet": "https://esm.sh/leaflet@1.9.4",
+    "jspdf": "https://esm.sh/jspdf@2.5.1",
+    "html2canvas": "https://esm.sh/html2canvas@1.4.1",
+    "date-fns": "https://esm.sh/date-fns@4.1.0",
+    "path": "https://esm.sh/path@^0.12.7",
+    "fs": "https://esm.sh/fs@^0.0.1-security",
+    "jsonwebtoken": "https://esm.sh/jsonwebtoken@^9.0.3",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "dotenv/": "https://esm.sh/dotenv@^17.2.3/",
+    "dotenv": "https://esm.sh/dotenv@^17.2.3",
+    "url": "https://esm.sh/url@^0.11.4",
+    "express": "https://esm.sh/express@^5.2.1",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "bcryptjs": "https://esm.sh/bcryptjs@^3.0.3",
+    "mysql2/": "https://esm.sh/mysql2@^3.16.0/",
+    "cors": "https://esm.sh/cors@^2.8.5"
   }
 }
 </script>

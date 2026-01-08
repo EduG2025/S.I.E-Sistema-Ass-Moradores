@@ -8,21 +8,30 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * S.I.E PRO - Optimized Vite Config (SRE PRODUCTION BRANCH V22.9)
- * FIX DEFINITIVO: Erro 'isElement' undefined em Recharts/React-Is interop.
+ * S.I.E PRO - Optimized Vite Config (SRE PRODUCTION BRANCH V23.0)
+ * FIX DEFINITIVO: Interop ESM/CJS para React & Lucide-React.
  */
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './'),
-      // Força a resolução do react-is para a versão que o bundler consegue processar melhor
+      // Força o bundler a usar a versão local do node_modules para evitar conflitos de CDN
+      'react': path.resolve(__dirname, 'node_modules/react'),
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
       'react-is': path.resolve(__dirname, 'node_modules/react-is'),
     },
   },
   optimizeDeps: {
-    // Força o pré-bundle destas dependências para garantir interop ESM/CJS
-    include: ['react', 'react-dom', 'react-is', 'recharts', 'lucide-react', 'axios', 'scheduler'],
+    include: [
+      'react', 
+      'react-dom', 
+      'react-is', 
+      'recharts', 
+      'lucide-react', 
+      'axios', 
+      'scheduler'
+    ],
   },
   server: {
     host: true,
@@ -46,27 +55,30 @@ export default defineConfig({
     minify: 'esbuild',
     target: 'es2020',
     commonjsOptions: {
-      // Crucial: Inclui explicitamente o react-is na transformação de CommonJS para ESM
-      include: [/node_modules\/react-is/, /node_modules\/recharts/],
+      // CRÍTICO: Transforma TODOS os módulos CJS em ESM para garantir que 
+      // exportações como 'forwardRef' sejam encontradas pelo Lucide e Recharts.
+      include: [/node_modules/],
       transformMixedEsModules: true,
     },
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (id.includes('node_modules')) {
-            // UNIFICAÇÃO DE KERNEL: Mantemos Recharts e React-Is no mesmo chunk 'vendor-core'
-            // Isso evita falhas de referência entre arquivos JS diferentes (chunks separados)
+            // Kernel Unitário: Mantém React e dependências fundamentais juntas
             if (
               id.includes('react') || 
               id.includes('react-dom') || 
               id.includes('react-is') || 
               id.includes('scheduler') ||
-              id.includes('recharts') ||
-              id.includes('react-smooth')
+              id.includes('lucide-react')
             ) {
-              return 'vendor-core';
+              return 'vendor-kernel';
             }
-            return 'vendor-lib';
+            // Recharts tem muitas subdependências, mantemos em chunk separado
+            if (id.includes('recharts') || id.includes('d3') || id.includes('react-smooth')) {
+              return 'vendor-charts';
+            }
+            return 'vendor-utils';
           }
         },
         entryFileNames: 'assets/sie-[name]-[hash].js',
