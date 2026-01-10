@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import pool from "../../config/database.js";
 
 /**
- * S.I.E IA Gateway Manager (Protocolo SRE)
+ * S.I.E IA Gateway Manager (Protocolo SRE V22.1)
  * Gerencia o pool de chaves API e a execução resiliente de tarefas de IA.
  * Implementa failover automático para erros de quota ou validade.
  */
@@ -27,20 +27,43 @@ export const IAProviderManager = {
    * Marca uma chave com erro e incrementa contador para auditoria.
    */
   async markKeyError(id: number | string, status: string = 'ERROR'): Promise<void> {
-    await pool.query(
-      'UPDATE ai_keys SET status = ?, error_count = error_count + 1, last_checked = NOW() WHERE id = ?',
-      [status, id]
-    );
+    try {
+      await pool.query(
+        'UPDATE ai_keys SET status = ?, error_count = error_count + 1, last_checked = NOW() WHERE id = ?',
+        [status, id]
+      );
+    } catch (e) {
+      console.error("[IA GATEWAY] Erro ao atualizar status da chave no DB.");
+    }
+  },
+
+  /**
+   * Normaliza o conteúdo para o formato exigido pela SDK (contents: [{ role, parts: [{ text | inlineData }] }])
+   */
+  normalizeContents(contents: any) {
+    if (typeof contents === 'string') {
+      return [{ role: 'user', parts: [{ text: contents }] }];
+    }
+    if (Array.isArray(contents)) {
+      return contents.map(item => {
+        if (item.parts) return item;
+        return { role: item.role || 'user', parts: [{ text: item.text || item }] };
+      });
+    }
+    if (contents.parts) {
+      return [contents];
+    }
+    return [{ role: 'user', parts: [{ text: String(contents) }] }];
   },
 
   /**
    * Executor centralizado de tarefas de IA.
-   * Suporta geração de texto e análise de imagem (OCR).
+   * Suporta geração de texto, análise de imagem (OCR) e Thinking (Gemini 3).
    */
   async execute(task: 'generateText' | 'analyzeImage', payload: any): Promise<string> {
     const activeKey = await this.getActiveKey();
     
-    // Se não houver chave no DB, tenta usar a do ambiente como fallback emergencial
+    // Fallback para variável de ambiente se o banco estiver vazio
     const apiKey = activeKey?.key_value || process.env.API_KEY;
 
     if (!apiKey) {
@@ -50,35 +73,35 @@ export const IAProviderManager = {
     try {
       const ai = new GoogleGenAI({ apiKey });
       
-      // Seleção de modelo conforme diretrizes
+      // Seleção de modelo conforme diretrizes S.I.E PRO
       const modelName = payload.model || (
         activeKey?.tier === 'PAID' 
           ? 'gemini-3-pro-preview' 
           : 'gemini-3-flash-preview'
       );
       
-      let result = "";
+      const normalizedContents = this.normalizeContents(payload.contents);
+      
+      const config: any = payload.config || {
+        temperature: task === 'generateText' ? 0.7 : 0.4,
+        topP: 0.95,
+        topK: 40
+      };
 
-      if (task === 'generateText') {
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: payload.contents,
-          config: payload.config || {
-            temperature: 0.7,
-            topP: 0.8,
-            topK: 40
-          }
-        });
-        result = response.text;
-      } else if (task === 'analyzeImage') {
-        const response = await ai.models.generateContent({
-          model: modelName,
-          contents: payload.contents
-        });
-        result = response.text;
+      // Se for Gemini 3 Pro e Paid, podemos habilitar thinking budget se solicitado
+      if (modelName.includes('pro') && activeKey?.tier === 'PAID') {
+        config.thinkingConfig = { thinkingBudget: payload.thinkingBudget || 0 };
       }
 
-      // Sucesso: Reseta contador se for chave do banco
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: normalizedContents,
+        config: config
+      });
+
+      const result = response.text;
+
+      // Sucesso: Reseta contador de erros se for chave gerenciada pelo banco
       if (activeKey) {
         await pool.query(
           'UPDATE ai_keys SET last_checked = NOW(), error_count = 0 WHERE id = ?', 
@@ -89,22 +112,25 @@ export const IAProviderManager = {
       return result || "";
 
     } catch (error: any) {
-      console.error(`[IA GATEWAY] Falha na execução:`, error.message);
+      const errMsg = error.message?.toLowerCase() || "";
+      console.error(`[IA GATEWAY] Falha na execução (${activeKey?.label || 'ENV_KEY'}):`, error.message);
       
       if (activeKey) {
         let newStatus = 'ERROR';
-        const errMsg = error.message.toLowerCase();
-        if (errMsg.includes('429') || errMsg.includes('quota')) newStatus = 'QUOTA_EXCEEDED';
-        else if (errMsg.includes('api key not valid') || errMsg.includes('401')) newStatus = 'INVALID';
+        if (errMsg.includes('429') || errMsg.includes('quota') || errMsg.includes('limit')) {
+            newStatus = 'QUOTA_EXCEEDED';
+        } else if (errMsg.includes('401') || errMsg.includes('invalid') || errMsg.includes('key not found')) {
+            newStatus = 'INVALID';
+        }
         
         await this.markKeyError(activeKey.id, newStatus);
         
-        // Failover: Tenta a próxima chave se houver mais de uma
-        console.warn(`[IA GATEWAY] Failover em curso...`);
+        // Se a chave falhou, tentamos o próximo nó recursivamente
+        console.warn(`[IA GATEWAY] Iniciando failover para o próximo nó do cluster...`);
         return this.execute(task, payload);
       }
       
-      throw error;
+      throw new Error(`SRE IA_FAILURE: ${error.message}`);
     }
   }
 };

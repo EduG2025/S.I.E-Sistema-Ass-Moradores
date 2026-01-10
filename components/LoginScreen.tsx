@@ -80,10 +80,15 @@ const LoginScreen = ({ onLoginSuccess, systemInfo }: LoginScreenProps) => {
         setError('');
         
         try {
-            // Enviamos o identificador como 'username' para o backend (que tratará como CPF ou E-mail)
             const response = await authService.login({ username: loginIdentifier.trim(), password: loginPass });
-            onLoginSuccess(response.data.user, response.data.token);
+            const { user, token } = response.data;
+            
+            // SRE CRITICAL FIX: Persiste o token ANTES de qualquer transição de tela ou callback
+            localStorage.setItem('sie_auth_token', token);
+            
+            onLoginSuccess(user, token);
         } catch (err: any) {
+            console.error("[AUTH_FAILED]", err);
             setError(err.response?.data?.error || 'SRE_DENIED: CREDENCIAIS INVÁLIDAS');
         } finally {
             setIsLoading(false);
@@ -118,7 +123,6 @@ const LoginScreen = ({ onLoginSuccess, systemInfo }: LoginScreenProps) => {
         }
     };
 
-    // FIX: Use any to bypass namespace 'React' error
     const handleIdentifierChange = (e: any) => {
         const val = e.target.value;
         if (!val.includes('@') && !/[a-zA-Z]/.test(val)) {

@@ -1,9 +1,9 @@
 
 import React from 'react';
-import ReactDOM from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import App from './App';
 
-// FIX: Protocolo SRE para captura de falhas em ambiente de produção (VPS)
+// SRE ERROR BOUNDARY - Protocolo de Resiliência de Interface
 interface ErrorBoundaryProps { children?: any; }
 interface ErrorBoundaryState { hasError: boolean; error: any; }
 
@@ -56,7 +56,9 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
 const rootEl = document.getElementById('root');
 if (rootEl) {
-  ReactDOM.createRoot(rootEl).render(
+  // CORREÇÃO DEFINITIVA: createRoot chamado diretamente via Named Export
+  const root = createRoot(rootEl);
+  root.render(
     <ErrorBoundary>
       <App />
     </ErrorBoundary>

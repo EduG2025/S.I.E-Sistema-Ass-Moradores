@@ -17,8 +17,9 @@ const SmartMap = ({ systemInfo }: SmartMapProps) => {
   const [activeLayer, setActiveLayer] = useState('TODOS' as string);
   
   const mapContainerRef = useRef(null as HTMLDivElement | null);
-  const mapInstanceRef = useRef(null as L.Map | null);
-  const markersRef = useRef([] as L.Marker[]);
+  // FIX: Using any for Leaflet types (Map and Marker) to bypass namespace export errors in this environment
+  const mapInstanceRef = useRef(null as any);
+  const markersRef = useRef([] as any[]);
 
   useEffect(() => {
     loadUnits();

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { AVAILABLE_ROLES } from '../constants';
+import { AVAILABLE_ROLES, FINANCIAL_CATEGORIES } from '../constants';
 import { User, UserRole, UserStatus, FinancialRecord } from '../types';
 import { userService, financialService } from '../services/api';
 import { normalizeCPF, validateCPF, formatCPF } from '../utils/cpf';
@@ -23,8 +23,11 @@ const UserManagement = () => {
   const [userFinancials, setUserFinancials] = useState<FinancialRecord[]>([]);
   const [userScore, setUserScore] = useState({ score: 0, status: 'N/A' });
   const [isLoadingFinance, setIsLoadingFinance] = useState(false);
-  const [dossierText, setDossierText] = useState('');
-  const [isGeneratingDossier, setIsLoadingDossier] = useState(false);
+  
+  const [isFinModalOpen, setIsFinModalOpen] = useState(false);
+  const [finFormData, setFinFormData] = useState<any>({
+    description: '', amount: '', type: 'INCOME', category: 'CONDOMÍNIO', date: new Date().toISOString().slice(0, 10), status: 'PENDING'
+  });
 
   const loadUsers = useCallback(async (page: number, searchTerm: string = '') => {
       setIsLoading(true);
@@ -52,14 +55,25 @@ const UserManagement = () => {
   };
 
   useEffect(() => {
-    if (editingUser?.id && (activeTab === 'FINANCIAL' || activeTab === 'PERSONAL')) {
+    if (editingUser?.id && !String(editingUser.id).startsWith('temp_')) {
         loadUserData(editingUser.id);
     }
-  }, [activeTab, editingUser]);
+  }, [editingUser, activeTab]);
 
   useEffect(() => { 
       loadUsers(pagination.page, search); 
   }, [pagination.page, search, loadUsers]);
+
+  const handleSaveFin = async (e: any) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    try {
+        await financialService.create({ ...finFormData, user_id: editingUser.id });
+        setIsFinModalOpen(false);
+        loadUserData(editingUser.id);
+        setFinFormData({ description: '', amount: '', type: 'INCOME', category: 'CONDOMÍNIO', date: new Date().toISOString().slice(0, 10), status: 'PENDING' });
+    } catch (err) { alert("Erro ao commitar transação."); }
+  };
 
   const saveUser = async () => {
     if (!editingUser) return;
@@ -79,7 +93,7 @@ const UserManagement = () => {
       <div className="flex justify-between items-center bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-xl">
           <div>
             <h2 className="text-2xl font-black tracking-tighter uppercase leading-none">Governança de Membros</h2>
-            <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest mt-2">Database Operacional Ativo V22.0</p>
+            <p className="text-indigo-400 text-[10px] font-black uppercase tracking-widest mt-2">Database Operacional Ativo V91.2</p>
           </div>
           <button onClick={() => { setEditingUser({ id: `temp_${Date.now()}`, name: '', role: 'RESIDENT', status: 'PENDING', active: true, cpf_cnpj: '', username: '' } as User); setActiveTab('PERSONAL'); }} className="flex items-center gap-3 px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl">
             <UserPlus size={18}/> Novo Registro
@@ -151,15 +165,20 @@ const UserManagement = () => {
                   <div className="flex-1 overflow-y-auto bg-slate-50 p-12">
                       {activeTab === 'FINANCIAL' && (
                         <div className="max-w-4xl mx-auto space-y-8">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm text-center">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Social Credit Score</p>
-                                    <h3 className="text-4xl font-black text-indigo-600">{userScore.score}</h3>
+                            <div className="flex justify-between items-center">
+                                <div className="grid grid-cols-2 gap-6 w-full max-w-lg">
+                                    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm text-center">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Social Credit Score</p>
+                                        <h3 className="text-4xl font-black text-indigo-600">{userScore.score}</h3>
+                                    </div>
+                                    <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm text-center">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Solvência Individual</p>
+                                        <h3 className={`text-4xl font-black ${userScore.status === 'AAA' ? 'text-emerald-500' : 'text-amber-500'}`}>{userScore.status}</h3>
+                                    </div>
                                 </div>
-                                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm text-center">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Solvência Individual</p>
-                                    <h3 className={`text-4xl font-black ${userScore.status === 'AAA' ? 'text-emerald-500' : 'text-amber-500'}`}>{userScore.status}</h3>
-                                </div>
+                                <button onClick={() => setIsFinModalOpen(true)} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl flex items-center gap-3">
+                                    <Plus size={18}/> Novo Lançamento
+                                </button>
                             </div>
 
                             <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden">
@@ -178,6 +197,7 @@ const UserManagement = () => {
                                                 </td>
                                             </tr>
                                         ))}
+                                        {userFinancials.length === 0 && <tr><td colSpan={4} className="p-10 text-center text-slate-300 uppercase text-[10px] font-black">Nenhuma transação vinculada</td></tr>}
                                     </tbody>
                                 </table>
                             </div>
@@ -202,6 +222,51 @@ const UserManagement = () => {
                       <button onClick={() => setEditingUser(null)} className="px-10 py-4 text-slate-500 font-black text-xs uppercase tracking-widest">Cancelar</button>
                       <button onClick={saveUser} className="px-12 py-4 bg-slate-900 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl flex items-center gap-3"><Save size={18}/> Salvar Registro</button>
                   </div>
+              </div>
+          </div>
+      )}
+
+      {/* MODAL NOVO LANÇAMENTO FINANCEIRO */}
+      {isFinModalOpen && editingUser && (
+          <div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-md animate-fade-in">
+              <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 animate-scale-in">
+                  <form onSubmit={handleSaveFin}>
+                    <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                        <h3 className="font-black text-2xl tracking-tighter">Novo Lançamento: {editingUser.name}</h3>
+                        <button type="button" onClick={() => setIsFinModalOpen(false)}><X size={28}/></button>
+                    </div>
+                    <div className="p-10 space-y-6">
+                        <div className="flex bg-slate-100 p-1 rounded-2xl">
+                            <button type="button" onClick={() => setFinFormData({...finFormData, type: 'INCOME'})} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase ${finFormData.type === 'INCOME' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500'}`}>Receita / Cobrança</button>
+                            <button type="button" onClick={() => setFinFormData({...finFormData, type: 'EXPENSE'})} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase ${finFormData.type === 'EXPENSE' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500'}`}>Despesa / Reembolso</button>
+                        </div>
+                        <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Descrição</label><input required className="w-full font-bold" value={finFormData.description} onChange={e => setFinFormData({...finFormData, description: e.target.value})} placeholder="Cota Condominial 05/2025" /></div>
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Valor (R$)</label><input type="number" step="0.01" className="w-full font-black" value={finFormData.amount} onChange={e => setFinFormData({...finFormData, amount: e.target.value})} placeholder="450.00" /></div>
+                            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Categoria</label>
+                                <select className="w-full font-bold" value={finFormData.category} onChange={e => setFinFormData({...finFormData, category: e.target.value})}>
+                                    {FINANCIAL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-6">
+                             <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Data Vencimento</label><input type="date" className="w-full font-bold" value={finFormData.date} onChange={e => setFinFormData({...finFormData, date: e.target.value})} /></div>
+                             <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Status Inicial</label>
+                                <select className="w-full font-bold" value={finFormData.status} onChange={e => setFinFormData({...finFormData, status: e.target.value})}>
+                                    <option value="PENDING">Pendente</option>
+                                    <option value="PAID">Liquidado</option>
+                                    <option value="OVERDUE">Atrasado</option>
+                                </select>
+                             </div>
+                        </div>
+                    </div>
+                    <div className="p-10 border-t border-slate-100 flex justify-end gap-4 bg-slate-50">
+                        <button type="button" onClick={() => setIsFinModalOpen(false)} className="px-10 py-4 text-slate-400 font-black text-xs uppercase">Cancelar</button>
+                        <button type="submit" className="px-14 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase shadow-xl flex items-center gap-3">
+                            <Save size={18}/> Commitar Lançamento
+                        </button>
+                    </div>
+                  </form>
               </div>
           </div>
       )}
