@@ -1,6 +1,6 @@
 {
-  "name": "S.I.E-Sistema-Ass-Moradores",
-  "description": "S.I.E-Sistema-Ass-Moradores . Versão consolidada V22.0  com IA Ativa.",
+  "name": "S.I.E PRO - Sistema Inteligente Ativo",
+  "description": "Plataforma de Governança para Associações e Condomínios com IA Ativa e Monitoramento Digital.",
   "requestFramePermissions": [
     "camera",
     "microphone",

@@ -1,8 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Plus, Send, Loader2, Search, X, CheckCircle, AlertTriangle, ShieldCheck, Heart, Trash2, Edit2, Save, Sparkles, ThumbsUp } from 'lucide-react';
 import api from '../services/api';
 
-// FIX: Added missing ThumbsUp to imports and completed truncated component logic and JSX
 const SuggestionBox = () => {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -16,11 +16,14 @@ const SuggestionBox = () => {
     setIsLoading(true);
     try {
       const res = await api.get('/suggestions');
-      setSuggestions(res.data);
+      // SRE FIX: Kernel CRUD retorna { data: [], pagination: {} }
+      const data = res.data?.data || (Array.isArray(res.data) ? res.data : []);
+      setSuggestions(data);
+    } catch (e) {
+      setSuggestions([]);
     } finally { setIsLoading(false); }
   };
 
-  // FIX: Use any to bypass namespace 'React' error
   const handleSave = async (e: any) => {
     e.preventDefault();
     setIsSaving(true);
@@ -47,14 +50,14 @@ const SuggestionBox = () => {
           <h2 className="text-3xl font-black tracking-tighter">Ouvidoria Digital</h2>
           <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mt-1">Canal Direto de Co-Gestão S.I.E</p>
         </div>
-        <button onClick={() => setIsModalOpen(true)} className="px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl transition-all flex items-center gap-2">
+        <button onClick={() => setIsModalOpen(true)} className="px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-50 shadow-xl transition-all flex items-center gap-2">
             <Plus size={18}/> Nova Sugestão
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {isLoading ? <div className="col-span-full p-20 text-center"><Loader2 className="animate-spin text-indigo-600 mx-auto" size={48}/></div> : 
-         suggestions.map(s => (
+         Array.isArray(suggestions) && suggestions.map(s => (
             <div key={s.id} className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all group flex flex-col h-full relative">
                 <div className="flex items-center gap-3 mb-6">
                     {getSentimentIcon(s.sentiment || 'NEUTRO')}
@@ -62,16 +65,9 @@ const SuggestionBox = () => {
                 </div>
                 <h3 className="text-2xl font-black text-slate-800 tracking-tight">{s.title}</h3>
                 <p className="text-sm text-slate-500 mt-4 line-clamp-3 font-medium leading-relaxed flex-1">{s.content}</p>
-                <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
-                    <span className="text-[9px] font-black text-slate-400 uppercase">{new Date(s.created_at).toLocaleDateString()}</span>
-                    <div className="flex gap-2">
-                        <button className="p-2 text-slate-400 hover:text-indigo-600"><ThumbsUp size={16}/></button>
-                        <span className="text-xs font-bold text-slate-400">{s.upvotes || 0}</span>
-                    </div>
-                </div>
             </div>
         ))}
-        {!isLoading && suggestions.length === 0 && <div className="col-span-full py-40 bg-white rounded-[3rem] border-2 border-dashed border-slate-100 text-center text-slate-300 font-black uppercase text-xs tracking-widest">Nenhuma sugestão enviada.</div>}
+        {!isLoading && (!Array.isArray(suggestions) || suggestions.length === 0) && <div className="col-span-full py-40 bg-white rounded-[3rem] border-2 border-dashed border-slate-100 text-center text-slate-300 font-black uppercase text-xs tracking-widest">Nenhuma sugestão enviada.</div>}
       </div>
 
       {isModalOpen && (

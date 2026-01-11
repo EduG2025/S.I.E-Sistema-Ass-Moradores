@@ -1,178 +1,249 @@
--- ---------------------------------------------------------
--- S.I.E PRO - SCHEMA MESTRE DE PRODUÇÃO V27.0 (FULL STACK)
--- ---------------------------------------------------------
-SET NAMES utf8mb4;
-SET FOREIGN_KEY_CHECKS = 0;
 
--- 1. Configurações Globais
-CREATE TABLE IF NOT EXISTS `settings` (
+-- ---------------------------------------------------------
+-- S.I.E PRO - MASTER DATABASE SCHEMA V37.0 (SRE)
+-- PROTOCOLO DE RESILIÊNCIA: CORREÇÃO DE COLUNAS DO STUDIO
+-- ---------------------------------------------------------
+
+SET NAMES utf8mb4;
+SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
+
+-- 1. CONFIGURAÇÕES NUCLEARES
+DROP TABLE IF EXISTS `settings`;
+CREATE TABLE `settings` (
   `id` INT NOT NULL PRIMARY KEY,
   `name` VARCHAR(100) DEFAULT 'S.I.E PRO',
-  `cnpj` VARCHAR(20),
+  `cnpj` VARCHAR(25),
   `address` TEXT,
-  `logoUrl` LONGTEXT
-) ENGINE=InnoDB;
-
--- 2. Usuários e Identidade
-CREATE TABLE IF NOT EXISTS `users` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `username` VARCHAR(50) NOT NULL UNIQUE,
-  `password_hash` VARCHAR(255) NOT NULL,
-  `name` VARCHAR(100) NOT NULL,
   `email` VARCHAR(100),
-  `cpf_cnpj` VARCHAR(20) NOT NULL UNIQUE,
-  `unit` VARCHAR(50),
+  `phone` VARCHAR(20),
+  `primaryColor` VARCHAR(10) DEFAULT '#4f46e5',
+  `registrationMode` ENUM('OPEN', 'APPROVAL', 'INVITE_ONLY') DEFAULT 'APPROVAL',
+  `logoUrl` TEXT,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 2. MEMBROS E RBAC
+DROP TABLE IF EXISTS `users`;
+CREATE TABLE `users` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `username` VARCHAR(50) NULL UNIQUE,
+  `password_hash` VARCHAR(255) NULL,
+  `name` VARCHAR(100) NOT NULL,
+  `cpf_cnpj` VARCHAR(25) NOT NULL UNIQUE,
+  `rg` VARCHAR(20),
+  `rg_issuing_body` VARCHAR(20),
+  `unit` VARCHAR(50) NULL,
   `role` VARCHAR(50) DEFAULT 'RESIDENT',
   `status` VARCHAR(50) DEFAULT 'ACTIVE',
-  `socialData` JSON,
-  `avatar_url` LONGTEXT,
+  `active` TINYINT(1) DEFAULT 1,
+  `email` VARCHAR(100),
+  `phone` VARCHAR(20),
+  `socialData` LONGTEXT NULL, 
+  `coordinates` LONGTEXT NULL, 
+  `avatar_url` LONGTEXT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 3. Governança & IA
-CREATE TABLE IF NOT EXISTS `governance_matrix` (
-  `role` VARCHAR(50) NOT NULL PRIMARY KEY,
-  `permissions` JSON NOT NULL
-) ENGINE=InnoDB;
-
-CREATE TABLE IF NOT EXISTS `ai_keys` (
+-- 3. FINANCEIRO (ERP)
+DROP TABLE IF EXISTS `financials`;
+CREATE TABLE `financials` (
   `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `label` VARCHAR(100),
-  `key_value` VARCHAR(255) NOT NULL,
-  `provider` VARCHAR(50) DEFAULT 'GEMINI',
-  `tier` VARCHAR(20) DEFAULT 'FREE',
-  `priority` INT DEFAULT 1,
-  `status` VARCHAR(20) DEFAULT 'ACTIVE',
-  `error_count` INT DEFAULT 0,
-  `last_checked` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- 4. Studio & Templates (CORREÇÃO ERRO TEMPLATES)
-CREATE TABLE IF NOT EXISTS `templates` (
-  `id` VARCHAR(50) NOT NULL PRIMARY KEY,
-  `name` VARCHAR(100) NOT NULL,
-  `width` INT DEFAULT 320,
-  `height` INT DEFAULT 200,
-  `orientation` VARCHAR(20) DEFAULT 'landscape',
-  `frontBackground` LONGTEXT,
-  `backBackground` LONGTEXT,
-  `elements` JSON NOT NULL
-) ENGINE=InnoDB;
-
--- 5. Financeiro (ERP)
-CREATE TABLE IF NOT EXISTS `financials` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `description` VARCHAR(255),
-  `amount` DECIMAL(15,2),
-  `type` ENUM('INCOME', 'EXPENSE'),
-  `category` VARCHAR(100),
-  `date` DATE,
+  `user_id` BIGINT NULL,
+  `description` VARCHAR(255) NOT NULL,
+  `amount` DECIMAL(15,2) NOT NULL,
+  `type` ENUM('INCOME', 'EXPENSE') NOT NULL,
+  `category` VARCHAR(100) NULL,
+  `date` DATE NOT NULL,
   `status` VARCHAR(50) DEFAULT 'PENDING',
-  `user_id` BIGINT,
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
-) ENGINE=InnoDB;
-
--- 6. Operacional (Watchdog & Mural)
-CREATE TABLE IF NOT EXISTS `incidents` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `title` VARCHAR(200),
-  `location` VARCHAR(100),
-  `priority` ENUM('LOW', 'MEDIUM', 'HIGH'),
-  `status` VARCHAR(50) DEFAULT 'OPEN',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS `notices` (
+-- 4. OCORRÊNCIAS (WATCHDOG)
+DROP TABLE IF EXISTS `incidents`;
+CREATE TABLE `incidents` (
   `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `title` VARCHAR(200),
-  `content` TEXT,
-  `urgency` VARCHAR(20),
-  `date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB;
-
--- 7. Planejamento (Timeline & Reservas)
-CREATE TABLE IF NOT EXISTS `agenda` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `title` VARCHAR(200),
+  `title` VARCHAR(255) NOT NULL,
   `description` TEXT,
-  `date` DATETIME,
-  `type` VARCHAR(50),
-  `status` VARCHAR(50) DEFAULT 'UPCOMING'
-) ENGINE=InnoDB;
+  `location` VARCHAR(100),
+  `priority` ENUM('LOW', 'MEDIUM', 'HIGH', 'CRITICAL') DEFAULT 'LOW',
+  `status` ENUM('OPEN', 'IN_PROGRESS', 'RESOLVED') DEFAULT 'OPEN',
+  `author_id` BIGINT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS `reservations` (
+-- 5. RESERVAS DE ÁREAS
+DROP TABLE IF EXISTS `reservations`;
+CREATE TABLE `reservations` (
   `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `user_id` BIGINT,
-  `area_name` VARCHAR(100),
-  `date` DATE,
-  `startTime` TIME,
-  `endTime` TIME,
-  `status` VARCHAR(50) DEFAULT 'APPROVED',
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
-) ENGINE=InnoDB;
+  `area_name` VARCHAR(100) NOT NULL,
+  `user_id` BIGINT NOT NULL,
+  `date` DATE NOT NULL,
+  `startTime` TIME NOT NULL,
+  `endTime` TIME NOT NULL,
+  `status` ENUM('PENDING', 'APPROVED', 'REJECTED', 'CANCELLED') DEFAULT 'PENDING',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 8. Projetos & Ativos
-CREATE TABLE IF NOT EXISTS `projects` (
+-- 6. CENSO E PESQUISAS
+DROP TABLE IF EXISTS `surveys`;
+CREATE TABLE `surveys` (
   `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `title` VARCHAR(200),
+  `title` VARCHAR(255) NOT NULL,
   `description` TEXT,
-  `budget` DECIMAL(15,2),
-  `spent` DECIMAL(15,2) DEFAULT 0,
-  `progress` INT DEFAULT 0,
-  `status` VARCHAR(50),
-  `category` VARCHAR(50),
-  `startDate` DATE
-) ENGINE=InnoDB;
+  `type` ENUM('CENSUS', 'SOCIAL_AID', 'SATISFACTION', 'POLL') DEFAULT 'CENSUS',
+  `status` ENUM('DRAFT', 'ACTIVE', 'CLOSED', 'SCHEDULED') DEFAULT 'DRAFT',
+  `questions` LONGTEXT NULL, 
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS `assets` (
+DROP TABLE IF EXISTS `survey_questions`;
+CREATE TABLE `survey_questions` (
   `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `name` VARCHAR(200),
+  `survey_id` BIGINT NOT NULL,
+  `text` TEXT NOT NULL,
+  `type` VARCHAR(50) DEFAULT 'text',
+  `options` LONGTEXT NULL, 
+  `mapping_tag` VARCHAR(50) DEFAULT 'VULNERABILITY',
+  `required` TINYINT(1) DEFAULT 0,
+  `order_priority` INT DEFAULT 0,
+  FOREIGN KEY (`survey_id`) REFERENCES `surveys`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS `survey_responses`;
+CREATE TABLE `survey_responses` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `survey_id` BIGINT NOT NULL,
+  `user_cpf` VARCHAR(25) NOT NULL,
+  `answers` LONGTEXT NOT NULL, 
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 7. DOCUMENTOS E ASSEMBLEIAS
+DROP TABLE IF EXISTS `documents`;
+CREATE TABLE `documents` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `title` VARCHAR(255) NOT NULL,
+  `content` LONGTEXT,
+  `type` ENUM('OFICIO', 'ATA', 'EDITAL', 'CONTRATO', 'RELATÓRIO') DEFAULT 'OFICIO',
+  `status` ENUM('DRAFT', 'SIGNED', 'ARCHIVED') DEFAULT 'DRAFT',
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS `assemblies`;
+CREATE TABLE `assemblies` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+  `date` DATETIME NOT NULL,
+  `status` ENUM('SCHEDULED', 'LIVE', 'FINISHED', 'CANCELLED') DEFAULT 'SCHEDULED',
+  `type` ENUM('ORDINARY', 'EXTRAORDINARY') DEFAULT 'ORDINARY',
+  `topics` LONGTEXT NULL,
+  `ata_content` LONGTEXT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 8. ECONOMIA CIRCULAR E ATIVOS
+DROP TABLE IF EXISTS `marketplace_items`;
+CREATE TABLE `marketplace_items` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `title` VARCHAR(100) NOT NULL,
+  `description` TEXT,
+  `category` ENUM('FOOD', 'SERVICE', 'GOODS') DEFAULT 'GOODS',
+  `price` DECIMAL(10,2),
+  `whatsapp` VARCHAR(20),
+  `merchant_id` BIGINT NOT NULL,
+  `status` ENUM('ACTIVE', 'SOLD', 'PAUSED') DEFAULT 'ACTIVE',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS `assets`;
+CREATE TABLE `assets` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `name` VARCHAR(255) NOT NULL,
   `category` VARCHAR(100),
   `value` DECIMAL(15,2),
   `status` VARCHAR(50),
   `date_acquired` DATE,
-  `responsible_id` BIGINT
-) ENGINE=InnoDB;
+  `responsible_id` BIGINT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 9. Social & Censo
-CREATE TABLE IF NOT EXISTS `surveys` (
+-- 9. IA GATEWAY
+DROP TABLE IF EXISTS `ai_keys`;
+CREATE TABLE `ai_keys` (
   `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `title` VARCHAR(200),
-  `description` TEXT,
-  `type` VARCHAR(50),
-  `status` VARCHAR(50) DEFAULT 'ACTIVE'
-) ENGINE=InnoDB;
+  `label` VARCHAR(100),
+  `key_value` VARCHAR(255) NOT NULL,
+  `provider` VARCHAR(50) DEFAULT 'GEMINI',
+  `tier` ENUM('FREE', 'PAID') DEFAULT 'FREE',
+  `priority` INT DEFAULT 1,
+  `status` ENUM('ACTIVE', 'ERROR', 'QUOTA_EXCEEDED', 'INVALID') DEFAULT 'ACTIVE',
+  `error_count` INT DEFAULT 0,
+  `last_checked` TIMESTAMP NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS `survey_questions` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `survey_id` BIGINT,
-  `text` TEXT,
-  `type` VARCHAR(20),
-  `options` JSON,
-  FOREIGN KEY (`survey_id`) REFERENCES `surveys`(`id`) ON DELETE CASCADE
-) ENGINE=InnoDB;
+-- 10. STUDIO E COMUNICAÇÃO (FIXED COLUMNS)
+DROP TABLE IF EXISTS `templates`;
+CREATE TABLE `templates` (
+  `id` VARCHAR(50) NOT NULL PRIMARY KEY,
+  `name` VARCHAR(255) NOT NULL,
+  `type` VARCHAR(50) DEFAULT 'ID_CARD', -- Coluna Corrigida
+  `width` INT DEFAULT 320,
+  `height` INT DEFAULT 200,
+  `orientation` VARCHAR(20) DEFAULT 'landscape',
+  `frontBackground` VARCHAR(50) DEFAULT '#ffffff',
+  `backBackground` VARCHAR(50) DEFAULT '#f8fafc',
+  `elements` LONGTEXT NULL, 
+  `is_default` TINYINT(1) DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 10. Marketplace & Sugestões
-CREATE TABLE IF NOT EXISTS `marketplace_items` (
+DROP TABLE IF EXISTS `notices`;
+CREATE TABLE `notices` (
   `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `title` VARCHAR(200),
-  `description` TEXT,
+  `title` VARCHAR(255) NOT NULL,
+  `content` TEXT,
+  `urgency` ENUM('LOW', 'MEDIUM', 'HIGH') DEFAULT 'LOW',
   `category` VARCHAR(50),
-  `price` DECIMAL(10,2),
-  `whatsapp` VARCHAR(20),
-  `merchant_id` BIGINT,
-  FOREIGN KEY (`merchant_id`) REFERENCES `users`(`id`)
-) ENGINE=InnoDB;
+  `date` DATE,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS `suggestions` (
+DROP TABLE IF EXISTS `agenda`;
+CREATE TABLE `agenda` (
   `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `user_id` BIGINT,
-  `title` VARCHAR(200),
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+  `date` DATETIME NOT NULL,
+  `type` ENUM('MEETING', 'MAINTENANCE', 'EVENT', 'DEADLINE') DEFAULT 'EVENT',
+  `status` ENUM('UPCOMING', 'COMPLETED', 'CANCELLED') DEFAULT 'UPCOMING',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS `projects`;
+CREATE TABLE `projects` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+  `budget` DECIMAL(15,2),
+  `spent` DECIMAL(15,2) DEFAULT 0.00,
+  `progress` INT DEFAULT 0,
+  `status` VARCHAR(50),
+  `startDate` DATE,
+  `category` VARCHAR(50),
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS `suggestions`;
+CREATE TABLE `suggestions` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `title` VARCHAR(255) NOT NULL,
   `content` TEXT,
   `category` VARCHAR(50),
-  `sentiment` VARCHAR(20),
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
-) ENGINE=InnoDB;
+  `sentiment` VARCHAR(20) DEFAULT 'NEUTRO',
+  `upvotes` INT DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-SET FOREIGN_KEY_CHECKS = 1;
+SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;

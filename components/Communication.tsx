@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Alert, Notice } from '../types';
 import { communicationService } from '../services/api';
@@ -19,16 +18,19 @@ const Communication = () => {
       try {
           setIsLoading(true);
           const res = await communicationService.getNotices();
-          setNotices(res.data);
+          // SRE FIX: Garantindo que notices receba o array de dados correto
+          const data = res.data?.data || (Array.isArray(res.data) ? res.data : []);
+          setNotices(data);
+      } catch (e) {
+          setNotices([]);
       } finally { setIsLoading(false); }
   };
 
   const handleOpenCreate = () => {
-      setEditingNotice({ title: '', content: '', urgency: 'LOW' });
+      setEditingNotice({ title: '', content: '', urgency: 'LOW', date: new Date().toISOString().split('T')[0] });
       setIsModalOpen(true);
   };
 
-  // FIX: Use any to bypass namespace 'React' error
   const handleSave = async (e: any) => {
       e.preventDefault();
       setIsSaving(true);
@@ -72,7 +74,7 @@ const Communication = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {isLoading ? <div className="col-span-full py-20 text-center"><Loader2 className="animate-spin text-indigo-600 mx-auto" size={40}/></div> : 
-             notices.map(notice => (
+             Array.isArray(notices) && notices.map(notice => (
                 <div key={notice.id} className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-200 relative overflow-hidden group hover:border-indigo-400 hover:shadow-2xl transition-all flex flex-col">
                     <div className={`absolute left-0 top-0 bottom-0 w-3 ${notice.urgency === 'HIGH' ? 'bg-rose-500' : notice.urgency === 'MEDIUM' ? 'bg-amber-500' : 'bg-indigo-500'}`} />
                     <div className="flex justify-between items-start mb-6">
@@ -93,7 +95,7 @@ const Communication = () => {
                     </div>
                 </div>
             ))}
-            {!isLoading && notices.length === 0 && <div className="col-span-full py-40 bg-white rounded-[3rem] border-2 border-dashed border-slate-100 text-center text-slate-300 font-black uppercase text-xs tracking-widest">Silêncio no Mural. Nenhum aviso publicado.</div>}
+            {!isLoading && (!Array.isArray(notices) || notices.length === 0) && <div className="col-span-full py-40 bg-white rounded-[3rem] border-2 border-dashed border-slate-100 text-center text-slate-300 font-black uppercase text-xs tracking-widest">Silêncio no Mural. Nenhum aviso publicado.</div>}
         </div>
 
         {isModalOpen && (

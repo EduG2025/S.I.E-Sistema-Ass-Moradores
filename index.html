@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
@@ -16,7 +15,7 @@
       window.process = { env: { NODE_ENV: 'production' } };
       window.global = window;
       
-      // Polyfill de Emergência: Caso alguma lib minificada procure por ReactDOM.createRoot
+      // Polyfill de Emergência
       window.ReactDOM = window.ReactDOM || {};
       window.ReactDOM.createRoot = createRoot;
 
@@ -24,6 +23,10 @@
         window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = { isDisabled: true };
       }
     </script>
+
+    <!-- CARGA SEQUENCIAL OBRIGATÓRIA SRE -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 
 <script type="importmap">
 {

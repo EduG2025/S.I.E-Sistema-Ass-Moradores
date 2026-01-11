@@ -19,14 +19,22 @@ const Assets = () => {
     setLoading(true);
     try {
       const res = await assetService.getAll();
-      setItems(res.data);
-    } finally { setLoading(false); }
+      // SRE FIX: Kernel CRUD retorna { data: [], pagination: {} }
+      const data = res.data?.data || (Array.isArray(res.data) ? res.data : []);
+      setItems(data);
+    } catch (e) {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadUsers = async () => {
     try {
       const res = await userService.getAll();
-      setUsers(res.data.data);
+      // SRE FIX: Garantindo que users receba o array correto
+      const data = res.data?.data || (Array.isArray(res.data) ? res.data : []);
+      setUsers(data);
     } catch (e) {}
   };
 
@@ -35,7 +43,6 @@ const Assets = () => {
     setIsModalOpen(true);
   };
 
-  // FIX: Use any to bypass namespace 'React' error
   const handleSave = async (e: any) => {
     e.preventDefault();
     setIsSaving(true);
@@ -63,9 +70,9 @@ const Assets = () => {
             <html><head><title>Inventário S.I.E</title><style>body{font-family:sans-serif;padding:30px} table{width:100%;border-collapse:collapse} th,td{border:1px solid #eee;padding:10px;text-align:left}</style></head>
             <body>
                 <h1>S.I.E - Inventário de Ativos Comunitários</h1>
-                <p>Total de Itens: ${items.length} | Valor Total: R$ ${items.reduce((acc, i) => acc + Number(i.value), 0).toLocaleString()}</p>
+                <p>Total de Itens: ${items.length} | Valor Total: R$ ${items.reduce((acc, i) => acc + Number(i.value || 0), 0).toLocaleString()}</p>
                 <table><thead><tr><th>Item</th><th>Categoria</th><th>Estado</th><th>Valor (R$)</th></tr></thead>
-                <tbody>${items.map(i => `<tr><td>${i.name}</td><td>${i.category}</td><td>${i.status}</td><td>${Number(i.value).toLocaleString()}</td></tr>`).join('')}</tbody>
+                <tbody>${items.map(i => `<tr><td>${i.name}</td><td>${i.category}</td><td>${i.status}</td><td>${Number(i.value || 0).toLocaleString()}</td></tr>`).join('')}</tbody>
                 </table>
             </body></html>
           `);
@@ -85,6 +92,8 @@ const Assets = () => {
 
   if (loading) return <div className="p-20 text-center"><Loader2 className="animate-spin text-amber-500 mx-auto" size={56}/></div>;
 
+  const filteredItems = Array.isArray(items) ? items.filter(i => (i.name || '').toLowerCase().includes(searchTerm.toLowerCase())) : [];
+
   return (
     <div className="space-y-8 animate-fade-in pb-12">
       <div className="flex flex-col md:flex-row justify-between items-center gap-6">
@@ -103,7 +112,7 @@ const Assets = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-amber-600 p-8 rounded-[2.5rem] text-white shadow-xl">
               <p className="text-[10px] font-black uppercase opacity-80">Valor Total Estimado</p>
-              <h3 className="text-4xl font-black mt-2 tracking-tighter">R$ {items.reduce((acc, i) => acc + Number(i.value), 0).toLocaleString('pt-BR')}</h3>
+              <h3 className="text-4xl font-black mt-2 tracking-tighter">R$ {items.reduce((acc, i) => acc + Number(i.value || 0), 0).toLocaleString('pt-BR')}</h3>
           </div>
       </div>
 
@@ -120,11 +129,11 @@ const Assets = () => {
                     <tr><th className="p-8">Ativo / ID</th><th className="p-8">Estado</th><th className="p-8 text-right">Avaliação</th><th className="p-8 text-right">Ações</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                      {items.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase())).map(item => (
+                      {filteredItems.map(item => (
                           <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
                               <td className="p-8"><p className="text-sm font-black text-slate-800">{item.name}</p><p className="text-[10px] text-slate-400 font-bold uppercase">{item.category}</p></td>
                               <td className="p-8"><span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase border ${getStatusStyle(item.status)}`}>{item.status}</span></td>
-                              <td className="p-8 text-right font-black">R$ {Number(item.value).toLocaleString('pt-BR')}</td>
+                              <td className="p-8 text-right font-black">R$ {Number(item.value || 0).toLocaleString('pt-BR')}</td>
                               <td className="p-8 text-right">
                                   <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100">
                                       <button onClick={() => { setEditingItem(item); setIsModalOpen(true); }} className="p-2 text-slate-400 hover:text-indigo-600 rounded-lg"><Edit2 size={16}/></button>
@@ -151,6 +160,7 @@ const Assets = () => {
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Valor (R$)</label><input type="number" step="0.01" className="w-full" value={editingItem.value} onChange={e => setEditingItem({...editingItem, value: e.target.value})} /></div>
                   <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Estado</label>
+                      {/* FIXED: Changed editingRecord to editingItem in setEditingItem call */}
                       <select className="w-full font-bold" value={editingItem.status} onChange={e => setEditingItem({...editingItem, status: e.target.value})}>
                           <option value="PERFEITO">Perfeito</option><option value="BOM">Bom</option><option value="MANUTENÇÃO">Manutenção</option><option value="DEPRECIADO">Depreciado</option>
                       </select>

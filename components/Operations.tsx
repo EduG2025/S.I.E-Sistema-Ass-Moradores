@@ -21,7 +21,10 @@ const Operations = () => {
         try {
             setIsLoading(true);
             const res = await operationsService.getIncidents();
-            setIncidents(res.data);
+            const data = res.data?.data || (Array.isArray(res.data) ? res.data : []);
+            setIncidents(data);
+        } catch (e) {
+            setIncidents([]);
         } finally { setIsLoading(false); }
     };
 
@@ -30,7 +33,6 @@ const Operations = () => {
         setIsModalOpen(true);
     };
 
-    // FIX: Use any to bypass namespace 'React' error
     const handleSave = async (e: any) => {
         e.preventDefault();
         setIsSaving(true);
@@ -51,23 +53,6 @@ const Operations = () => {
         loadData();
     };
 
-    const handlePrintReport = () => {
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(`
-                <html><head><title>Relatório Operacional</title><style>body{font-family:sans-serif;padding:40px} table{width:100%;border-collapse:collapse} th,td{border:1px solid #eee;padding:12px;text-align:left}</style></head>
-                <body>
-                    <h1>S.I.E - Log de Ocorrências e SLA</h1>
-                    <table><thead><tr><th>Assunto</th><th>Local</th><th>Prioridade</th><th>Status</th><th>Abertura</th></tr></thead>
-                    <tbody>${incidents.map(i => `<tr><td>${i.title}</td><td>${i.location}</td><td>${i.priority}</td><td>${i.status}</td><td>${new Date().toLocaleDateString()}</td></tr>`).join('')}</tbody>
-                    </table>
-                </body></html>
-            `);
-            printWindow.document.close();
-            printWindow.print();
-        }
-    };
-
     const getPriorityStyle = (priority: string) => {
         switch(priority) {
             case 'HIGH': return 'bg-rose-50 text-rose-700 border-rose-100';
@@ -84,7 +69,6 @@ const Operations = () => {
                     <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-2">Monitoramento Ativo de Ocorrências e Manutenção</p>
                 </div>
                 <div className="flex bg-white rounded-3xl p-1.5 shadow-sm border border-slate-200">
-                    <button onClick={handlePrintReport} className="px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-emerald-600 transition-all flex items-center gap-2"><Printer size={16}/> Relatório SLA</button>
                     <button onClick={handleOpenCreate} className="px-6 py-2.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-indigo-600 transition-all flex items-center gap-2"><Plus size={16}/> Abrir Chamado</button>
                 </div>
             </div>
@@ -92,11 +76,7 @@ const Operations = () => {
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <div className="bg-slate-900 p-6 rounded-[2rem] text-white flex items-center gap-5 shadow-xl">
                     <div className="p-4 bg-rose-500 rounded-2xl shadow-lg shadow-rose-500/20"><AlertTriangle size={24}/></div>
-                    <div><p className="text-[10px] font-black uppercase text-rose-300 tracking-widest">Severidade Alta</p><h4 className="text-2xl font-black">{incidents.filter(i => i.priority === 'HIGH').length}</h4></div>
-                </div>
-                <div className="bg-white p-6 rounded-[2rem] border border-slate-200 flex items-center gap-5">
-                    <div className="p-4 bg-indigo-50 text-indigo-600 rounded-2xl"><Timer size={24}/></div>
-                    <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Tickets Ativos</p><h4 className="text-2xl font-black text-slate-800">{incidents.filter(i => i.status !== 'RESOLVED').length}</h4></div>
+                    <div><p className="text-[10px] font-black uppercase text-rose-300 tracking-widest">Severidade Alta</p><h4 className="text-2xl font-black">{Array.isArray(incidents) ? incidents.filter(i => i.priority === 'HIGH' || i.priority === 'CRITICAL').length : 0}</h4></div>
                 </div>
             </div>
 
@@ -108,7 +88,7 @@ const Operations = () => {
                                 <tr><th className="p-8">Assunto / Local</th><th className="p-8 text-center">Severidade</th><th className="p-8 text-center">Status</th><th className="p-8 text-right">Ações</th></tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {incidents.map(i => (
+                                {Array.isArray(incidents) && incidents.map(i => (
                                     <tr key={i.id} className="hover:bg-slate-50 transition-colors group">
                                         <td className="p-8"><div><p className="text-sm font-black text-slate-800">{i.title}</p><p className="text-[10px] text-slate-400 font-bold uppercase">{i.location}</p></div></td>
                                         <td className="p-8 text-center"><span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase border ${getPriorityStyle(i.priority)}`}>{i.priority}</span></td>
@@ -137,7 +117,6 @@ const Operations = () => {
                             </div>
                             <div className="p-10 space-y-6">
                                 <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Título do Assunto</label><input required className="w-full" value={editingIncident.title} onChange={e => setEditingIncident({...editingIncident, title: e.target.value})} /></div>
-                                <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Localização</label><input required className="w-full" value={editingIncident.location} onChange={e => setEditingIncident({...editingIncident, location: e.target.value})} /></div>
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Prioridade</label>
                                         <select className="w-full" value={editingIncident.priority} onChange={e => setEditingIncident({...editingIncident, priority: e.target.value})}>

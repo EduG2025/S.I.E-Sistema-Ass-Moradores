@@ -24,6 +24,20 @@ body {
   overflow-x: hidden;
 }
 
+/* Fix Leaflet Visibility */
+.leaflet-container {
+  height: 100% !important;
+  width: 100% !important;
+  z-index: 1 !important;
+  background: #f1f5f9 !important;
+  border-radius: inherit;
+}
+
+.custom-map-marker {
+  background: none !important;
+  border: none !important;
+}
+
 /* Foco de Acessibilidade (WCAG) */
 :focus-visible {
   outline: 3px solid var(--sie-primary);

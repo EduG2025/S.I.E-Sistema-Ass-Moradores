@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MarketItem, User } from '../types';
 import { marketplaceService, authService } from '../services/api';
@@ -32,10 +31,13 @@ const MarketPlace = () => {
         marketplaceService.getAll(),
         authService.me()
       ]);
-      setItems(itemsRes.data);
+      // SRE FIX: Acessando node .data.data para evitar crash no .filter()
+      const data = itemsRes.data?.data || (Array.isArray(itemsRes.data) ? itemsRes.data : []);
+      setItems(data);
       setCurrentUser(userRes.data);
     } catch (e) {
       console.error("[SRE] Falha ao carregar marketplace.");
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -44,8 +46,11 @@ const MarketPlace = () => {
   const loadItems = async () => {
     try {
       const res = await marketplaceService.getAll();
-      setItems(res.data);
-    } catch (e) {}
+      const data = res.data?.data || (Array.isArray(res.data) ? res.data : []);
+      setItems(data);
+    } catch (e) {
+      setItems([]);
+    }
   };
 
   const handleOpenCreate = () => {
@@ -53,7 +58,6 @@ const MarketPlace = () => {
     setIsModalOpen(true);
   };
 
-  // FIX: Use any to bypass namespace 'React' error
   const handleSave = async (e: any) => {
     e.preventDefault();
     setIsSaving(true);
@@ -103,7 +107,7 @@ const MarketPlace = () => {
                             <h3>${i.title}</h3>
                             <p>${i.description}</p>
                             <div class="price">R$ ${Number(i.price).toLocaleString('pt-BR')}</div>
-                            <div class="meta">${i.merchantName} - Unidade ${i.unit}</div>
+                            <div class="meta">${i.merchantName || 'Morador Empreendedor'} - Unidade ${i.unit || 'Residencial'}</div>
                         </div>
                     `).join('')}
                 </div>
@@ -116,13 +120,13 @@ const MarketPlace = () => {
 
   if (loading) return <div className="p-20 text-center"><Loader2 className="animate-spin text-emerald-600 mx-auto" size={48}/></div>;
 
-  const filteredItems = items.filter(i => {
+  const filteredItems = Array.isArray(items) ? items.filter(i => {
     const categoryMatch = activeCategory === 'ALL' || i.category === activeCategory;
-    const searchMatch = i.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                       i.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchMatch = (i.title || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                       (i.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     const ownershipMatch = viewMode === 'GLOBAL' || String(i.merchant_id) === String(currentUser?.id);
     return categoryMatch && searchMatch && ownershipMatch;
-  });
+  }) : [];
 
   return (
     <div className="space-y-8 animate-fade-in pb-12">
@@ -197,14 +201,14 @@ const MarketPlace = () => {
                   <h3 className="text-xl font-black text-slate-800 tracking-tight mb-2 group-hover:text-emerald-600 transition-colors">{item.title}</h3>
                   <div className="flex items-center gap-2 mb-6">
                       <MapPin size={12} className="text-slate-400"/>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{item.merchantName} • Unidade {item.unit}</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{item.merchantName || 'Morador'} • Unidade {item.unit || 'Local'}</p>
                   </div>
 
                   <p className="text-sm text-slate-500 font-medium leading-relaxed mb-8 flex-1">{item.description}</p>
 
                   <div className="flex gap-3 pt-6 border-t border-slate-50">
                       <a 
-                        href={`https://wa.me/${item.whatsapp?.replace(/\D/g, '')}`}
+                        href={`https://wa.me/${(item.whatsapp || '').replace(/\D/g, '')}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20"
@@ -232,7 +236,7 @@ const MarketPlace = () => {
                 <button type="button" onClick={() => setIsModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full"><X/></button>
               </div>
               <div className="p-10 space-y-6">
-                <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Título</label><input required className="w-full" value={editingItem.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} /></div>
+                <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Título</label><input required className="w-full font-bold" value={editingItem.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} /></div>
                 <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Descrição</label><textarea rows={3} required className="w-full" value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} /></div>
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Categoria</label>

@@ -1,4 +1,5 @@
-import { SocialTag, IdCardTemplate } from './types';
+
+import { SocialTag, IdCardTemplate, SystemInfo } from './types';
 import { 
   LayoutDashboard, Wallet, Users, Bell, ShieldAlert, CalendarClock, 
   Settings, ClipboardList, BarChart3, Map as MapIcon, Briefcase, ShoppingBag,
@@ -49,7 +50,8 @@ export const SYSTEM_PERMISSIONS = [
   { id: 'manage_sustainability', label: 'Gerir ESG', module: 'MEIO AMBIENTE' },
 ];
 
-export const DEFAULT_SYSTEM_INFO = {
+// SRE FIX: Tipagem explícita como SystemInfo para garantir compatibilidade com unions do Kernel
+export const DEFAULT_SYSTEM_INFO: SystemInfo = {
   name: 'S.I.E — Sistema Inteligente Ativo',
   cnpj: '00.000.000/0001-00',
   address: 'Sede Administrativa S.I.E - Cluster 01',
