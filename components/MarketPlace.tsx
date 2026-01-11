@@ -31,12 +31,10 @@ const MarketPlace = () => {
         marketplaceService.getAll(),
         authService.me()
       ]);
-      // SRE FIX: Acessando node .data.data para evitar crash no .filter()
       const data = itemsRes.data?.data || (Array.isArray(itemsRes.data) ? itemsRes.data : []);
       setItems(data);
       setCurrentUser(userRes.data);
     } catch (e) {
-      console.error("[SRE] Falha ao carregar marketplace.");
       setItems([]);
     } finally {
       setLoading(false);
@@ -86,38 +84,6 @@ const MarketPlace = () => {
     }
   };
 
-  const handlePrintCatalog = () => {
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-        const catalogItems = items.filter(i => activeCategory === 'ALL' || i.category === activeCategory);
-        printWindow.document.write(`
-            <html><head><title>Catálogo S.I.E</title><style>
-                body{font-family:sans-serif;padding:40px} 
-                .header{border-bottom:2px solid #10b981;margin-bottom:30px;padding-bottom:10px;text-align:center} 
-                .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
-                .item{border:1px solid #eee;padding:15px;border-radius:10px}
-                .price{color:#10b981;font-weight:bold}
-                .meta{font-size:10px;color:#666}
-            </style></head>
-            <body>
-                <div class="header"><h1>Vitrine de Economia Circular S.I.E</h1><p>Categoria: ${activeCategory} | Emissão: ${new Date().toLocaleDateString()}</p></div>
-                <div class="grid">
-                    ${catalogItems.map(i => `
-                        <div class="item">
-                            <h3>${i.title}</h3>
-                            <p>${i.description}</p>
-                            <div class="price">R$ ${Number(i.price).toLocaleString('pt-BR')}</div>
-                            <div class="meta">${i.merchantName || 'Morador Empreendedor'} - Unidade ${i.unit || 'Residencial'}</div>
-                        </div>
-                    `).join('')}
-                </div>
-            </body></html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-    }
-  };
-
   if (loading) return <div className="p-20 text-center"><Loader2 className="animate-spin text-emerald-600 mx-auto" size={48}/></div>;
 
   const filteredItems = Array.isArray(items) ? items.filter(i => {
@@ -129,30 +95,24 @@ const MarketPlace = () => {
   }) : [];
 
   return (
-    <div className="space-y-8 animate-fade-in pb-12">
-      <div className="bg-emerald-900 rounded-[3rem] p-12 text-white relative overflow-hidden shadow-2xl">
+    <div className="flex-1 flex flex-col min-h-0 space-y-8 animate-fade-in overflow-hidden">
+      <div className="bg-emerald-900 rounded-[2.5rem] lg:rounded-[3.5rem] p-8 lg:p-12 text-white relative overflow-hidden shadow-2xl shrink-0">
           <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
           <div className="relative z-10 flex flex-col lg:flex-row justify-between items-center gap-10">
-              <div className="space-y-6 max-w-2xl">
-                  <div className="flex items-center gap-3 px-4 py-1.5 bg-white/10 rounded-full w-fit border border-white/10 backdrop-blur-md">
+              <div className="space-y-4 max-w-2xl text-center lg:text-left">
+                  <div className="flex items-center justify-center lg:justify-start gap-3 px-4 py-1.5 bg-white/10 rounded-full w-fit mx-auto lg:mx-0 border border-white/10 backdrop-blur-md">
                       <ShoppingBag size={16} className="text-emerald-400"/>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-200">Economia Circular Ativa</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-200">Economia Circular</span>
                   </div>
-                  <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-tight">Negócios Locais, <br/>Impacto Global.</h1>
-                  <p className="text-emerald-100/70 text-base font-medium leading-relaxed">Conecte-se com vizinhos empreendedores. Compre local, fortaleça sua rede.</p>
+                  <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-tight">Negócios Locais, Impacto Real.</h1>
               </div>
-              <div className="flex flex-col gap-4 shrink-0">
-                  <button onClick={handleOpenCreate} className="bg-white text-emerald-900 px-10 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-emerald-50 transition-all shadow-2xl flex items-center gap-3">
-                    <Plus size={20}/> Criar Novo Anúncio
-                  </button>
-                  <button onClick={handlePrintCatalog} className="bg-emerald-800/50 text-white border border-white/20 px-10 py-4 rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-3">
-                    <Printer size={18}/> Imprimir Catálogo
-                  </button>
-              </div>
+              <button onClick={handleOpenCreate} className="bg-white text-emerald-900 px-10 py-5 rounded-[2rem] font-black text-xs uppercase tracking-widest hover:bg-emerald-50 transition-all shadow-2xl flex items-center gap-3 shrink-0">
+                <Plus size={20}/> Criar Anúncio
+              </button>
           </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6 items-center">
+      <div className="flex flex-col lg:flex-row gap-6 items-center shrink-0">
           <div className="relative flex-1 w-full">
               <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={20}/>
               <input 
@@ -160,10 +120,10 @@ const MarketPlace = () => {
                 placeholder="Pesquisar na vitrine..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-16 pr-8 py-5 bg-white border border-slate-200 rounded-[2rem] text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-500/10 shadow-sm"
+                className="w-full pl-16 pr-8 py-5 bg-white border border-slate-200 rounded-[2rem] text-sm font-bold outline-none shadow-sm"
               />
           </div>
-          <div className="flex bg-white p-1.5 rounded-[2rem] shadow-sm border border-slate-200 overflow-x-auto w-full lg:w-auto">
+          <div className="flex bg-white p-1.5 rounded-[2rem] shadow-sm border border-slate-200 overflow-x-auto w-full lg:w-auto custom-scrollbar">
               {[
                   { id: 'ALL', label: 'Todos', icon: Package },
                   { id: 'FOOD', label: 'Alimentação', icon: Utensils },
@@ -175,83 +135,79 @@ const MarketPlace = () => {
                   </button>
               ))}
           </div>
-          <div className="flex bg-slate-100 p-1 rounded-2xl shrink-0">
-                <button onClick={() => setViewMode('GLOBAL')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'GLOBAL' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500'}`}><LayoutGrid size={16} className="inline mr-2"/> Vitrine</button>
-                <button onClick={() => setViewMode('MY_ITEMS')} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'MY_ITEMS' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-500'}`}><UserIcon size={16} className="inline mr-2"/> Meus Anúncios</button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto custom-scrollbar pb-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+              {filteredItems.map(item => (
+                  <div key={item.id} className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm hover:shadow-xl transition-all group flex flex-col h-full relative">
+                      {String(item.merchant_id) === String(currentUser?.id) && (
+                          <div className="absolute top-6 right-6 flex gap-2">
+                              <button onClick={() => { setEditingItem(item); setIsModalOpen(true); }} className="p-2 bg-slate-50 text-slate-400 hover:text-emerald-600 rounded-lg"><Edit2 size={16}/></button>
+                              <button onClick={() => handleDelete(Number(item.id))} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-600 rounded-lg"><Trash2 size={16}/></button>
+                          </div>
+                      )}
+
+                      <div className="flex justify-between items-start mb-6">
+                          <div className="w-16 h-16 bg-slate-100 rounded-3xl flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors shadow-inner">
+                              {item.category === 'FOOD' ? <Utensils size={28}/> : item.category === 'SERVICE' ? <Wrench size={28}/> : <Package size={28}/>}
+                          </div>
+                          <div className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-2xl text-xs font-black">R$ {Number(item.price).toLocaleString('pt-BR')}</div>
+                      </div>
+
+                      <h3 className="text-xl font-black text-slate-800 tracking-tight mb-2 group-hover:text-emerald-600 transition-colors">{item.title}</h3>
+                      <div className="flex items-center gap-2 mb-6">
+                          <MapPin size={12} className="text-slate-400"/>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{item.merchantName || 'Morador'} • Unidade {item.unit || 'Local'}</p>
+                      </div>
+
+                      <p className="text-sm text-slate-500 font-medium leading-relaxed mb-8 flex-1">{item.description}</p>
+
+                      <div className="flex gap-3 pt-6 border-t border-slate-50">
+                          <a 
+                            href={`https://wa.me/${(item.whatsapp || '').replace(/\D/g, '')}`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
+                          >
+                            <MessageCircle size={16}/> WhatsApp
+                          </a>
+                      </div>
+                  </div>
+              ))}
+              {filteredItems.length === 0 && (
+                  <div className="col-span-full py-40 bg-white rounded-[3rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center text-slate-300">
+                      <ShoppingBag size={64} className="mb-4 opacity-20"/>
+                      <p className="font-black uppercase tracking-widest text-[10px]">Silêncio na vitrine.</p>
+                  </div>
+              )}
           </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-          {filteredItems.map(item => (
-              <div key={item.id} className="bg-white rounded-[2.5rem] border border-slate-200 p-8 shadow-sm hover:shadow-xl transition-all group flex flex-col h-full relative">
-                  {String(item.merchant_id) === String(currentUser?.id) && (
-                      <div className="absolute top-6 right-6 flex gap-2">
-                          <button onClick={() => { setEditingItem(item); setIsModalOpen(true); }} className="p-2 bg-slate-50 text-slate-400 hover:text-emerald-600 rounded-lg transition-colors"><Edit2 size={16}/></button>
-                          <button onClick={() => handleDelete(Number(item.id))} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-600 rounded-lg transition-colors"><Trash2 size={16}/></button>
-                      </div>
-                  )}
-
-                  <div className="flex justify-between items-start mb-6">
-                      <div className="w-16 h-16 bg-slate-100 rounded-3xl flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors shadow-inner">
-                          {item.category === 'FOOD' ? <Utensils size={28}/> : item.category === 'SERVICE' ? <Wrench size={28}/> : <Package size={28}/>}
-                      </div>
-                      <div className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-2xl text-xs font-black">R$ {Number(item.price).toLocaleString('pt-BR')}</div>
-                  </div>
-
-                  <h3 className="text-xl font-black text-slate-800 tracking-tight mb-2 group-hover:text-emerald-600 transition-colors">{item.title}</h3>
-                  <div className="flex items-center gap-2 mb-6">
-                      <MapPin size={12} className="text-slate-400"/>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{item.merchantName || 'Morador'} • Unidade {item.unit || 'Local'}</p>
-                  </div>
-
-                  <p className="text-sm text-slate-500 font-medium leading-relaxed mb-8 flex-1">{item.description}</p>
-
-                  <div className="flex gap-3 pt-6 border-t border-slate-50">
-                      <a 
-                        href={`https://wa.me/${(item.whatsapp || '').replace(/\D/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 bg-emerald-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20"
-                      >
-                        <MessageCircle size={16}/> Chat WhatsApp
-                      </a>
-                      <button className="p-4 bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-2xl transition-all"><Info size={20}/></button>
-                  </div>
-              </div>
-          ))}
-          {filteredItems.length === 0 && (
-              <div className="col-span-full py-40 bg-white rounded-[3rem] border-2 border-dashed border-slate-100 flex flex-col items-center justify-center text-slate-300">
-                  <ShoppingBag size={64} className="mb-4 opacity-20"/>
-                  <p className="font-black uppercase tracking-widest text-[10px]">Nenhum anúncio localizado nesta visão.</p>
-              </div>
-          )}
-      </div>
-
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200 animate-scale-in">
-            <form onSubmit={handleSave}>
-              <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h3 className="font-black text-xl text-slate-800 tracking-tighter">{editingItem.id ? 'Editar Anúncio' : 'Publicar na Vitrine'}</h3>
-                <button type="button" onClick={() => setIsModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full"><X/></button>
+        <div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-md animate-fade-in">
+          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200 animate-scale-in flex flex-col max-h-[90vh]">
+            <form onSubmit={handleSave} className="flex flex-col h-full">
+              <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
+                <h3 className="font-black text-xl text-slate-800 tracking-tighter">Publicar Anúncio</h3>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-all"><X/></button>
               </div>
-              <div className="p-10 space-y-6">
-                <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Título</label><input required className="w-full font-bold" value={editingItem.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} /></div>
-                <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Descrição</label><textarea rows={3} required className="w-full" value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} /></div>
+              <div className="p-10 space-y-6 overflow-y-auto custom-scrollbar flex-1">
+                <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase">Título</label><input required className="w-full font-bold" value={editingItem.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} /></div>
+                <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase">Descrição</label><textarea rows={3} required className="w-full" value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} /></div>
                 <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Categoria</label>
+                  <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase">Categoria</label>
                     <select className="w-full font-bold" value={editingItem.category} onChange={e => setEditingItem({...editingItem, category: e.target.value as any})}>
                         <option value="FOOD">Alimentação</option><option value="SERVICE">Serviços</option><option value="GOODS">Produtos</option>
                     </select>
                   </div>
-                  <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Preço (R$)</label><input type="number" step="0.01" className="w-full font-black" value={editingItem.price} onChange={e => setEditingItem({...editingItem, price: parseFloat(e.target.value)})} /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase">Preço (R$)</label><input type="number" step="0.01" className="w-full font-black" value={editingItem.price} onChange={e => setEditingItem({...editingItem, price: parseFloat(e.target.value)})} /></div>
                 </div>
-                <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">WhatsApp para Vendas</label><input required className="w-full" value={editingItem.whatsapp} onChange={e => setEditingItem({...editingItem, whatsapp: e.target.value})} /></div>
+                <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase">WhatsApp</label><input required className="w-full" value={editingItem.whatsapp} onChange={e => setEditingItem({...editingItem, whatsapp: e.target.value})} /></div>
               </div>
-              <div className="p-10 border-t border-slate-100 flex justify-end gap-4 bg-slate-50">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-10 py-4 text-slate-400 font-black text-xs uppercase">Cancelar</button>
-                <button type="submit" disabled={isSaving} className="px-14 py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-emerald-700 flex items-center gap-3">
-                  {isSaving ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Commitar Anúncio
+              <div className="p-10 border-t border-slate-100 flex justify-end gap-4 bg-slate-50 shrink-0">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-10 py-4 text-slate-400 font-black text-xs uppercase tracking-widest">Cancelar</button>
+                <button type="submit" disabled={isSaving} className="px-14 py-4 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase shadow-xl hover:bg-emerald-700 flex items-center gap-3">
+                  {isSaving ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Publicar
                 </button>
               </div>
             </form>

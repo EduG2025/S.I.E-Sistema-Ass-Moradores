@@ -126,7 +126,12 @@ app.get('/api/dashboard/stats', authenticate, async (req, res) => {
         const [[{ total }]] = await pool.query('SELECT SUM(CASE WHEN type="INCOME" THEN amount ELSE -amount END) as total FROM financials');
         const [[{ incidents }]] = await pool.query('SELECT COUNT(*) as count FROM incidents WHERE status != "RESOLVED"');
         const [[{ users }]] = await pool.query('SELECT COUNT(*) as count FROM users WHERE active = 1');
-        res.json({ balance: total || 0, openIncidents: incidents, totalUsers: users, sla: '98.5%' });
+        res.json({
+            balance: total || 0,
+            openIncidents: incidents,
+            totalPopulation: users,
+            sla: '98.5%'
+        });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -145,14 +150,23 @@ app.get('/api/users/:id/score', authenticate, async (req, res) => {
 
 app.get('/api/demographics/stats', authenticate, async (req, res) => {
     try {
-        const [users] = await pool.query('SELECT socialData FROM users WHERE role = "RESIDENT" AND active = 1');
-        const stats = { totalPopulation: users.length, incomeDistribution: { low: 0, midLow: 0, mid: 0, high: 0 } };
+        const [users] = await pool.query('SELECT socialData FROM users WHERE active = 1');
+        const stats = {
+            totalPopulation: users.length,
+            incomeDistribution: { low: 0, midLow: 0, mid: 0, high: 0 },
+            vulnerability: { critical: 0, moderate: 0, low: 0 }
+        };
         users.forEach(u => {
             const data = safeJsonParse(u.socialData, {});
-            if (data?.incomeRange === 'LOW') stats.incomeDistribution.low++;
-            else if (data?.incomeRange === 'MID_LOW') stats.incomeDistribution.midLow++;
+            if (data?.incomeRange === 'LOW' || data?.incomeRange === 'Até 1 Salário') stats.incomeDistribution.low++;
+            else if (data?.incomeRange === 'MID_LOW' || data?.incomeRange === '1 a 3 Salários') stats.incomeDistribution.midLow++;
             else if (data?.incomeRange === 'MID') stats.incomeDistribution.mid++;
-            else if (data?.incomeRange === 'HIGH') stats.incomeDistribution.high++;
+            else stats.incomeDistribution.high++;
+
+            const tags = data?.tags || [];
+            if (tags.includes('AJUDA_URGENTE') || data?.vulnerabilityScore > 80) stats.vulnerability.critical++;
+            else if (tags.includes('BAIXA_RENDA') || data?.vulnerabilityScore > 40) stats.vulnerability.moderate++;
+            else stats.vulnerability.low++;
         });
         res.json(stats);
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -166,15 +180,49 @@ app.get('/api/sustainability/stats', authenticate, async (req, res) => {
     });
 });
 
-app.get('/api/map/units', authenticate, async (req, res) => {
+app.get('/api/users/:id/dossier', authenticate, async (req, res) => {
     try {
-        const [users] = await pool.query('SELECT id, name as residentName, unit, coordinates, socialData FROM users WHERE active = 1 AND unit IS NOT NULL');
-        const formatted = users.map(u => ({
-            ...u,
-            coordinates: safeJsonParse(u.coordinates, { lat: -23.5505, lng: -46.6333 }),
-            tags: (safeJsonParse(u.socialData, {}).vulnerabilityScore > 50) ? ['AJUDA_URGENTE'] : []
-        }));
-        res.json(formatted);
+        const [userRows] = await pool.query('SELECT * FROM users WHERE id = ?', [req.params.id]);
+        if (!userRows.length) return res.status(404).json({ error: 'USER_NOT_FOUND' });
+        const user = userRows[0];
+        user.socialData = safeJsonParse(user.socialData, {});
+
+        const [financials] = await pool.query('SELECT * FROM financials WHERE user_id = ? ORDER BY date DESC', [req.params.id]);
+        res.json({ user, financials });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- CENSO LEGACY ENDPOINTS (SUPPORT FOR CensusRegister.tsx & SocioProfile.tsx) ---
+app.post('/api/census/register', async (req, res) => {
+    try {
+        const { name, cpf_cnpj, birth_date, gender, address, phone, email } = req.body;
+        const [result] = await pool.query(
+            'INSERT INTO users (name, cpf_cnpj, role, status, active, email, phone, socialData) VALUES (?, ?, "RESIDENT", "PENDING", 1, ?, ?, ?)',
+            [name, cpf_cnpj, email, phone, JSON.stringify({ birth_date, gender, address })]
+        );
+        res.json({ success: true, id: result.insertId });
+    } catch (e) { res.status(500).json({ error: 'Erro ao registrar no censo corporativo.' }); }
+});
+
+app.post('/api/census/submit', async (req, res) => {
+    try {
+        const { cpf, name, email, unit, answers } = req.body;
+        const cleanCpf = cpf.replace(/\D/g, '');
+        const [result] = await pool.query(
+            'INSERT INTO survey_responses (survey_id, user_cpf, answers) VALUES (0, ?, ?)',
+            [cleanCpf, JSON.stringify(answers)]
+        );
+        res.json({ success: true, id: result.insertId });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/census/registry/:id/profile', async (req, res) => {
+    try {
+        const { income_range, education_level, household_size, employment_status, social_benefits, additional } = req.body;
+        const id = req.params.id;
+        const socialData = JSON.stringify({ income_range, education_level, household_size, employment_status, social_benefits, ...additional });
+        await pool.query('UPDATE users SET socialData = ? WHERE id = ?', [socialData, id]);
+        res.json({ success: true, profileId: id });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -211,7 +259,12 @@ app.post('/api/surveys/public/:id/submit', async (req, res) => {
     try {
         await pool.query('INSERT INTO survey_responses (survey_id, user_cpf, answers) VALUES (?, ?, ?)', [surveyId, cleanCpf, JSON.stringify(answers)]);
         const [existing] = await pool.query('SELECT id FROM users WHERE REPLACE(REPLACE(cpf_cnpj, ".", ""), "-", "") = ?', [cleanCpf]);
-        const socialDataJson = JSON.stringify(answers);
+
+        let tags = [];
+        if (JSON.stringify(answers).includes('BAIXA') || JSON.stringify(answers).includes('Até 1')) tags.push('BAIXA_RENDA');
+
+        const socialDataJson = JSON.stringify({ ...answers, tags });
+
         if (existing.length > 0) {
             await pool.query(`UPDATE users SET socialData = JSON_MERGE_PATCH(COALESCE(socialData, '{}'), ?), name = COALESCE(?, name), email = COALESCE(?, email), unit = COALESCE(?, unit) WHERE id = ?`,
                 [socialDataJson, userData.name, userData.email, userData.unit, existing[0].id]);

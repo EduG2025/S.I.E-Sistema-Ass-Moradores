@@ -1,14 +1,12 @@
-
 import React, { useState, Suspense, lazy, useEffect } from 'react';
 import { MENU_ITEMS, DEFAULT_SYSTEM_INFO, DEFAULT_ID_CARD_TEMPLATE } from './constants';
 import { SystemInfo, User, IdCardTemplate } from './types';
 import {
     LogOut, Menu, Loader2, Settings as SettingsIcon, Shield,
-    Bell, Zap, Search, Sparkles, X, Key
+    Bell, Zap, Search, Sparkles, X, Key, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import { systemService, authService, templateService, aiService } from './services/api';
+import { systemService, authService, templateService } from './services/api';
 
-// Lazy loading modules for performance optimization
 const Dashboard = lazy(() => import('./components/Dashboard')) as any;
 const Finance = lazy(() => import('./components/Finance')) as any;
 const Settings = lazy(() => import('./components/Settings')) as any;
@@ -37,17 +35,11 @@ const App = () => {
     const [systemInfo, setSystemInfo] = useState<SystemInfo>(DEFAULT_SYSTEM_INFO);
     const [activeTab, setActiveTab] = useState('dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     
-    // SRE Navigation & UI State
     const [settingsTab, setSettingsTab] = useState<'INFO' | 'ACCESS' | 'API' | 'STUDIO'>('INFO');
     const [templates, setTemplates] = useState<IdCardTemplate[]>([DEFAULT_ID_CARD_TEMPLATE]);
 
-    // Neural Search State
-    const [searchQuery, setSearchQuery] = useState('');
-    const [isSearching, setIsSearching] = useState(false);
-    const [searchResult, setSearchResult] = useState<string | null>(null);
-
-    // SRE ROUTE DETECTOR: Prioridade Máxima para links públicos
     const isPublicCensus = window.location.pathname.includes('/census/');
 
     const initKernel = async () => {
@@ -75,7 +67,6 @@ const App = () => {
             setSystemInfo(infoRes.data);
             if (templatesRes.data.data) setTemplates(templatesRes.data.data);
         } catch (error) {
-            console.error("[SRE KERNEL] Auth Validation Failed", error);
             localStorage.removeItem('sie_auth_token');
             setIsAuthenticated(false);
         } finally {
@@ -83,9 +74,7 @@ const App = () => {
         }
     };
 
-    useEffect(() => {
-        initKernel();
-    }, []);
+    useEffect(() => { initKernel(); }, []);
 
     const handleLoginSuccess = (user: User, token: string) => {
         localStorage.setItem('sie_auth_token', token);
@@ -94,24 +83,8 @@ const App = () => {
         window.location.reload();
     };
 
-    const handleGlobalSearch = async (e: any) => {
-        if (e && e.preventDefault) e.preventDefault();
-        if (!searchQuery.trim()) return;
-        setIsSearching(true);
-        try {
-            const res = await aiService.globalSearch(searchQuery);
-            setSearchResult(res.data.answer);
-        } catch (err) {
-            console.error("AI Search Failure", err);
-        } finally {
-            setIsSearching(false);
-        }
-    };
-
     const handleLogout = () => {
         localStorage.removeItem('sie_auth_token');
-        setIsAuthenticated(false);
-        setCurrentUser(null);
         window.location.reload();
     };
 
@@ -123,7 +96,7 @@ const App = () => {
     );
 
     if (isPublicCensus) return (
-        <Suspense fallback={<div className="h-screen flex flex-col items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-indigo-600" size={48} /><p className="mt-4 text-[10px] font-black uppercase text-slate-400">Sincronizando Censo Neural...</p></div>}>
+        <Suspense fallback={<div className="h-screen flex flex-col items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-indigo-600" size={48} /></div>}>
             <PublicSenso />
         </Suspense>
     );
@@ -136,23 +109,31 @@ const App = () => {
 
     return (
         <div className="h-screen w-screen overflow-hidden flex bg-[#f8fafc] font-sans">
-            <aside className={`fixed lg:static inset-y-0 left-0 z-[60] w-80 bg-slate-950 border-r border-white/5 flex flex-col shrink-0 transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="p-8 flex items-center justify-between lg:justify-start gap-4">
+            {/* SIDEBAR REPROJETADA */}
+            <aside className={`fixed lg:static inset-y-0 left-0 z-[60] bg-slate-950 border-r border-white/5 flex flex-col shrink-0 transition-all duration-500 ${sidebarOpen ? 'translate-x-0 w-80' : '-translate-x-full w-80 lg:translate-x-0'} ${sidebarCollapsed ? 'lg:w-24' : 'lg:w-80'}`}>
+                <div className={`p-8 flex items-center justify-between ${sidebarCollapsed ? 'flex-col gap-4' : ''}`}>
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl overflow-hidden ring-4 ring-indigo-600/20">
-                            {systemInfo.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-cover" /> : <Shield size={24} className="text-white" />}
+                        <div className={`bg-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl shrink-0 transition-all ${sidebarCollapsed ? 'w-10 h-10' : 'w-12 h-12'}`}>
+                            <Shield size={sidebarCollapsed ? 18 : 24} className="text-white" />
                         </div>
-                        <div>
-                            <h1 className="font-black text-white text-xl tracking-tighter leading-none">S.I.E PRO</h1>
-                            <p className="text-[9px] text-indigo-400 font-black uppercase tracking-widest mt-1">Gestão Ativa</p>
-                        </div>
+                        {!sidebarCollapsed && (
+                            <div className="animate-fade-in">
+                                <h1 className="font-black text-white text-xl tracking-tighter leading-none">S.I.E PRO</h1>
+                                <p className="text-[9px] text-indigo-400 font-black uppercase tracking-widest mt-1">Gestão Ativa</p>
+                            </div>
+                        )}
                     </div>
-                    <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 text-slate-400 hover:text-white transition-colors">
+                    <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 text-slate-400 hover:text-white">
                         <X size={24} />
                     </button>
+                    {!sidebarOpen && (
+                        <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden lg:flex p-2 text-slate-600 hover:text-indigo-400 transition-colors">
+                            {sidebarCollapsed ? <ChevronRight size={20}/> : <ChevronLeft size={20}/>}
+                        </button>
+                    )}
                 </div>
 
-                <nav className="flex-1 overflow-y-auto px-6 py-4 space-y-2 custom-scrollbar">
+                <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-2 custom-scrollbar">
                     {MENU_ITEMS.map((item) => {
                         if (currentUser && !item.roles.includes(currentUser.role as any)) return null;
                         const Icon = item.icon;
@@ -161,97 +142,67 @@ const App = () => {
                             <button
                                 key={item.id}
                                 onClick={() => { setActiveTab(item.id); setSettingsTab('INFO'); setSidebarOpen(false); }}
-                                className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all group ${isActive ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
+                                className={`w-full flex items-center p-4 rounded-2xl transition-all group ${isActive ? 'bg-indigo-600 text-white shadow-xl' : 'text-slate-400 hover:bg-white/5 hover:text-white'} ${sidebarCollapsed ? 'justify-center' : 'justify-start gap-4'}`}
+                                title={sidebarCollapsed ? item.label : ''}
                             >
-                                <div className="flex items-center gap-4">
-                                    <Icon size={20} className={isActive ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400 transition-colors'} />
-                                    <span className="text-[11px] font-black uppercase tracking-widest">{item.label}</span>
-                                </div>
-                                {isActive && <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>}
+                                <Icon size={20} className={isActive ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'} />
+                                {!sidebarCollapsed && <span className="text-[11px] font-black uppercase tracking-widest animate-fade-in truncate">{item.label}</span>}
                             </button>
                         );
                     })}
                 </nav>
 
-                <div className="p-8 border-t border-white/5 space-y-6">
-                    <div className="flex items-center gap-4 p-2 rounded-2xl bg-white/5 border border-white/5">
-                        <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center font-black text-white text-xs border border-white/10 shadow-lg">
-                            {currentUser?.avatar_url ? <img src={currentUser.avatar_url} className="w-full h-full object-cover rounded-xl" /> : currentUser?.name?.[0]}
+                <div className={`p-6 border-t border-white/5 space-y-6 ${sidebarCollapsed ? 'items-center' : ''}`}>
+                    {!sidebarCollapsed && (
+                        <div className="flex items-center gap-4 p-2 rounded-2xl bg-white/5 border border-white/5">
+                            <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center font-black text-white text-xs border border-white/10 shadow-lg shrink-0">
+                                {currentUser?.name?.[0]}
+                            </div>
+                            <div className="flex-1 min-w-0 animate-fade-in">
+                                <p className="text-xs font-black text-white truncate">{currentUser?.name}</p>
+                                <p className="text-[9px] font-bold text-indigo-400 uppercase truncate">{currentUser?.role}</p>
+                            </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-xs font-black text-white truncate">{currentUser?.name}</p>
-                            <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest truncate">{currentUser?.role}</p>
-                        </div>
-                    </div>
-
-                    <button onClick={handleLogout} className="w-full flex items-center gap-4 p-4 rounded-2xl bg-rose-500/10 text-rose-500 hover:bg-rose-50 hover:text-white transition-all font-black text-[10px] uppercase tracking-widest shadow-lg shadow-rose-500/5">
-                        <LogOut size={18} /> Encerrar Sessão
+                    )}
+                    <button onClick={handleLogout} className={`flex items-center gap-4 p-4 rounded-2xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all font-black text-[10px] uppercase tracking-widest ${sidebarCollapsed ? 'justify-center' : 'w-full'}`}>
+                        <LogOut size={18} /> {!sidebarCollapsed && <span className="animate-fade-in">Encerrar</span>}
                     </button>
-
-                    <div className="flex items-center justify-between px-2">
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                            <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Live Node Stable</span>
-                        </div>
-                        <span className="text-[8px] font-black text-slate-600 uppercase tracking-tighter">v82.5 SRE</span>
-                    </div>
                 </div>
             </aside>
 
+            {/* ÁREA DE CONTEÚDO PRINCIPAL */}
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-                <header className="h-24 bg-white border-b border-slate-200 flex items-center justify-between px-8 lg:px-12 shrink-0 z-50">
-                    <div className="flex items-center gap-6 flex-1">
-                        <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-3 bg-slate-100 rounded-xl text-slate-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 lg:px-10 shrink-0 z-50">
+                    <div className="flex items-center gap-4 flex-1">
+                        <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-3 bg-slate-100 rounded-xl text-slate-600">
                             <Menu size={20} />
                         </button>
-                        <form onSubmit={handleGlobalSearch} className="hidden md:flex relative w-full max-w-xl">
-                            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                        <div className="hidden md:flex relative w-full max-w-lg">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                             <input
-                                value={searchQuery}
-                                onChange={(e: any) => setSearchQuery(e.target.value)}
-                                className="w-full pl-14 pr-16 py-4 bg-slate-50 border border-slate-200 rounded-[1.5rem] text-xs font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all shadow-inner"
-                                placeholder="Consultar Kernel S.I.E (IA Search)..."
+                                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-[11px] font-bold outline-none"
+                                placeholder="Consultar Kernel S.I.E..."
                             />
-                            <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 p-2.5 bg-slate-900 text-white rounded-xl shadow-md hover:bg-indigo-600 transition-all">
-                                {isSearching ? <Loader2 className="animate-spin" size={16} /> : <Sparkles size={16} />}
-                            </button>
-                        </form>
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-4 lg:gap-6 bg-white rounded-[2rem] p-1.5 border border-slate-100 shadow-sm">
-                        <button onClick={() => { setActiveTab('settings'); setSettingsTab('API'); }} className="flex items-center gap-3 px-8 py-2.5 bg-slate-900 text-white rounded-[1.25rem] font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl">
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => { setActiveTab('settings'); setSettingsTab('API'); }} className="hidden sm:flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 shadow-lg">
                             <Key size={14}/> AI GATEWAY
                         </button>
-                        <button onClick={() => setActiveTab('settings')} className="p-3 bg-slate-100 rounded-xl text-slate-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                        <button onClick={() => setActiveTab('settings')} className="p-3 bg-slate-100 rounded-xl text-slate-600 hover:bg-indigo-600 hover:text-white transition-all">
                             <SettingsIcon size={20} />
                         </button>
                     </div>
                 </header>
 
-                <main className="flex-1 flex flex-col min-h-0 bg-[#f8fafc] overflow-hidden relative">
-                    {searchResult && (
-                        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] w-full max-w-2xl px-8">
-                            <div className="bg-slate-900 text-white p-10 rounded-[2.5rem] shadow-2xl border border-indigo-500/30 animate-scale-in relative">
-                                <button onClick={() => setSearchResult(null)} className="absolute top-6 right-6 p-2 text-slate-500 hover:text-white transition-colors">
-                                    <X size={24} />
-                                </button>
-                                <p className="text-indigo-400 font-black uppercase text-[10px] tracking-widest mb-4 flex items-center gap-2">
-                                    <Sparkles size={14} /> SRE Advisor Insight
-                                </p>
-                                <p className="text-base font-medium leading-relaxed italic">"{searchResult}"</p>
-                            </div>
-                        </div>
-                    )}
-
-                    <div className={`flex-1 flex flex-col min-h-0 w-full ${activeTab === 'surveys' ? '' : 'p-6 lg:p-12'}`}>
+                <main className="flex-1 flex flex-col min-h-0 bg-[#fcfcfd] overflow-hidden relative">
+                    <div className="flex-1 flex flex-col min-h-0 w-full overflow-y-auto custom-scrollbar p-4 lg:p-8">
                         <Suspense fallback={
-                            <div className="p-20 text-center flex flex-col items-center">
-                                <Loader2 className="animate-spin text-indigo-600 mb-4" size={48} />
-                                <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest">Inicializando Módulo Operacional...</p>
-                            </div>
+                            <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" size={40}/></div>
                         }>
                             {activeTab === 'dashboard' && <Dashboard onNavigate={setActiveTab} />}
-                            {activeTab === 'users' && <UserManagement templates={templates} />}
+                            {activeTab === 'users' && <UserManagement />}
                             {activeTab === 'finance' && <Finance />}
                             {activeTab === 'settings' && <Settings systemInfo={systemInfo} onUpdateSystemInfo={setSystemInfo} templates={templates} onUpdateTemplates={setTemplates} initialTab={settingsTab} />}
                             {activeTab === 'surveys' && <Surveys />}
@@ -274,10 +225,7 @@ const App = () => {
             </div>
 
             {sidebarOpen && (
-                <div
-                    onClick={() => setSidebarOpen(false)}
-                    className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[55] lg:hidden animate-fade-in"
-                ></div>
+                <div onClick={() => setSidebarOpen(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[55] lg:hidden animate-fade-in"></div>
             )}
         </div>
     );

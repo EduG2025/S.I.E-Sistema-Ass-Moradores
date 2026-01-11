@@ -1,4 +1,3 @@
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -10,7 +9,9 @@ const __dirname = path.dirname(__filename);
 export default defineConfig({
   plugins: [
     react({
-      jsxRuntime: 'automatic'
+      jsxRuntime: 'automatic',
+      // Força o modo de produção no compilador de JSX
+      jsxImportSource: 'react',
     })
   ],
   resolve: {
@@ -34,7 +35,8 @@ export default defineConfig({
         'react',
         'react-dom',
         'react-dom/client',
-        'react/jsx-runtime'
+        'react/jsx-runtime',
+        'react/jsx-dev-runtime'
       ],
       output: {
         format: 'esm'

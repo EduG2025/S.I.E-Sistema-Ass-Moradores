@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { financialService, demographicsService } from '../services/api';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { 
   AlertTriangle, Users, Loader2, TrendingUp, 
-  Shield, ChevronRight, UserPlus, FileText, Activity, Zap, Landmark, Sparkles, ShoppingBag, Leaf
+  Shield, ChevronRight, Activity, Zap, Landmark, Sparkles, 
+  ShoppingBag, Leaf
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -12,123 +13,102 @@ interface DashboardProps {
 
 const Dashboard = ({ onNavigate }: DashboardProps) => {
   const [stats, setStats] = useState<any>(null);
-  const [socialStats, setSocialStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-      const loadAllStats = async () => {
+      const loadAll = async () => {
           try {
-              const [finRes, socialRes] = await Promise.all([
+              const [fin, soc] = await Promise.all([
                   financialService.getDashboardStats(),
                   demographicsService.getStats()
               ]);
-              setStats(finRes.data);
-              setSocialStats(socialRes.data);
+              setStats({ ...fin.data, ...soc.data });
           } catch (error) {
-              setStats({ balance: 0, openIncidents: 0, totalUsers: 0, sla: 'N/A' });
-          } finally {
-              setLoading(false);
-          }
+              console.error("Dashboard Sync Failed");
+          } finally { setLoading(false); }
       };
-      loadAllStats();
+      loadAll();
   }, []);
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center h-[70vh]">
-      <Loader2 className="animate-spin text-indigo-600 mb-4" size={56}/>
-      <p className="text-slate-400 font-black animate-pulse text-[10px] uppercase tracking-[0.4em]">Sincronizando Cluster de Dados...</p>
+    <div className="flex-1 flex flex-col items-center justify-center p-20">
+      <Loader2 className="animate-spin text-indigo-600 mb-4" size={48}/>
+      <p className="text-slate-400 font-black animate-pulse text-[10px] uppercase tracking-widest">Sincronizando Sistema...</p>
     </div>
   );
 
   return (
-    <div className="space-y-10 animate-fade-in pb-12">
-      {/* Hero Section - Missão Crítica */}
-      <div className="bg-slate-900 rounded-[3.5rem] p-12 text-white relative overflow-hidden shadow-2xl border border-white/5">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
-          <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-10">
-              <div className="space-y-6 max-w-3xl">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 px-4 py-1.5 bg-indigo-500/20 rounded-full w-fit border border-indigo-500/30">
-                        <Shield size={16} className="text-indigo-400"/>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-indigo-300">SRE Operational Core V100.0</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-4 py-1.5 bg-emerald-500/20 rounded-full w-fit border border-emerald-500/30">
-                        <Activity size={16} className="text-emerald-400"/>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300">Sistema Estabilizado</span>
+    <div className="flex-1 flex flex-col min-h-0 space-y-8 animate-fade-in max-w-[1600px] mx-auto overflow-y-auto custom-scrollbar pr-2">
+      {/* HEADER PADRÃO S.I.E */}
+      <div className="bg-slate-900 border border-white/5 rounded-[3rem] p-10 relative overflow-hidden shadow-2xl">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+              <div className="lg:col-span-8 space-y-6">
+                  <div className="flex flex-wrap gap-3">
+                    <div className="px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full flex items-center gap-2">
+                        <Shield size={12} className="text-indigo-400"/>
+                        <span className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">SISTEMA ATIVO</span>
                     </div>
                   </div>
-                  <h1 className="text-4xl md:text-6xl font-black tracking-tightest leading-[0.9]">
+                  <h1 className="text-5xl font-black text-white tracking-tightest leading-none">
                       S.I.E — Sistema <br/>
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-emerald-400">Inteligente Ativo</span>
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-emerald-400 italic">Inteligente Ativo</span>
                   </h1>
                   <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-xl">
-                      Gestão soberana para Associações e Condomínios com inteligência demográfica e governança digital.
+                      Plataforma integrada para governança e gestão colaborativa de associações e condomínios.
                   </p>
               </div>
-              <div className="grid grid-cols-2 gap-4 shrink-0">
-                  <div className="bg-white/5 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/10 text-center shadow-2xl">
-                      <p className="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-2">Social Score</p>
-                      <h3 className="text-4xl font-black">{socialStats?.totalPopulation > 0 ? '782' : '--'}</h3>
+              <div className="lg:col-span-4 grid grid-cols-2 gap-4">
+                  <div className="bg-white/5 border border-white/5 p-6 rounded-3xl backdrop-blur-xl text-center">
+                      <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-2">Membros</p>
+                      <h3 className="text-3xl font-black text-white">{stats?.totalPopulation || '--'}</h3>
                   </div>
-                  <div className="bg-white/5 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/10 text-center shadow-2xl">
-                      <p className="text-[10px] font-black text-emerald-300 uppercase tracking-widest mb-2">ESG Level</p>
-                      <h3 className="text-4xl font-black">A+</h3>
+                  <div className="bg-white/5 border border-white/5 p-6 rounded-3xl backdrop-blur-xl text-center">
+                      <p className="text-[8px] font-black text-emerald-400 uppercase tracking-widest mb-2">ESG Score</p>
+                      <h3 className="text-3xl font-black text-white">A+</h3>
                   </div>
               </div>
           </div>
       </div>
 
-      {/* Grid Principal de Telemetria */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* METRIC GRID */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { title: "Caixa Operacional", value: `R$ ${(stats?.balance || 0).toLocaleString('pt-BR')}`, icon: TrendingUp, color: 'text-emerald-500', tab: 'finance', desc: 'Saldo em Cluster' },
-          { title: "Alertas Watchdog", value: stats?.openIncidents || 0, icon: AlertTriangle, color: 'text-rose-500', tab: 'operations', desc: 'Severidade Crítica' },
-          { title: "Membros Ativos", value: stats?.totalUsers || 0, icon: Users, color: 'text-indigo-500', tab: 'users', desc: 'População Validada' },
-          { title: "Economia Circular", value: "24", icon: ShoppingBag, color: 'text-amber-500', tab: 'marketplace', desc: 'Anúncios Ativos' }
-        ].map((stat, i) => (
-          <div key={stat.title} onClick={() => onNavigate(stat.tab)} className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all cursor-pointer group relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-150 group-hover:rotate-12 transition-transform duration-500">
-                  <stat.icon size={80}/>
+          { title: "Caixa Total", value: `R$ ${(stats?.balance || 0).toLocaleString('pt-BR')}`, icon: Landmark, color: 'text-emerald-500', tab: 'finance' },
+          { title: "Ocorrências", value: stats?.openIncidents || 0, icon: AlertTriangle, color: 'text-rose-500', tab: 'operations' },
+          { title: "Projetos Ativos", value: "08", icon: Zap, color: 'text-indigo-500', tab: 'projects' },
+          { title: "Marketplace", value: "24", icon: ShoppingBag, color: 'text-amber-500', tab: 'marketplace' }
+        ].map((item) => (
+          <div key={item.title} onClick={() => onNavigate(item.tab)} className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all cursor-pointer group">
+              <div className="flex justify-between items-start mb-6">
+                  <div className={`p-4 rounded-2xl bg-slate-50 ${item.color} group-hover:scale-110 transition-transform`}><item.icon size={24}/></div>
+                  <ChevronRight size={18} className="text-slate-200 group-hover:text-indigo-500 transition-colors"/>
               </div>
-              <div className="flex justify-between items-start">
-                  <div className={`p-4 rounded-2xl bg-slate-50 ${stat.color} group-hover:scale-110 transition-transform`}><stat.icon size={28}/></div>
-                  <ChevronRight size={18} className="text-slate-300"/>
-              </div>
-              <div className="mt-6 relative z-10">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stat.title}</p>
-                  <h3 className="text-3xl font-black text-slate-800 mt-1 tracking-tighter">{stat.value}</h3>
-                  <p className="text-[9px] text-slate-400 font-bold uppercase mt-2">{stat.desc}</p>
-              </div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.title}</p>
+              <h3 className="text-3xl font-black text-slate-800 mt-1 tracking-tighter">{item.value}</h3>
           </div>
         ))}
       </div>
 
-      {/* Seção de Atalhos Rápidos SRE */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm">
-              <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                      <Activity size={20} className="text-indigo-600"/> Handshake Operacional
-                  </h3>
-                  <button onClick={() => onNavigate('timeline')} className="text-[10px] font-black text-indigo-600 uppercase hover:underline">Ver Cronograma</button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <button onClick={() => onNavigate('surveys')} className="p-6 bg-slate-50 hover:bg-indigo-50 border border-slate-100 rounded-[2rem] text-left transition-all group">
-                      <div className="flex items-center gap-4">
-                          <div className="p-3 bg-white rounded-xl text-indigo-600 group-hover:scale-110 transition-transform"><Sparkles size={20}/></div>
-                          <div>
-                              <p className="font-black text-slate-800 text-sm">Lançar Censo 2025</p>
-                              <p className="text-[10px] text-slate-400 font-bold uppercase">Inteligência Demográfica</p>
-                          </div>
+      {/* SHORTCUTS */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-10">
+          <div className="lg:col-span-2 bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm space-y-8">
+              <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-4">
+                  <Activity size={20} className="text-indigo-600"/> Protocolos de Gestão
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <button onClick={() => onNavigate('surveys')} className="p-8 bg-slate-50 border border-slate-100 rounded-[2rem] text-left hover:bg-indigo-50 transition-all group flex items-center gap-6">
+                      <div className="p-4 bg-white rounded-2xl shadow-sm text-indigo-600 group-hover:scale-110 transition-transform"><Sparkles size={24}/></div>
+                      <div>
+                          <p className="font-black text-slate-800 text-sm">Disparar Censo</p>
+                          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Coleta de Dados</p>
                       </div>
                   </button>
-                  <button onClick={() => onNavigate('assemblies')} className="p-6 bg-slate-50 hover:bg-emerald-50 border border-slate-100 rounded-[2rem] text-left transition-all group">
-                      <div className="flex items-center gap-4">
-                          <div className="p-3 bg-white rounded-xl text-emerald-600 group-hover:scale-110 transition-transform"><FileText size={20}/></div>
-                          <div>
-                              <p className="font-black text-slate-800 text-sm">Convocação Digital</p>
-                              <p className="text-[10px] text-slate-400 font-bold uppercase">Gestão de Quórum</p>
-                          </div>
+                  <button onClick={() => onNavigate('assemblies')} className="p-8 bg-slate-50 border border-slate-100 rounded-[2rem] text-left hover:bg-emerald-50 transition-all group flex items-center gap-6">
+                      <div className="p-4 bg-white rounded-2xl shadow-sm text-emerald-600 group-hover:scale-110 transition-transform"><Landmark size={24}/></div>
+                      <div>
+                          <p className="font-black text-slate-800 text-sm">Nova Assembleia</p>
+                          <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Governança Digital</p>
                       </div>
                   </button>
               </div>
@@ -137,11 +117,13 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
           <div className="bg-indigo-600 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden flex flex-col justify-between">
               <div className="absolute top-0 right-0 p-8 opacity-10"><Zap size={120}/></div>
               <div>
-                  <h3 className="text-2xl font-black tracking-tightest">Ghostwriter IA</h3>
-                  <p className="text-indigo-100 text-sm mt-3 font-medium opacity-80">Converta discussões em atas oficiais automaticamente via Gemini 3 Pro.</p>
+                  <h3 className="text-2xl font-black tracking-tightest">SRE Ghostwriter</h3>
+                  <p className="text-indigo-100/70 text-xs mt-3 font-medium leading-relaxed">
+                      Gerador de atas e documentos oficiais através de inteligência artificial.
+                  </p>
               </div>
-              <button onClick={() => onNavigate('neural_chat')} className="w-full py-5 bg-white text-indigo-600 rounded-[1.75rem] font-black text-xs uppercase tracking-widest shadow-xl hover:bg-indigo-50 transition-all flex items-center justify-center gap-3">
-                  <Sparkles size={18}/> Iniciar Advisor IA
+              <button onClick={() => onNavigate('neural_chat')} className="w-full py-5 bg-white text-indigo-600 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-indigo-50 transition-all active:scale-95">
+                  Iniciar Assistente IA
               </button>
           </div>
       </div>
