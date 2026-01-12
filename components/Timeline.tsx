@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { AgendaEvent } from '../types';
 import { agendaService } from '../services/api';
@@ -43,13 +44,20 @@ const Timeline = () => {
           }
           setIsModalOpen(false);
           loadData();
+          alert("✅ Marco sincronizado no Kernel.");
+      } catch (err) {
+          alert("Erro ao salvar marco temporal.");
       } finally { setIsSaving(false); }
   };
 
   const handleDelete = async (id: number | string) => {
-      if (!confirm("Confirmar exclusão?")) return;
-      await agendaService.delete(id);
-      loadData();
+      if (!confirm("Confirmar exclusão deste marco no cronograma?")) return;
+      try {
+          await agendaService.delete(id);
+          loadData();
+      } catch (err) {
+          alert("Erro ao excluir.");
+      }
   };
 
   const getEventConfig = (type: AgendaEvent['type']) => {
@@ -63,7 +71,6 @@ const Timeline = () => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-6 animate-fade-in overflow-hidden">
-        {/* Header Compacto */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-slate-900 p-8 rounded-[2rem] text-white shadow-xl shrink-0">
             <div>
                 <h2 className="text-3xl font-black tracking-tightest leading-none">Cronograma Ativo</h2>
@@ -74,7 +81,6 @@ const Timeline = () => {
             </button>
         </div>
 
-        {/* Viewport Isolado com Linha do Tempo */}
         <div className="bg-white rounded-[3rem] shadow-sm border border-slate-200 flex-1 overflow-hidden flex flex-col min-h-0">
             {loading ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-20">
@@ -84,20 +90,17 @@ const Timeline = () => {
             ) : (
                 <div className="flex-1 overflow-y-auto p-6 lg:p-12 custom-scrollbar">
                     <div className="max-w-5xl mx-auto space-y-8 relative">
-                        {/* Linha Vertical SRE */}
                         <div className="absolute left-[39px] md:left-[49px] top-4 bottom-4 w-1 bg-slate-100 rounded-full hidden sm:block"></div>
                         
-                        {events.map((event, idx) => {
+                        {events.map((event) => {
                             const config = getEventConfig(event.type);
                             const Icon = config.icon;
                             return (
                                 <div key={event.id} className="relative flex flex-col sm:flex-row gap-6 md:gap-10 group animate-fade-in">
-                                    {/* Indicador de Status */}
                                     <div className={`w-20 h-20 md:w-24 md:h-24 rounded-[2rem] shrink-0 flex items-center justify-center shadow-2xl z-10 transition-transform group-hover:scale-110 border-4 border-white ${config.color}`}>
                                         <Icon size={28} className="text-white"/>
                                     </div>
                                     
-                                    {/* Card de Dados (High Density) */}
                                     <div className="flex-1 bg-white p-8 md:p-10 rounded-[2.5rem] border border-slate-100 hover:border-indigo-200 transition-all hover:shadow-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden group/card">
                                         <div className="space-y-4 flex-1">
                                             <div className="flex flex-wrap items-center gap-4">
@@ -135,10 +138,9 @@ const Timeline = () => {
             )}
         </div>
 
-        {/* Modal Registry */}
         {isModalOpen && (
-            <div className="fixed inset-0 bg-slate-950/90 z-[300] flex items-center justify-center p-6 backdrop-blur-xl animate-fade-in">
-                <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-white/20 animate-scale-in flex flex-col max-h-[90vh]">
+            <div className="fixed inset-0 bg-slate-950/95 z-[2000] flex items-center justify-center p-6 backdrop-blur-xl animate-fade-in">
+                <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-white/10 animate-scale-in flex flex-col max-h-[90vh]">
                     <form onSubmit={handleSave} className="flex flex-col h-full">
                         <div className="p-8 lg:p-12 bg-slate-900 text-white flex justify-between items-center shrink-0">
                             <div className="flex items-center gap-6">
@@ -151,13 +153,13 @@ const Timeline = () => {
                             <button type="button" onClick={() => setIsModalOpen(false)} className="p-4 hover:bg-white/10 rounded-2xl transition-all text-white"><X size={28}/></button>
                         </div>
                         <div className="p-8 lg:p-12 space-y-10 overflow-y-auto custom-scrollbar flex-1 bg-[#fcfcfd]">
-                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Título</label><input required className="w-full font-black h-16 text-xl bg-white border-slate-200 rounded-2xl px-6" value={editingEvent.title} onChange={e => setEditingEvent({...editingEvent, title: e.target.value})} /></div>
+                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Título do Evento</label><input required className="w-full font-black h-16 text-xl bg-white border-slate-200 rounded-2xl px-6 shadow-inner" value={editingEvent.title} onChange={e => setEditingEvent({...editingEvent, title: e.target.value})} /></div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data & Hora</label><input type="datetime-local" className="w-full font-bold h-16 bg-white border-slate-200 rounded-2xl px-6" value={editingEvent.date} onChange={e => setEditingEvent({...editingEvent, date: e.target.value})} /></div>
-                                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Categoria</label><select className="w-full font-bold h-16 bg-white border-slate-200 rounded-2xl px-6" value={editingEvent.type} onChange={e => setEditingEvent({...editingEvent, type: e.target.value as any})}><option value="MEETING">Reunião</option><option value="MAINTENANCE">Manutenção</option><option value="EVENT">Evento</option><option value="DEADLINE">Prazo</option></select></div>
+                                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data & Hora Agendada</label><input type="datetime-local" className="w-full font-bold h-16 bg-white border-slate-200 rounded-2xl px-6 shadow-inner" value={editingEvent.date} onChange={e => setEditingEvent({...editingEvent, date: e.target.value})} /></div>
+                                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoria de Fluxo</label><select className="w-full font-bold h-16 bg-white border-slate-200 rounded-2xl px-6 shadow-inner appearance-none" value={editingEvent.type} onChange={e => setEditingEvent({...editingEvent, type: e.target.value as any})}><option value="MEETING">Reunião de Conselho</option><option value="MAINTENANCE">Manutenção Preventiva</option><option value="EVENT">Evento Comunitário</option><option value="DEADLINE">Prazo de Resolução</option></select></div>
                             </div>
-                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Localização</label><input className="w-full font-bold h-16 bg-white border-slate-200 rounded-2xl px-6" value={editingEvent.location} onChange={e => setEditingEvent({...editingEvent, location: e.target.value})} /></div>
-                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Detalhes</label><textarea rows={4} className="w-full font-medium bg-white border-slate-200 rounded-2xl p-6" value={editingEvent.description} onChange={e => setEditingEvent({...editingEvent, description: e.target.value})} /></div>
+                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Localização Física / Virtual</label><input className="w-full font-bold h-16 bg-white border-slate-200 rounded-2xl px-6 shadow-inner" value={editingEvent.location} onChange={e => setEditingEvent({...editingEvent, location: e.target.value})} placeholder="Ex: Sede Social ou Meet" /></div>
+                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição do Protocolo</label><textarea rows={4} className="w-full font-medium bg-white border-slate-200 rounded-2xl p-6 shadow-inner" value={editingEvent.description} onChange={e => setEditingEvent({...editingEvent, description: e.target.value})} /></div>
                         </div>
                         <div className="p-10 bg-slate-50 border-t border-slate-100 flex justify-end gap-6 shrink-0">
                             <button type="button" onClick={() => setIsModalOpen(false)} className="px-10 py-5 text-slate-400 font-black text-xs uppercase tracking-widest">Abortar</button>

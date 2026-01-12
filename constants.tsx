@@ -7,25 +7,26 @@ import {
 } from 'lucide-react';
 
 export const MENU_ITEMS = [
-  { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard, roles: ['ADMIN', 'PRESIDENT', 'VICE_PRESIDENT', 'SINDIC', 'RESIDENT', 'CONCIERGE', 'MERCHANT', 'COUNCIL'] },
-  { id: 'neural_chat', label: 'SRE Advisor (Chat)', icon: MessageSquareText, roles: ['ADMIN', 'PRESIDENT', 'VICE_PRESIDENT', 'SINDIC', 'RESIDENT', 'CONCIERGE', 'COUNCIL'] },
-  { id: 'demographics', label: 'Observatório Social', icon: BarChart3, roles: ['ADMIN', 'PRESIDENT', 'COUNCIL'] },
-  { id: 'map', label: 'Mapa Inteligente', icon: MapIcon, roles: ['ADMIN', 'PRESIDENT', 'VICE_PRESIDENT', 'SINDIC', 'CONCIERGE'] },
-  { id: 'digital_watch', label: 'Vigia Digital', icon: Camera, roles: ['ADMIN', 'PRESIDENT', 'CONCIERGE'] },
-  { id: 'sustainability', label: 'Gestão ESG', icon: Leaf, roles: ['ADMIN', 'PRESIDENT'] },
-  { id: 'finance', label: 'Financeiro', icon: Wallet, roles: ['ADMIN', 'PRESIDENT', 'VICE_PRESIDENT', 'SINDIC', 'RESIDENT'] },
-  { id: 'operations', label: 'Ocorrências (Watchdog)', icon: ShieldAlert, roles: ['ADMIN', 'PRESIDENT', 'SINDIC', 'CONCIERGE', 'RESIDENT'] },
-  { id: 'documents', label: 'Hub de Documentos', icon: FileText, roles: ['ADMIN', 'PRESIDENT', 'SINDIC', 'COUNCIL'] },
-  { id: 'assemblies', label: 'Assembleia Digital', icon: Gavel, roles: ['ADMIN', 'PRESIDENT', 'RESIDENT', 'COUNCIL'] },
-  { id: 'users', label: 'Famílias & Membros', icon: Users, roles: ['ADMIN', 'PRESIDENT', 'VICE_PRESIDENT', 'SINDIC', 'CONCIERGE'] },
-  { id: 'surveys', label: 'Censo & Pesquisas', icon: ClipboardList, roles: ['ADMIN', 'PRESIDENT', 'VICE_PRESIDENT', 'SINDIC', 'RESIDENT'] },
-  { id: 'marketplace', label: 'Marketplace Local', icon: ShoppingBag, roles: ['ADMIN', 'PRESIDENT', 'VICE_PRESIDENT', 'SINDIC', 'RESIDENT', 'MERCHANT'] },
-  { id: 'reservations', label: 'Reservas de Áreas', icon: Calendar, roles: ['ADMIN', 'PRESIDENT', 'RESIDENT'] },
-  { id: 'timeline', label: 'Cronograma Ativo', icon: CalendarClock, roles: ['ADMIN', 'PRESIDENT', 'SINDIC', 'RESIDENT'] },
-  { id: 'projects', label: 'Obras & Projetos', icon: Landmark, roles: ['ADMIN', 'PRESIDENT', 'SINDIC'] },
-  { id: 'assets', label: 'Inventário / Ativos', icon: Briefcase, roles: ['ADMIN', 'PRESIDENT', 'SINDIC'] },
-  { id: 'suggestions', label: 'Ouvidoria Digital', icon: MessageSquare, roles: ['ADMIN', 'PRESIDENT', 'RESIDENT'] },
-  { id: 'settings', label: 'Console Master', icon: Settings, roles: ['ADMIN', 'PRESIDENT'] },
+  { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard, permissionId: 'view_dashboard' },
+  { id: 'neural_chat', label: 'SRE Advisor (Chat)', icon: MessageSquareText, permissionId: 'use_ai_chat' },
+  { id: 'demographics', label: 'Observatório Social', icon: BarChart3, permissionId: 'view_demographics' },
+  { id: 'map', label: 'Mapa Inteligente', icon: MapIcon, permissionId: 'view_dashboard' },
+  { id: 'digital_watch', label: 'Vigia Digital', icon: Camera, permissionId: 'manage_operations' },
+  { id: 'sustainability', label: 'Gestão ESG', icon: Leaf, permissionId: 'manage_sustainability' },
+  { id: 'finance', label: 'Financeiro', icon: Wallet, permissionId: 'view_finances' },
+  { id: 'operations', label: 'Ocorrências (Watchdog)', icon: ShieldAlert, permissionId: 'view_operations' },
+  { id: 'documents', label: 'Hub de Documentos', icon: FileText, permissionId: 'manage_documents' },
+  { id: 'assemblies', label: 'Assembleia Digital', icon: Gavel, permissionId: 'manage_assemblies' },
+  { id: 'users', label: 'Famílias & Membros', icon: Users, permissionId: 'manage_users' },
+  // FIX: Substituído 'manage_surveys' por 'ClipboardList' que está devidamente importado da lucide-react
+  { id: 'surveys', label: 'Censo & Pesquisas', icon: ClipboardList, permissionId: 'manage_users' },
+  { id: 'marketplace', label: 'Marketplace Local', icon: ShoppingBag, permissionId: 'manage_marketplace' },
+  { id: 'reservations', label: 'Reservas de Áreas', icon: Calendar, permissionId: 'manage_reservations' },
+  { id: 'timeline', label: 'Cronograma Ativo', icon: CalendarClock, permissionId: 'view_timeline' },
+  { id: 'projects', label: 'Obras & Projetos', icon: Landmark, permissionId: 'view_projects' },
+  { id: 'assets', label: 'Inventário / Ativos', icon: Briefcase, permissionId: 'view_assets' },
+  { id: 'suggestions', label: 'Ouvidoria Digital', icon: MessageSquare, permissionId: 'view_suggestions' },
+  { id: 'settings', label: 'Console Master', icon: Settings, permissionId: 'manage_settings' },
 ];
 
 export const AVAILABLE_ROLES = [
@@ -48,9 +49,12 @@ export const SYSTEM_PERMISSIONS = [
   { id: 'manage_assemblies', label: 'Gerir Assembleias', module: 'GOVERNANÇA' },
   { id: 'view_demographics', label: 'Ver Observatório Social', module: 'SOCIAL' },
   { id: 'manage_sustainability', label: 'Gerir ESG', module: 'MEIO AMBIENTE' },
+  { id: 'view_timeline', label: 'Ver Cronograma', module: 'PLANEJAMENTO' },
+  { id: 'view_projects', label: 'Ver Projetos/Obras', module: 'PLANEJAMENTO' },
+  { id: 'view_assets', label: 'Ver Inventário', module: 'PATRIMÔNIO' },
+  { id: 'view_suggestions', label: 'Ver Ouvidoria', module: 'SOCIAL' },
 ];
 
-// SRE FIX: Tipagem explícita como SystemInfo para garantir compatibilidade com unions do Kernel
 export const DEFAULT_SYSTEM_INFO: SystemInfo = {
   name: 'S.I.E — Sistema Inteligente Ativo',
   cnpj: '00.000.000/0001-00',

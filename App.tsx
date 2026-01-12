@@ -1,9 +1,10 @@
-import React, { useState, Suspense, lazy, useEffect } from 'react';
+
+import React, { useState, Suspense, lazy, useEffect, useMemo } from 'react';
 import { MENU_ITEMS, DEFAULT_SYSTEM_INFO, DEFAULT_ID_CARD_TEMPLATE } from './constants';
 import { SystemInfo, User, IdCardTemplate } from './types';
 import {
     LogOut, Menu, Loader2, Settings as SettingsIcon, Shield,
-    Bell, Zap, Search, Sparkles, X, Key, ChevronLeft, ChevronRight
+    Bell, Zap, Search, Sparkles, X, Key, ChevronLeft, ChevronRight, Lock
 } from 'lucide-react';
 import { systemService, authService, templateService } from './services/api';
 
@@ -56,7 +57,8 @@ const App = () => {
 
         try {
             const userRes = await authService.me();
-            setCurrentUser(userRes.data);
+            const userData = userRes.data;
+            setCurrentUser(userData);
             setIsAuthenticated(true);
 
             const [infoRes, templatesRes] = await Promise.all([
@@ -75,6 +77,28 @@ const App = () => {
     };
 
     useEffect(() => { initKernel(); }, []);
+
+    // MOTOR DE VISIBILIDADE RBAC REAL
+    const canSee = (permissionId: string) => {
+        if (!currentUser) return false;
+        // Protocolo SRE: Bypass master removido para teste real de filtragem solicitado pelo usuário.
+        // Se desejar reativar o master absoluto: if (currentUser.id === 1) return true;
+        return currentUser.permissions?.includes(permissionId);
+    };
+
+    // Componente de Fallback para Acesso Negado
+    const AccessDenied = () => (
+        <div className="flex-1 flex flex-col items-center justify-center p-20 text-center animate-fade-in">
+            <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-inner">
+                <Lock size={48} />
+            </div>
+            <h3 className="text-3xl font-black text-slate-800 tracking-tighter uppercase">Acesso Bloqueado</h3>
+            <p className="text-slate-500 font-medium max-w-md mt-4 leading-relaxed">
+                O seu cargo (<span className="text-indigo-600 font-black">{currentUser?.role}</span>) não possui permissão de leitura para este módulo na Matriz de Governança.
+            </p>
+            <button onClick={() => setActiveTab('dashboard')} className="mt-10 px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-600 transition-all">Retornar ao Dashboard</button>
+        </div>
+    );
 
     const handleLoginSuccess = (user: User, token: string) => {
         localStorage.setItem('sie_auth_token', token);
@@ -109,7 +133,6 @@ const App = () => {
 
     return (
         <div className="h-screen w-screen overflow-hidden flex bg-[#f8fafc] font-sans">
-            {/* SIDEBAR REPROJETADA */}
             <aside className={`fixed lg:static inset-y-0 left-0 z-[60] bg-slate-950 border-r border-white/5 flex flex-col shrink-0 transition-all duration-500 ${sidebarOpen ? 'translate-x-0 w-80' : '-translate-x-full w-80 lg:translate-x-0'} ${sidebarCollapsed ? 'lg:w-24' : 'lg:w-80'}`}>
                 <div className={`p-8 flex items-center justify-between ${sidebarCollapsed ? 'flex-col gap-4' : ''}`}>
                     <div className="flex items-center gap-4">
@@ -135,7 +158,7 @@ const App = () => {
 
                 <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-2 custom-scrollbar">
                     {MENU_ITEMS.map((item) => {
-                        if (currentUser && !item.roles.includes(currentUser.role as any)) return null;
+                        if (!canSee(item.permissionId)) return null;
                         const Icon = item.icon;
                         const isActive = activeTab === item.id;
                         return (
@@ -170,7 +193,6 @@ const App = () => {
                 </div>
             </aside>
 
-            {/* ÁREA DE CONTEÚDO PRINCIPAL */}
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
                 <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 lg:px-10 shrink-0 z-50">
                     <div className="flex items-center gap-4 flex-1">
@@ -187,38 +209,40 @@ const App = () => {
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <button onClick={() => { setActiveTab('settings'); setSettingsTab('API'); }} className="hidden sm:flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 shadow-lg">
-                            <Key size={14}/> AI GATEWAY
-                        </button>
-                        <button onClick={() => setActiveTab('settings')} className="p-3 bg-slate-100 rounded-xl text-slate-600 hover:bg-indigo-600 hover:text-white transition-all">
-                            <SettingsIcon size={20} />
-                        </button>
+                        {canSee('manage_ai_keys') && (
+                            <button onClick={() => { setActiveTab('settings'); setSettingsTab('API'); }} className="hidden sm:flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 shadow-lg">
+                                <Key size={14}/> AI GATEWAY
+                            </button>
+                        )}
+                        {canSee('manage_settings') && (
+                            <button onClick={() => setActiveTab('settings')} className="p-3 bg-slate-100 rounded-xl text-slate-600 hover:bg-indigo-600 hover:text-white transition-all">
+                                <SettingsIcon size={20} />
+                            </button>
+                        )}
                     </div>
                 </header>
 
                 <main className="flex-1 flex flex-col min-h-0 bg-[#fcfcfd] overflow-hidden relative">
                     <div className="flex-1 flex flex-col min-h-0 w-full overflow-y-auto custom-scrollbar p-4 lg:p-8">
-                        <Suspense fallback={
-                            <div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" size={40}/></div>
-                        }>
-                            {activeTab === 'dashboard' && <Dashboard onNavigate={setActiveTab} />}
-                            {activeTab === 'users' && <UserManagement />}
-                            {activeTab === 'finance' && <Finance />}
-                            {activeTab === 'settings' && <Settings systemInfo={systemInfo} onUpdateSystemInfo={setSystemInfo} templates={templates} onUpdateTemplates={setTemplates} initialTab={settingsTab} />}
-                            {activeTab === 'surveys' && <Surveys />}
-                            {activeTab === 'operations' && <Operations />}
-                            {activeTab === 'projects' && <ProjectManagement />}
-                            {activeTab === 'marketplace' && <MarketPlace />}
-                            {activeTab === 'assets' && <Assets />}
-                            {activeTab === 'neural_chat' && <ChatAssistant />}
-                            {activeTab === 'suggestions' && <SuggestionBox />}
-                            {activeTab === 'reservations' && <Reservations />}
-                            {activeTab === 'documents' && <DocumentHub />}
-                            {activeTab === 'assemblies' && <AssemblyManager />}
-                            {activeTab === 'timeline' && <Timeline />}
-                            {activeTab === 'demographics' && <DemographicAnalysis systemInfo={systemInfo} />}
-                            {activeTab === 'digital_watch' && <DigitalWatch />}
-                            {activeTab === 'sustainability' && <Sustainability />}
+                        <Suspense fallback={<div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" size={40}/></div>}>
+                            {activeTab === 'dashboard' && (canSee('view_dashboard') ? <Dashboard onNavigate={setActiveTab} /> : <AccessDenied />)}
+                            {activeTab === 'users' && (canSee('manage_users') ? <UserManagement /> : <AccessDenied />)}
+                            {activeTab === 'finance' && (canSee('view_finances') ? <Finance /> : <AccessDenied />)}
+                            {activeTab === 'settings' && (canSee('manage_settings') ? <Settings systemInfo={systemInfo} onUpdateSystemInfo={setSystemInfo} templates={templates} onUpdateTemplates={setTemplates} initialTab={settingsTab} /> : <AccessDenied />)}
+                            {activeTab === 'surveys' && (canSee('manage_users') ? <Surveys /> : <AccessDenied />)}
+                            {activeTab === 'operations' && (canSee('view_operations') ? <Operations /> : <AccessDenied />)}
+                            {activeTab === 'projects' && (canSee('view_projects') ? <ProjectManagement /> : <AccessDenied />)}
+                            {activeTab === 'marketplace' && (canSee('manage_marketplace') ? <MarketPlace /> : <AccessDenied />)}
+                            {activeTab === 'assets' && (canSee('view_assets') ? <Assets /> : <AccessDenied />)}
+                            {activeTab === 'neural_chat' && (canSee('use_ai_chat') ? <ChatAssistant /> : <AccessDenied />)}
+                            {activeTab === 'suggestions' && (canSee('view_suggestions') ? <SuggestionBox /> : <AccessDenied />)}
+                            {activeTab === 'reservations' && (canSee('manage_reservations') ? <Reservations /> : <AccessDenied />)}
+                            {activeTab === 'documents' && (canSee('manage_documents') ? <DocumentHub /> : <AccessDenied />)}
+                            {activeTab === 'assemblies' && (canSee('manage_assemblies') ? <AssemblyManager /> : <AccessDenied />)}
+                            {activeTab === 'timeline' && (canSee('view_timeline') ? <Timeline /> : <AccessDenied />)}
+                            {activeTab === 'demographics' && (canSee('view_demographics') ? <DemographicAnalysis systemInfo={systemInfo} /> : <AccessDenied />)}
+                            {activeTab === 'digital_watch' && (canSee('manage_operations') ? <DigitalWatch /> : <AccessDenied />)}
+                            {activeTab === 'sustainability' && (canSee('manage_sustainability') ? <Sustainability /> : <AccessDenied />)}
                         </Suspense>
                     </div>
                 </main>

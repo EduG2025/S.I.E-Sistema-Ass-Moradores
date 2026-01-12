@@ -17,11 +17,15 @@ const Reservations = () => {
         setIsLoading(true);
         try {
             const res = await reservationService.getAll();
-            setReservations(res.data);
+            // SRE FIX: Kernel CRUD retorna { data: [], pagination: {} }. Normalizando para array.
+            const data = res.data?.data || (Array.isArray(res.data) ? res.data : []);
+            setReservations(data);
+        } catch (e) {
+            console.error("[SRE] Falha ao listar reservas:", e);
+            setReservations([]);
         } finally { setIsLoading(false); }
     };
 
-    // FIX: Use any to bypass namespace 'React' error
     const handleSave = async (e: any) => {
         e.preventDefault();
         setIsSaving(true);
@@ -37,8 +41,12 @@ const Reservations = () => {
 
     const handleDelete = async (id: number) => {
         if(!confirm("Cancelar esta reserva?")) return;
-        await reservationService.delete(id);
-        loadData();
+        try {
+            await reservationService.delete(id);
+            loadData();
+        } catch (e) {
+            alert("Erro ao cancelar reserva.");
+        }
     };
 
     return (
@@ -48,7 +56,7 @@ const Reservations = () => {
                     <h2 className="text-3xl font-black tracking-tighter">Reservas de Áreas</h2>
                     <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mt-1">SRE Agenda Common Resources</p>
                 </div>
-                <button onClick={() => setIsModalOpen(true)} className="px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-500 shadow-xl transition-all flex items-center gap-2">
+                <button onClick={() => setIsModalOpen(true)} className="px-8 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-50 shadow-xl transition-all flex items-center gap-2">
                     <Plus size={18}/> Nova Reserva
                 </button>
             </div>
@@ -67,44 +75,39 @@ const Reservations = () => {
                         </div>
                         <div className="space-y-3">
                             <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
-                                <Clock size={14} className="text-slate-400"/> {r.startTime.slice(0,5)} às {r.endTime.slice(0,5)}
+                                <Clock size={14} className="text-slate-400"/> {r.startTime?.slice(0,5)} às {r.endTime?.slice(0,5)}
                             </div>
                             <div className="flex items-center gap-2 text-xs font-medium text-slate-600">
-                                <User size={14} className="text-slate-400"/> {r.userName} (Apt {r.userUnit})
+                                <User size={14} className="text-slate-400"/> {r.userName || 'Membro S.I.E'}
                             </div>
-                        </div>
-                        <div className="mt-6 pt-4 border-t border-slate-50">
-                            <span className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase ${r.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>{r.status}</span>
                         </div>
                     </div>
                 ))}
             </div>
 
             {isModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-md animate-fade-in">
-                    <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 animate-scale-in">
+                <div className="fixed inset-0 bg-slate-900/80 z-[1000] flex items-center justify-center p-4 backdrop-blur-md animate-fade-in">
+                    <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-white/10 animate-scale-in">
                         <form onSubmit={handleSave}>
                             <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
                                 <h3 className="font-black text-2xl tracking-tighter">Agendar Espaço</h3>
-                                <button type="button" onClick={() => setIsModalOpen(false)}><X/></button>
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-all text-slate-400"><X size={24}/></button>
                             </div>
                             <div className="p-10 space-y-6">
-                                {error && <div className="bg-rose-50 text-rose-600 p-4 rounded-2xl text-[10px] font-black uppercase text-center border border-rose-100 flex items-center justify-center gap-2 animate-bounce"><AlertTriangle size={14}/> {error}</div>}
-                                <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Área Comum</label>
-                                    <select className="w-full font-bold" value={newRes.area_name} onChange={e => setNewRes({...newRes, area_name: e.target.value})}>
-                                        <option value="SALÃO DE FESTAS">Salão de Festas</option><option value="CHURRASQUEIRA 01">Churrasqueira 01</option><option value="QUADRA POLIESPORTIVA">Quadra Poliesportiva</option><option value="ESPAÇO GOURMET">Espaço Gourmet</option>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Área Comum</label>
+                                    <select className="w-full font-bold h-14 bg-slate-50 border-slate-200 rounded-2xl px-6" value={newRes.area_name} onChange={e => setNewRes({...newRes, area_name: e.target.value})}>
+                                        <option value="SALÃO DE FESTAS">Salão de Festas</option>
+                                        <option value="CHURRASQUEIRA 01">Churrasqueira 01</option>
+                                        <option value="QUADRA POLIESPORTIVA">Quadra Poliesportiva</option>
                                     </select>
                                 </div>
-                                <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Data</label><input type="date" required className="w-full font-bold" value={newRes.date} onChange={e => setNewRes({...newRes, date: e.target.value})} /></div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Início</label><input type="time" className="w-full font-bold" value={newRes.startTime} onChange={e => setNewRes({...newRes, startTime: e.target.value})} /></div>
-                                    <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Fim</label><input type="time" className="w-full font-bold" value={newRes.endTime} onChange={e => setNewRes({...newRes, endTime: e.target.value})} /></div>
-                                </div>
+                                <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Data</label><input type="date" required className="w-full font-bold h-14 bg-slate-50 border-slate-200 rounded-2xl px-6" value={newRes.date} onChange={e => setNewRes({...newRes, date: e.target.value})} /></div>
                             </div>
                             <div className="p-10 border-t border-slate-100 flex justify-end gap-4 bg-slate-50">
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-10 py-4 text-slate-400 font-black text-xs uppercase">Cancelar</button>
-                                <button type="submit" disabled={isSaving} className="px-14 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase shadow-xl flex items-center gap-3">
-                                    {isSaving ? <Loader2 className="animate-spin"/> : <CheckCircle size={18}/>} Confirmar Agendamento
+                                <button type="submit" disabled={isSaving} className="px-14 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase shadow-xl hover:bg-indigo-600 flex items-center gap-3">
+                                    {isSaving ? <Loader2 className="animate-spin"/> : <CheckCircle size={18}/>} Confirmar
                                 </button>
                             </div>
                         </form>
