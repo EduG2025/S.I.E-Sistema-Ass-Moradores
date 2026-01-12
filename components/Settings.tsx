@@ -1,9 +1,8 @@
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AVAILABLE_ROLES, SYSTEM_PERMISSIONS, DEFAULT_SYSTEM_INFO } from '../constants';
 import { SystemInfo, IdCardTemplate, AIKey } from '../types';
 import { aiKeyService, systemService } from '../services/api';
-import axios from 'axios';
 import {
   Settings as SettingsIcon, Save, Building, Shield, Check, X, Upload,
   Image as ImageIcon, Plus, Trash2, Loader2, Key, Database, Server
@@ -22,7 +21,6 @@ const Settings = ({ systemInfo, onUpdateSystemInfo, templates, onUpdateTemplates
   const [localInfo, setLocalInfo] = useState<SystemInfo>(systemInfo || DEFAULT_SYSTEM_INFO);
   const [aiKeys, setAiKeys] = useState<AIKey[]>([]);
   const [isLoadingKeys, setIsLoadingKeys] = useState(false);
-  const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     if (systemInfo) setLocalInfo(systemInfo);
@@ -36,31 +34,27 @@ const Settings = ({ systemInfo, onUpdateSystemInfo, templates, onUpdateTemplates
     } finally { setIsLoadingKeys(false); }
   }, []);
 
-  const loadPermissions = useCallback(async () => {
-    try {
-      const res = await axios.get('/api/settings/permissions');
-      setRolePermissions(res.data || {});
-    } catch (e) { console.error("[SRE] Permissões indisponíveis."); }
-  }, []);
-
   useEffect(() => {
     if (activeTab === 'API') loadAIKeys();
-    if (activeTab === 'ACCESS') loadPermissions();
-  }, [activeTab, loadAIKeys, loadPermissions]);
+  }, [activeTab, loadAIKeys]);
 
   const handleSaveSystemInfo = async () => {
     setIsSaving(true);
     try {
         const payload = { ...localInfo };
-        // Limpa campos automáticos se existirem
+        // SRE Sanitization: Limpa campos automáticos se existirem
         delete (payload as any).created_at;
         delete (payload as any).updated_at;
         
-        await axios.post('/api/settings/system', payload);
+        // CORREÇÃO: Utilizando systemService (com interceptor de token) em vez de axios puro
+        await systemService.updateInfo(payload);
+        
         onUpdateSystemInfo(localInfo);
-        alert("✅ Configurações de sistema sincronizadas com sucesso.");
-    } catch (e) {
-        alert("FALHA CRÍTICA: Não foi possível gravar os parâmetros no Kernel.");
+        alert("✅ Parâmetros de Kernel sincronizados com sucesso.");
+    } catch (e: any) {
+        console.error("SRE SETTINGS_FAIL:", e);
+        const errorMsg = e.response?.data?.error || "FALHA CRÍTICA: Erro de autorização ou conexão.";
+        alert(errorMsg);
     } finally { setIsSaving(false); }
   };
 
@@ -117,7 +111,7 @@ const Settings = ({ systemInfo, onUpdateSystemInfo, templates, onUpdateTemplates
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                  <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome Oficial da Associação/Condomínio</label>
+                  <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome Oficial da Organização</label>
                       <input className="w-full font-bold h-16 bg-slate-50 border-slate-200 rounded-2xl px-6 focus:bg-white focus:border-indigo-500 transition-all" value={localInfo.name} onChange={e => setLocalInfo({...localInfo, name: e.target.value})} />
                   </div>
                   <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Abreviatura / Sigla Curta</label>

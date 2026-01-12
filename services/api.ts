@@ -42,6 +42,7 @@ export const financialService = {
 
 export const systemService = {
     getInfo: () => api.get('/settings/system'),
+    updateInfo: (data: any) => api.post('/settings/system', data),
     getSustainabilityStats: () => api.get('/sustainability/stats'),
 };
 
@@ -74,7 +75,6 @@ export const surveyService = {
     delete: (id: string | number) => api.delete(`/surveys/${id}`),
     getPublic: (id: string) => api.get(`/surveys/public/${id}`),
     submitPublic: (id: string, data: any) => api.post(`/surveys/public/${id}/submit`, data),
-    // SRE CORE: Recupera respostas históricas vinculadas ao CPF
     getResponsesByCpf: (cpf: string) => api.get('/survey-responses', { params: { user_cpf: cpf.replace(/\D/g, '') } }),
 };
 

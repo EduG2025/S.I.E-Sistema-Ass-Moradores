@@ -5,8 +5,13 @@ import {
     Plus, Search, Clock, Users, ChevronRight, X, Save, Sparkles, Printer, Loader2, ThumbsUp, ThumbsDown, CircleSlash, Send, MonitorPlay, BarChart3
 } from 'lucide-react';
 import { assemblyService, aiService } from '../services/api';
+import { User } from '../types';
 
-const AssemblyManager = () => {
+interface AssemblyManagerProps {
+    currentUser?: User | null;
+}
+
+const AssemblyManager = ({ currentUser }: AssemblyManagerProps) => {
     const [assemblies, setAssemblies] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'HISTORY' | 'LIVE'>('HISTORY');
@@ -19,13 +24,18 @@ const AssemblyManager = () => {
     const [isGeneratingAta, setIsGeneratingAta] = useState(false);
     const [messages, setMessages] = useState<any[]>([]);
     const [chatInput, setChatInput] = useState('');
+    
+    // Motor de Votação Reativo
     const [votingData, setVotingData] = useState({
         quorum: 0, totalEligible: 452,
         topics: [
-            { id: 1, title: 'Prestação de Contas Anual', votes: { yes: 0, no: 0, abstain: 0 } },
-            { id: 2, title: 'Investimentos em Segurança', votes: { yes: 0, no: 0, abstain: 0 } }
+            { id: 1, title: 'Previsão Orçamentária 2025/2026', votes: { yes: 0, no: 0, abstain: 0 } },
+            { id: 2, title: 'Fundo de Reserva para Manutenção Estrutural', votes: { yes: 0, no: 0, abstain: 0 } }
         ]
     });
+
+    // Permission Logic (ADMIN, COUNCIL, ou permissão específica)
+    const isManager = currentUser?.role === 'ADMIN' || currentUser?.role === 'COUNCIL' || currentUser?.permissions?.includes('manage_assemblies');
 
     useEffect(() => { loadAssemblies(); }, []);
 
@@ -38,6 +48,7 @@ const AssemblyManager = () => {
     };
 
     const handleOpenCreate = () => {
+        if (!isManager) return alert("Acesso restrito ao Administrador.");
         setEditingAssembly({ title: '', description: '', date: new Date().toISOString().slice(0, 16), status: 'SCHEDULED', pautas: [] });
         setIsModalOpen(true);
     };
@@ -60,6 +71,7 @@ const AssemblyManager = () => {
     };
 
     const handleDelete = async (id: number | string) => {
+        if (!isManager) return;
         if (!confirm("Excluir esta assembleia permanentemente?")) return;
         try {
             await assemblyService.delete(id);
@@ -73,9 +85,43 @@ const AssemblyManager = () => {
         setActiveSession(assembly);
         setActiveTab('LIVE');
         setMessages([{ id: 1, user: 'SISTEMA', text: `Sessão "${assembly.title}" iniciada no Terminal.`, type: 'system' }]);
+        // O quórum agora é definido pelo número real de participantes (simulado por range realista)
+        setVotingData(prev => ({ ...prev, quorum: Math.floor(Math.random() * (150 - 80 + 1)) + 80 }));
+    };
+
+    const registerVote = (topicId: number, type: 'yes' | 'no' | 'abstain') => {
+        setVotingData(prev => ({
+            ...prev,
+            topics: prev.topics.map(t => t.id === topicId ? { ...t, votes: { ...t.votes, [type]: t.votes[type] + 1 } } : t)
+        }));
+        
+        const voteLabel = type === 'yes' ? 'favorável' : type === 'no' ? 'contrário' : 'abstenção';
+        const newMsg = { 
+            id: Date.now(), 
+            user: 'VOTO COMPUTADO', 
+            text: `Um novo voto ${voteLabel} foi registrado na pauta #${topicId}.`, 
+            type: 'system' 
+        };
+        setMessages(prev => [...prev, newMsg]);
+    };
+
+    const handleSendMessage = (e?: any) => {
+        if (e) e.preventDefault();
+        if (!chatInput.trim()) return;
+        
+        // Injetando o nome do participante real logado
+        const newMsg = { 
+            id: Date.now(), 
+            user: currentUser?.name || 'Membro S.I.E', 
+            text: chatInput, 
+            type: 'user' 
+        };
+        setMessages(prev => [...prev, newMsg]);
+        setChatInput('');
     };
 
     const handleEndAssembly = async () => {
+        if (!isManager) return;
         if (!confirm("Deseja encerrar a sessão e consolidar a Ata via IA?")) return;
         setIsGeneratingAta(true);
         try {
@@ -112,22 +158,24 @@ const AssemblyManager = () => {
         <div className="space-y-8 animate-fade-in pb-20">
             <header className="flex flex-col md:flex-row justify-between items-center bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm gap-6">
                 <div>
-                    <h2 className="text-3xl font-black text-slate-800 tracking-tighter">Assembleia & Co-Gestão</h2>
-                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Kernel Governança Digital V71.0</p>
+                    <h2 className="text-3xl font-black text-slate-800 tracking-tighter">Assembleia Digital</h2>
+                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Kernel Governança Ativa V71.0</p>
                 </div>
                 <div className="flex bg-slate-100 p-1.5 rounded-2xl shadow-inner w-full md:w-auto">
-                    <button onClick={() => setActiveTab('HISTORY')} className={`flex-1 md:flex-none px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'HISTORY' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-500 hover:text-indigo-600'}`}>Gestão Central</button>
-                    <button disabled={!activeSession} onClick={() => setActiveTab('LIVE')} className={`flex-1 md:flex-none px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'LIVE' ? 'bg-rose-600 text-white shadow-lg' : 'text-slate-400 opacity-50'}`}>Live Ativa</button>
+                    <button onClick={() => setActiveTab('HISTORY')} className={`flex-1 md:flex-none px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'HISTORY' ? 'bg-white text-indigo-600 shadow-md' : 'text-slate-500 hover:text-indigo-600'}`}>Histórico</button>
+                    <button disabled={!activeSession} onClick={() => setActiveTab('LIVE')} className={`flex-1 md:flex-none px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'LIVE' ? 'bg-rose-600 text-white shadow-lg' : 'text-slate-400 opacity-50'}`}>Sessão Ao Vivo</button>
                 </div>
             </header>
 
             {activeTab === 'HISTORY' && (
                 <div className="space-y-6">
-                    <div className="flex justify-end gap-4">
-                        <button onClick={handleOpenCreate} className="flex items-center gap-3 px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-indigo-600 transition-all active:scale-95">
-                            <Plus size={20}/> Agendar Nova Sessão
-                        </button>
-                    </div>
+                    {isManager && (
+                        <div className="flex justify-end gap-4">
+                            <button onClick={handleOpenCreate} className="flex items-center gap-3 px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-indigo-600 transition-all active:scale-95">
+                                <Plus size={20}/> Agendar Nova Sessão
+                            </button>
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-1 gap-4">
                         {assemblies.map(ass => (
@@ -144,17 +192,23 @@ const AssemblyManager = () => {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex gap-2 mt-6 md:mt-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex gap-2 mt-6 md:mt-0">
                                     {ass.status === 'SCHEDULED' && (
                                         <>
-                                            <button onClick={() => handleStartLive(ass)} className="p-4 bg-indigo-600 text-white rounded-2xl shadow-lg hover:bg-indigo-700 transition-all" title="Iniciar Sessão Digital"><Play size={20}/></button>
-                                            <button onClick={() => { setEditingAssembly(ass); setIsModalOpen(true); }} className="p-4 bg-slate-100 text-slate-400 hover:text-indigo-600 rounded-2xl hover:bg-white transition-all shadow-sm"><Edit2 size={20}/></button>
+                                            {isManager ? (
+                                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => handleStartLive(ass)} className="p-4 bg-indigo-600 text-white rounded-2xl shadow-lg hover:bg-indigo-700 transition-all" title="Iniciar Sessão Digital"><Play size={20}/></button>
+                                                    <button onClick={() => { setEditingAssembly(ass); setIsModalOpen(true); }} className="p-4 bg-slate-100 text-slate-400 hover:text-indigo-600 rounded-2xl hover:bg-white transition-all shadow-sm"><Edit2 size={20}/></button>
+                                                    <button onClick={() => handleDelete(ass.id)} className="p-4 text-slate-300 hover:text-rose-600 transition-all"><Trash2 size={20}/></button>
+                                                </div>
+                                            ) : (
+                                                <button onClick={() => handleStartLive(ass)} className="px-10 py-3 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm">Participar</button>
+                                            )}
                                         </>
                                     )}
                                     {ass.status === 'FINISHED' && ass.ata_content && (
                                         <button onClick={() => handlePrintAta(ass.ata_content)} className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm" title="Imprimir Ata IA"><Printer size={20}/></button>
                                     )}
-                                    <button onClick={() => handleDelete(ass.id)} className="p-4 text-slate-300 hover:text-rose-600 transition-all"><Trash2 size={20}/></button>
                                 </div>
                             </div>
                         ))}
@@ -168,16 +222,19 @@ const AssemblyManager = () => {
                         <div className="bg-slate-950 rounded-[3rem] p-12 text-white shadow-2xl border border-white/5 relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-80 h-80 bg-rose-600/10 rounded-full blur-[100px] -mr-40 -mt-40"></div>
                             <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-10">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-3 px-4 py-2 bg-rose-500/10 text-rose-400 rounded-full w-fit border border-rose-500/20 mb-6">
+                                <div className="flex-1 text-center md:text-left">
+                                    <div className="flex items-center justify-center md:justify-start gap-3 px-4 py-2 bg-rose-500/10 text-rose-400 rounded-full w-fit border border-rose-500/20 mb-6 mx-auto md:mx-0">
                                         <div className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></div>
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Sessão Deliberativa On-line</span>
+                                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Painel Deliberativo Ativo</span>
                                     </div>
-                                    <h3 className="text-5xl font-black tracking-tightest leading-tight">{activeSession.title}</h3>
+                                    <h3 className="text-4xl md:text-5xl font-black tracking-tightest leading-tight">{activeSession.title}</h3>
+                                    <p className="text-slate-400 mt-4 font-medium uppercase tracking-widest text-[10px]">QUÓRUM ATUAL: {votingData.quorum} MEMBROS CONECTADOS NO CLUSTER</p>
                                 </div>
-                                <button onClick={handleEndAssembly} disabled={isGeneratingAta} className="px-12 py-6 bg-rose-600 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:bg-rose-700 transition-all flex items-center gap-4 shrink-0 active:scale-95">
-                                    {isGeneratingAta ? <Loader2 className="animate-spin" size={20}/> : <StopCircle size={20}/>} Finalizar & Gerar Ata IA
-                                </button>
+                                {isManager && (
+                                    <button onClick={handleEndAssembly} disabled={isGeneratingAta} className="px-12 py-6 bg-rose-600 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:bg-rose-700 transition-all flex items-center gap-4 shrink-0 active:scale-95">
+                                        {isGeneratingAta ? <Loader2 className="animate-spin" size={20}/> : <StopCircle size={20}/>} Finalizar e Gerar Ata
+                                    </button>
+                                )}
                             </div>
                         </div>
                         
@@ -188,14 +245,23 @@ const AssemblyManager = () => {
                                         <div className="w-2 h-8 bg-indigo-600 rounded-full"></div>
                                         <h4 className="text-2xl font-black text-slate-800 tracking-tight">{topic.title}</h4>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-6">
-                                        <button className="p-8 bg-slate-50 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 rounded-[2rem] flex flex-col items-center gap-3 transition-all border border-transparent hover:border-emerald-100">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <button 
+                                            onClick={() => registerVote(topic.id, 'yes')}
+                                            className="p-8 bg-slate-50 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 rounded-[2rem] flex flex-col items-center gap-3 transition-all border border-transparent hover:border-emerald-100 active:scale-95"
+                                        >
                                             <ThumbsUp size={36}/><span className="text-xs font-black uppercase tracking-widest">{topic.votes.yes} FAVORÁVEIS</span>
                                         </button>
-                                        <button className="p-8 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-[2rem] flex flex-col items-center gap-3 transition-all border border-transparent hover:border-rose-100">
+                                        <button 
+                                            onClick={() => registerVote(topic.id, 'no')}
+                                            className="p-8 bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-[2rem] flex flex-col items-center gap-3 transition-all border border-transparent hover:border-rose-100 active:scale-95"
+                                        >
                                             <ThumbsDown size={36}/><span className="text-xs font-black uppercase tracking-widest">{topic.votes.no} CONTRÁRIOS</span>
                                         </button>
-                                        <button className="p-8 bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-[2rem] flex flex-col items-center gap-3 transition-all border border-transparent hover:border-slate-200">
+                                        <button 
+                                            onClick={() => registerVote(topic.id, 'abstain')}
+                                            className="p-8 bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-600 rounded-[2rem] flex flex-col items-center gap-3 transition-all border border-transparent hover:border-slate-200 active:scale-95"
+                                        >
                                             <CircleSlash size={36}/><span className="text-xs font-black uppercase tracking-widest">{topic.votes.abstain} ABSTENÇÕES</span>
                                         </button>
                                     </div>
@@ -205,24 +271,36 @@ const AssemblyManager = () => {
                     </div>
                     
                     <div className="lg:col-span-4 bg-white rounded-[3rem] border border-slate-200 shadow-sm flex flex-col h-[700px] overflow-hidden sticky top-8">
-                        <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                        <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
                             <h5 className="font-black uppercase text-[10px] tracking-widest text-slate-500">Debate em Tempo Real</h5>
-                            <div className="flex items-center gap-2">
-                                <Users size={14} className="text-indigo-500"/>
-                                <span className="text-xs font-bold text-slate-800">124 Ativos</span>
+                            <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">
+                                <Users size={14}/>
+                                <span className="text-[10px] font-black">{votingData.quorum} Ativos</span>
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto p-8 space-y-5 custom-scrollbar bg-slate-50/20">
                             {messages.map(m => (
-                                <div key={m.id} className={`p-5 rounded-2xl shadow-sm border ${m.type === 'system' ? 'bg-indigo-50 border-indigo-100 text-indigo-600 text-center font-bold text-[10px] uppercase tracking-widest' : 'bg-white border-slate-100 text-slate-700'}`}>
-                                    {m.type !== 'system' && <p className="text-[8px] font-black uppercase text-indigo-500 mb-1">{m.user}</p>}
+                                <div key={m.id} className={`p-5 rounded-2xl shadow-sm border animate-fade-in ${m.type === 'system' ? 'bg-indigo-50 border-indigo-100 text-indigo-600 text-center font-bold text-[10px] uppercase tracking-widest' : 'bg-white border-slate-100 text-slate-700'}`}>
+                                    {m.type !== 'system' && (
+                                        <div className="flex items-center gap-2 mb-2 border-b border-slate-50 pb-1.5">
+                                            <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center text-[8px] font-black text-indigo-600 uppercase">{m.user?.[0]}</div>
+                                            <p className="text-[9px] font-black uppercase text-indigo-600 tracking-tighter">{m.user}</p>
+                                        </div>
+                                    )}
                                     <p className="text-xs font-medium leading-relaxed">{m.text}</p>
                                 </div>
                             ))}
                         </div>
-                        <div className="p-6 border-t border-slate-100 bg-white flex gap-3">
-                            <input className="flex-1 bg-slate-50 border-slate-100 rounded-xl px-5 text-sm font-medium focus:ring-4 focus:ring-indigo-500/5 outline-none" placeholder="Digite sua manifestação..." value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && chatInput && (setMessages([...messages, {id: Date.now(), text: chatInput, user: 'Morador S.I.E'}]), setChatInput(''))} />
-                            <button onClick={() => { if(chatInput){ setMessages([...messages, {id: Date.now(), text: chatInput, user: 'Morador S.I.E'}]); setChatInput(''); } }} className="p-4 bg-indigo-600 text-white rounded-xl shadow-lg hover:bg-indigo-700 transition-all"><Send size={20}/></button>
+                        <div className="p-6 border-t border-slate-100 bg-white shrink-0">
+                            <form onSubmit={handleSendMessage} className="flex gap-3">
+                                <input 
+                                    className="flex-1 bg-slate-50 border-slate-100 rounded-xl px-5 text-sm font-medium focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all" 
+                                    placeholder="Digite sua manifestação..." 
+                                    value={chatInput} 
+                                    onChange={e => setChatInput(e.target.value)} 
+                                />
+                                <button type="submit" className="p-4 bg-indigo-600 text-white rounded-xl shadow-lg hover:bg-indigo-700 transition-all active:scale-95"><Send size={20}/></button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -230,7 +308,7 @@ const AssemblyManager = () => {
 
             {isModalOpen && (
                 <div className="fixed inset-0 flex items-center justify-center bg-slate-900/95 z-[9999] p-4 backdrop-blur-xl animate-fade-in">
-                    <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-white/10 animate-scale-in flex flex-col max-h-[95vh]">
+                    <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-6xl overflow-hidden border border-white/10 animate-scale-in flex flex-col max-h-[95vh]">
                         <form onSubmit={handleSave} className="flex flex-col h-full overflow-hidden">
                             <div className="p-10 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
                                 <div className="flex items-center gap-4">

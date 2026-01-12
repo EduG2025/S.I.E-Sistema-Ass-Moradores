@@ -3,10 +3,11 @@ import React, { useState, Suspense, lazy, useEffect } from 'react';
 import { MENU_ITEMS, DEFAULT_SYSTEM_INFO, DEFAULT_ID_CARD_TEMPLATE } from './constants';
 import { SystemInfo, User, IdCardTemplate } from './types';
 import {
-    LogOut, Menu, Loader2, Shield, Search, X, ChevronLeft, ChevronRight, Bell
+    LogOut, Menu, Loader2, Shield, Search, X, Bell, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { systemService, authService, templateService } from './services/api';
 
+// LAZY LOADING TOTAL CLUSTER
 const Dashboard = lazy(() => import('./components/Dashboard')) as any;
 const Settings = lazy(() => import('./components/Settings')) as any;
 const UserManagement = lazy(() => import('./components/UserManagement')) as any;
@@ -14,12 +15,18 @@ const Operations = lazy(() => import('./components/Operations')) as any;
 const DemographicAnalysis = lazy(() => import('./components/DemographicAnalysis')) as any;
 const ProjectManagement = lazy(() => import('./components/ProjectManagement')) as any;
 const LoginScreen = lazy(() => import('./components/LoginScreen')) as any;
-const DigitalWatch = lazy(() => import('./components/DigitalWatch')) as any;
 const DocumentHub = lazy(() => import('./components/DocumentHub')) as any;
 const AssemblyManager = lazy(() => import('./components/AssemblyManager')) as any;
 const ChatAssistant = lazy(() => import('./components/ChatAssistant')) as any;
 const Finance = lazy(() => import('./components/Finance')) as any;
 const PublicSenso = lazy(() => import('./components/PublicSenso')) as any;
+const Communication = lazy(() => import('./components/Communication')) as any;
+const Timeline = lazy(() => import('./components/Timeline')) as any;
+const MarketPlace = lazy(() => import('./components/MarketPlace')) as any;
+const Reservations = lazy(() => import('./components/Reservations')) as any;
+const SuggestionBox = lazy(() => import('./components/SuggestionBox')) as any;
+const Assets = lazy(() => import('./components/Assets')) as any;
+const Surveys = lazy(() => import('./components/Surveys')) as any;
 
 const App = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -31,13 +38,11 @@ const App = () => {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [templates, setTemplates] = useState<IdCardTemplate[]>([DEFAULT_ID_CARD_TEMPLATE]);
 
-    // BYPASS PARA CENSO PÚBLICO
     const isPublicCensus = window.location.pathname.startsWith('/census/');
 
     useEffect(() => {
         const initKernel = async () => {
             const token = localStorage.getItem('sie_auth_token');
-            
             if (isPublicCensus) {
                 try {
                     const infoRes = await systemService.getInfo();
@@ -45,28 +50,30 @@ const App = () => {
                 } finally { setIsLoading(false); }
                 return;
             }
-
             if (!token) { setIsLoading(false); return; }
-
             try {
                 const userRes = await authService.me();
                 setCurrentUser(userRes.data);
                 setIsAuthenticated(true);
-
                 const [infoRes, templatesRes] = await Promise.all([
                     systemService.getInfo(),
                     templateService.getAll()
                 ]);
-
                 setSystemInfo(infoRes.data || DEFAULT_SYSTEM_INFO);
                 if (templatesRes.data.data) setTemplates(templatesRes.data.data);
             } catch (error) {
+                console.error("SRE SESSION_FAIL:", error);
                 localStorage.removeItem('sie_auth_token');
                 setIsAuthenticated(false);
             } finally { setIsLoading(false); }
         };
         initKernel();
     }, [isPublicCensus]);
+
+    const handleLoginSuccess = (user: User, token: string) => {
+        localStorage.setItem('sie_auth_token', token);
+        window.location.reload();
+    };
 
     const canSee = (permissionId: string) => {
         if (!currentUser) return false;
@@ -82,11 +89,11 @@ const App = () => {
     );
 
     if (isPublicCensus) return <Suspense fallback={null}><PublicSenso /></Suspense>;
-
+    
     if (!isAuthenticated) return (
         <Suspense fallback={null}>
             <LoginScreen 
-                onLoginSuccess={(u, t) => { localStorage.setItem('sie_auth_token', t); window.location.reload(); }} 
+                onLoginSuccess={handleLoginSuccess} 
                 systemInfo={systemInfo} 
             />
         </Suspense>
@@ -94,10 +101,11 @@ const App = () => {
 
     return (
         <div className="h-screen w-screen overflow-hidden flex bg-[#f8fafc] font-sans">
-            <aside className={`fixed lg:static inset-y-0 left-0 z-[60] bg-slate-950 border-r border-white/5 flex flex-col shrink-0 transition-all duration-500 ${sidebarOpen ? 'translate-x-0 w-80' : '-translate-x-full w-80 lg:translate-x-0'} ${sidebarCollapsed ? 'lg:w-24' : 'lg:w-80'}`}>
-                <div className={`p-8 flex items-center justify-between ${sidebarCollapsed ? 'flex-col gap-4' : ''}`}>
+            {/* SIDEBAR REESTRUTURADA */}
+            <aside className={`fixed lg:static inset-y-0 left-0 z-[60] bg-slate-950 border-r border-white/5 flex flex-col shrink-0 transition-all duration-500 ease-in-out ${sidebarOpen ? 'translate-x-0 w-80' : '-translate-x-full w-80 lg:translate-x-0'} ${sidebarCollapsed ? 'lg:w-24' : 'lg:w-80'}`}>
+                <div className={`p-8 flex items-center justify-between transition-all ${sidebarCollapsed ? 'flex-col gap-6' : ''}`}>
                     <div className="flex items-center gap-4 min-w-0">
-                        <div className={`bg-white/10 rounded-2xl flex items-center justify-center shadow-2xl shrink-0 overflow-hidden ${sidebarCollapsed ? 'w-10 h-10' : 'w-12 h-12'}`}>
+                        <div className={`bg-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl shrink-0 overflow-hidden transition-all ${sidebarCollapsed ? 'w-10 h-10' : 'w-12 h-12'}`}>
                             {systemInfo.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain p-1" /> : <Shield size={sidebarCollapsed ? 18 : 24} className="text-white" />}
                         </div>
                         {!sidebarCollapsed && (
@@ -107,49 +115,48 @@ const App = () => {
                             </div>
                         )}
                     </div>
+                    {/* Botão de colapso desktop */}
+                    <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden lg:flex p-2 bg-white/5 hover:bg-white/10 rounded-xl text-slate-500 transition-colors">
+                        {sidebarCollapsed ? <ChevronRight size={16}/> : <ChevronLeft size={16}/>}
+                    </button>
+                    {/* Botão fechar mobile */}
+                    <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 text-slate-400"><X size={24}/></button>
                 </div>
 
-                <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-2 custom-scrollbar">
+                <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-1.5 custom-scrollbar">
                     {MENU_ITEMS.map((item) => {
                         if (!canSee(item.permissionId)) return null;
                         const Icon = item.icon;
                         const isActive = activeTab === item.id;
                         return (
-                            <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }} className={`w-full flex items-center p-4 rounded-2xl transition-all group ${isActive ? 'bg-indigo-600 text-white shadow-xl' : 'text-slate-400 hover:bg-white/5 hover:text-white'} ${sidebarCollapsed ? 'justify-center' : 'justify-start gap-4'}`}>
-                                <Icon size={20} className={isActive ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'} />
-                                {!sidebarCollapsed && <span className="text-[11px] font-black uppercase tracking-widest truncate">{item.label}</span>}
+                            <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }} title={sidebarCollapsed ? item.label : ''} className={`w-full flex items-center p-3.5 rounded-xl transition-all group ${isActive ? 'bg-indigo-600 text-white shadow-xl' : 'text-slate-400 hover:bg-white/5 hover:text-white'} ${sidebarCollapsed ? 'justify-center' : 'justify-start gap-4'}`}>
+                                <Icon size={18} className={isActive ? 'text-white' : 'text-slate-500 group-hover:text-indigo-400'} />
+                                {!sidebarCollapsed && <span className="text-[10px] font-black uppercase tracking-widest truncate">{item.label}</span>}
                             </button>
                         );
                     })}
                 </nav>
 
                 <div className="p-6 border-t border-white/5">
-                    <button onClick={() => { localStorage.removeItem('sie_auth_token'); window.location.reload(); }} className={`flex items-center gap-4 p-4 rounded-2xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all font-black text-[10px] uppercase tracking-widest ${sidebarCollapsed ? 'justify-center' : 'w-full'}`}>
-                        <LogOut size={18} /> {!sidebarCollapsed && <span>Encerrar Sessão</span>}
+                    <button onClick={() => { localStorage.removeItem('sie_auth_token'); window.location.reload(); }} className={`flex items-center gap-4 p-4 rounded-xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all font-black text-[10px] uppercase tracking-widest ${sidebarCollapsed ? 'justify-center' : 'w-full'}`}>
+                        <LogOut size={18} /> {!sidebarCollapsed && <span>Sair</span>}
                     </button>
                 </div>
             </aside>
 
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-                <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 lg:px-10 shrink-0 z-50">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-3 bg-slate-100 rounded-xl text-slate-600"><Menu size={20} /></button>
-                        <div className="hidden md:flex relative w-full max-w-lg">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
-                            <input className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-[11px] font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" placeholder="Consultar Kernel S.I.E..." />
-                        </div>
-                    </div>
+                <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 z-50">
+                    <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 bg-slate-100 rounded-lg"><Menu size={18} /></button>
                     <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-4 text-right hidden sm:block">
-                            <p className="text-[10px] font-black text-slate-800 uppercase leading-none">{currentUser?.name}</p>
-                            <p className="text-[9px] font-bold text-indigo-500 uppercase mt-1">{currentUser?.role}</p>
+                        <div className="flex items-center gap-3 text-right hidden sm:block">
+                            <p className="text-[9px] font-black text-slate-800 uppercase leading-none">{currentUser?.name}</p>
+                            <p className="text-[8px] font-bold text-indigo-500 uppercase mt-1">{currentUser?.role}</p>
                         </div>
-                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400"><Bell size={18}/></div>
+                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400"><Bell size={16}/></div>
                     </div>
                 </header>
-
                 <main className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-8 bg-[#fcfcfd]">
-                    <Suspense fallback={<div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" size={40}/></div>}>
+                    <Suspense fallback={<div className="flex-1 flex items-center justify-center py-20"><Loader2 className="animate-spin text-indigo-600" size={40}/></div>}>
                         {activeTab === 'dashboard' && <Dashboard onNavigate={setActiveTab} systemInfo={systemInfo} />}
                         {activeTab === 'users' && <UserManagement />}
                         {activeTab === 'finance' && <Finance />}
@@ -158,13 +165,19 @@ const App = () => {
                         {activeTab === 'projects' && <ProjectManagement />}
                         {activeTab === 'neural_chat' && <ChatAssistant />}
                         {activeTab === 'documents' && <DocumentHub systemInfo={systemInfo} />}
-                        {activeTab === 'assemblies' && <AssemblyManager />}
+                        {activeTab === 'assemblies' && <AssemblyManager currentUser={currentUser} />}
                         {activeTab === 'demographics' && <DemographicAnalysis systemInfo={systemInfo} />}
-                        {activeTab === 'digital_watch' && <DigitalWatch />}
+                        {activeTab === 'communication' && <Communication />}
+                        {activeTab === 'timeline' && <Timeline />}
+                        {activeTab === 'marketplace' && <MarketPlace />}
+                        {activeTab === 'reservations' && <Reservations />}
+                        {activeTab === 'suggestions' && <SuggestionBox />}
+                        {activeTab === 'assets' && <Assets />}
+                        {activeTab === 'surveys' && <Surveys />}
                     </Suspense>
                 </main>
             </div>
-            {sidebarOpen && <div onClick={() => setSidebarOpen(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[55] lg:hidden animate-fade-in"></div>}
+            {sidebarOpen && <div onClick={() => setSidebarOpen(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[55] lg:hidden"></div>}
         </div>
     );
 };

@@ -22,10 +22,14 @@ const PublicSenso = () => {
     const [answers, setAnswers] = useState({} as Record<string, any>);
 
     useEffect(() => {
-        const id = window.location.pathname.split('/').pop();
+        const paths = window.location.pathname.split('/');
+        const id = paths[paths.length - 1];
+        
         if (id && id !== 'census') {
             loadSurvey(id);
             loadSystemInfo();
+        } else {
+            setError('Acesse via link oficial da pesquisa fornecido pela administração.');
         }
     }, []);
 
@@ -37,10 +41,15 @@ const PublicSenso = () => {
     };
 
     const loadSurvey = async (id: string) => {
+        setIsLoading(true);
         try {
             const res = await surveyService.getPublic(id);
             setSurvey(res.data);
-        } catch (e: any) { setError('Protocolo de Censo não localizado ou expirado.'); }
+        } catch (e: any) { 
+            setError('Protocolo de Censo não localizado ou expirado no Kernel.'); 
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleIdentify = async () => {
@@ -54,12 +63,22 @@ const PublicSenso = () => {
         try {
             const res = await axios.get(`/api/surveys/public/check-resident/${cleanCPF}`);
             if (res.data.found) {
-                setUserData({ name: res.data.name, unit: res.data.unit || '', email: res.data.email || '', phone: res.data.phone || '' });
+                setUserData({ 
+                    name: res.data.name, 
+                    unit: res.data.unit || '', 
+                    email: res.data.email || '', 
+                    phone: res.data.phone || '' 
+                });
                 setStep('FORM');
                 setActiveTab('SOCIAL');
-            } else { setStep('PERSONAL_INFO'); }
-        } catch (e) { setError('Falha de sincronização. Tente novamente.'); }
-        finally { setIsLoading(false); }
+            } else { 
+                setStep('PERSONAL_INFO'); 
+            }
+        } catch (e) { 
+            setError('Falha de sincronização com o Hub. Tente novamente.'); 
+        } finally { 
+            setIsLoading(false); 
+        }
     };
 
     const handleSubmit = async () => {
@@ -75,9 +94,23 @@ const PublicSenso = () => {
                 answers: { core: userData, social: answers }
             });
             setStep('SUCCESS');
-        } catch (e: any) { setError('Falha no commit social.'); }
-        finally { setIsLoading(false); }
+        } catch (e: any) { 
+            setError('Falha no commit social. O Kernel rejeitou a sincronização.'); 
+        } finally { 
+            setIsLoading(false); 
+        }
     };
+
+    if (error && step === 'IDENTIFY') return (
+        <div className="h-screen bg-slate-950 flex items-center justify-center p-6">
+            <div className="bg-white p-12 rounded-[3rem] text-center max-w-lg shadow-2xl">
+                <div className="p-5 bg-rose-50 text-rose-500 rounded-2xl mx-auto w-fit mb-6"><AlertTriangle size={40}/></div>
+                <h3 className="text-2xl font-black text-slate-800">Falha de Protocolo</h3>
+                <p className="text-slate-500 mt-4 leading-relaxed">{error}</p>
+                <button onClick={() => window.location.reload()} className="mt-8 px-10 py-4 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest">Tentar Novamente</button>
+            </div>
+        </div>
+    );
 
     if (step === 'SUCCESS') return (
         <div className="h-screen bg-slate-950 flex items-center justify-center p-6 animate-fade-in">
@@ -104,12 +137,10 @@ const PublicSenso = () => {
                 <div className="absolute inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-xl animate-fade-in">
                     <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-2xl p-16 text-center border border-white/20 animate-scale-in">
                         <div className="w-24 h-24 bg-indigo-600 rounded-[2rem] mx-auto flex items-center justify-center text-white shadow-xl mb-10 overflow-hidden">
-                            {systemInfo?.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain p-2" /> : <Fingerprint size={48} />}
+                            {systemInfo?.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain p-2" alt="Logo" /> : <Fingerprint size={48} />}
                         </div>
                         <h2 className="text-3xl font-black text-slate-800 tracking-tightest uppercase mb-2">{systemInfo?.name || 'Sistema S.I.E'}</h2>
                         <p className="text-slate-500 font-medium mb-12 leading-relaxed">Para iniciar sua participação no <span className="text-indigo-600 font-black">{survey?.title || 'Censo demográfico'}</span>, identifique-se com seu CPF.</p>
-
-                        {error && <div className="mb-8 p-5 bg-rose-50 text-rose-600 rounded-2xl text-[10px] font-black uppercase flex items-center justify-center gap-3 border border-rose-100"><AlertTriangle size={16} /> {error}</div>}
 
                         <input
                             type="text"
@@ -149,7 +180,15 @@ const PublicSenso = () => {
                                                 <input className="w-full font-bold h-18 bg-white border-slate-200 text-xl rounded-3xl px-8 shadow-sm focus:border-indigo-500" value={userData.unit} onChange={e => setUserData({ ...userData, unit: e.target.value })} />
                                             </div>
                                         </div>
-                                        <button onClick={() => { if (userData.name && userData.unit) { setStep('FORM'); setActiveTab('SOCIAL'); } else { alert("Preencha Nome e Unidade."); } }} className="w-full py-8 bg-slate-900 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.4em] shadow-2xl hover:bg-indigo-600 transition-all">Próxima Etapa: Dados Sociais</button>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail para Contato</label>
+                                                <input type="email" className="w-full font-bold h-18 bg-white border-slate-200 text-xl rounded-3xl px-8 shadow-sm focus:border-indigo-500" value={userData.email} onChange={e => setUserData({ ...userData, email: e.target.value })} />
+                                            </div>
+                                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Telefone / WhatsApp</label>
+                                                <input className="w-full font-bold h-18 bg-white border-slate-200 text-xl rounded-3xl px-8 shadow-sm focus:border-indigo-500" value={userData.phone} onChange={e => setUserData({ ...userData, phone: e.target.value })} />
+                                            </div>
+                                        </div>
+                                        <button onClick={() => { if (userData.name && userData.unit) { setStep('FORM'); setActiveTab('SOCIAL'); } else { alert("Preencha Nome e Unidade para prosseguir."); } }} className="w-full py-8 bg-slate-900 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.4em] shadow-2xl hover:bg-indigo-600 transition-all">Próxima Etapa: Dados Sociais</button>
                                     </div>
                                 )}
 

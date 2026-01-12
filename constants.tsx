@@ -1,22 +1,27 @@
-
-import { SystemInfo, IdCardTemplate } from './types';
 import { 
   LayoutDashboard, Wallet, Users, Bell, ShieldAlert, CalendarClock, 
   Settings, ClipboardList, BarChart3, Map as MapIcon, Briefcase, ShoppingBag,
-  Landmark, Shield, FileText, Gavel, MessageSquareText, MessageSquare, Calendar, Camera, Leaf
+  Landmark, Shield, FileText, Gavel, MessageSquareText, MessageSquare, 
+  Calendar, Camera, Leaf, Package, Megaphone, HelpCircle, Box
 } from 'lucide-react';
 
 export const MENU_ITEMS = [
   { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard, permissionId: 'view_dashboard' },
-  { id: 'neural_chat', label: 'SRE Advisor (Chat)', icon: MessageSquareText, permissionId: 'use_ai_chat' },
+  { id: 'neural_chat', label: 'IA Especialista', icon: MessageSquareText, permissionId: 'use_ai_chat' },
+  { id: 'users', label: 'Famílias & Membros', icon: Users, permissionId: 'manage_users' },
   { id: 'demographics', label: 'Observatório Social', icon: BarChart3, permissionId: 'view_demographics' },
-  { id: 'digital_watch', label: 'Vigia Digital', icon: Camera, permissionId: 'manage_operations' },
   { id: 'finance', label: 'Financeiro', icon: Wallet, permissionId: 'view_finances' },
   { id: 'operations', label: 'Ocorrências (Watchdog)', icon: ShieldAlert, permissionId: 'view_operations' },
   { id: 'documents', label: 'Hub de Documentos', icon: FileText, permissionId: 'manage_documents' },
   { id: 'assemblies', label: 'Assembleia Digital', icon: Gavel, permissionId: 'manage_assemblies' },
-  { id: 'users', label: 'Famílias & Membros', icon: Users, permissionId: 'manage_users' },
+  { id: 'communication', label: 'Mural de Avisos', icon: Megaphone, permissionId: 'view_dashboard' },
+  { id: 'timeline', label: 'Agenda & Marcos', icon: CalendarClock, permissionId: 'view_dashboard' },
   { id: 'projects', label: 'Obras & Projetos', icon: Landmark, permissionId: 'view_projects' },
+  { id: 'marketplace', label: 'Marketplace Local', icon: ShoppingBag, permissionId: 'view_dashboard' },
+  { id: 'reservations', label: 'Reservas de Áreas', icon: Calendar, permissionId: 'view_dashboard' },
+  { id: 'suggestions', label: 'Ouvidoria Digital', icon: HelpCircle, permissionId: 'view_dashboard' },
+  { id: 'assets', label: 'Patrimônio', icon: Box, permissionId: 'manage_users' },
+  { id: 'surveys', label: 'Censo & Pesquisas', icon: ClipboardList, permissionId: 'manage_users' },
   { id: 'settings', label: 'Configurações', icon: Settings, permissionId: 'manage_settings' },
 ];
 
@@ -35,21 +40,21 @@ export const SYSTEM_PERMISSIONS = [
   { id: 'view_projects', label: 'Ver Projetos/Obras', module: 'PLANEJAMENTO' },
 ];
 
-export const DEFAULT_SYSTEM_INFO: SystemInfo = {
-  name: 'Associação de Moradores de Cacaria',
-  shortName: 'AMC',
+export const DEFAULT_SYSTEM_INFO = {
+  name: 'Associação Residencial S.I.E',
+  shortName: 'S.I.E PRO',
   cnpj: '00.000.000/0001-00',
-  address: 'Cacaria, RJ - Brasil',
+  address: 'Sede Administrativa Central',
   primaryColor: '#4f46e5',
   registrationMode: 'APPROVAL'
 };
 
-export const DEFAULT_ID_CARD_TEMPLATE: IdCardTemplate = {
+export const DEFAULT_ID_CARD_TEMPLATE = {
   id: 'tpl_standard',
   name: 'Padrão S.I.E Oficial',
   width: 320,
   height: 200,
-  orientation: 'landscape',
+  orientation: 'landscape' as const,
   frontBackground: '#ffffff',
   backBackground: '#f8fafc',
   elements: []

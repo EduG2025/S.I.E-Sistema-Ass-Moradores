@@ -48,7 +48,7 @@ export const IAProviderManager = {
     const activeKeyFromDb = await this.getActiveKey();
     const apiKey = activeKeyFromDb?.key_value || process.env.API_KEY;
 
-    if (!apiKey) throw new Error("IA_OFFLINE: Nenhuma chave operacional detectada.");
+    if (!apiKey) throw new Error("IA_OFFLINE: Nenhuma chave operacional detectada no banco de dados.");
 
     // SRE COMPLIANCE: Utilizando inicialização via named parameter conforme diretriz
     const ai = new GoogleGenAI({ apiKey: apiKey });
@@ -65,7 +65,7 @@ export const IAProviderManager = {
       }
 
       const contents = this.normalizeContents(payload.contents);
-      const systemInstruction = payload.config?.systemInstruction || "Você é o assistente oficial de governança do S.I.E PRO.";
+      const systemInstruction = payload.config?.systemInstruction || "Você é o assistente oficial de governança do S.I.E PRO. Auxilie o gestor com precisão técnica e clareza.";
 
       // SRE COMPLIANCE: Chamada unificada conforme diretriz: ai.models.generateContent({ model, contents })
       const response = await ai.models.generateContent({
@@ -74,7 +74,6 @@ export const IAProviderManager = {
         config: {
           systemInstruction,
           temperature: payload.config?.temperature ?? 0.7,
-          // Thinking config habilitado para modelos Pro para maior precisão em governança
           thinkingConfig: modelName.includes('pro') ? { thinkingBudget: 2048 } : undefined
         }
       });
@@ -84,7 +83,7 @@ export const IAProviderManager = {
       }
 
       // SRE COMPLIANCE: Acesso direto à propriedade .text (não chamar text())
-      return response.text || "";
+      return response.text || "O Kernel não pôde processar a resposta neural.";
 
     } catch (error) {
       console.error("[IA GATEWAY] EXECUTION_FAIL:", error.message);
