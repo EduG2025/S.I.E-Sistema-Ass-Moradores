@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import pool from "../../config/database.js";
 
 /**
- * S.I.E IA Gateway Manager (Protocolo SRE V25.5 - FINAL)
+ * S.I.E IA Gateway Manager (Protocolo SRE V25.9 - FINAL)
  * Cluster Neural Centralizado com suporte a Multimodalidade e Redundância.
  */
 export const IAProviderManager = {
@@ -50,11 +50,11 @@ export const IAProviderManager = {
 
     if (!apiKey) throw new Error("IA_OFFLINE: Nenhuma chave operacional detectada.");
 
-    // SRE COMPLIANCE: Must use named parameter exclusively
+    // SRE COMPLIANCE: Utilizando inicialização via named parameter conforme diretriz
     const ai = new GoogleGenAI({ apiKey: apiKey });
 
     try {
-      // SRE MODEL SELECTION
+      // SRE MODEL SELECTION: Escolha automática de modelo baseada na tarefa ou tier da chave
       let modelName = payload.model;
       if (!modelName) {
         if (task === 'analyzeImage' || (payload.contents && JSON.stringify(payload.contents).includes('inlineData'))) {
@@ -67,13 +67,15 @@ export const IAProviderManager = {
       const contents = this.normalizeContents(payload.contents);
       const systemInstruction = payload.config?.systemInstruction || "Você é o assistente oficial de governança do S.I.E PRO.";
 
+      // SRE COMPLIANCE: Chamada unificada conforme diretriz: ai.models.generateContent({ model, contents })
       const response = await ai.models.generateContent({
         model: modelName,
         contents,
         config: {
           systemInstruction,
           temperature: payload.config?.temperature ?? 0.7,
-          thinkingConfig: modelName.includes('pro') ? { thinkingBudget: 1024 } : undefined
+          // Thinking config habilitado para modelos Pro para maior precisão em governança
+          thinkingConfig: modelName.includes('pro') ? { thinkingBudget: 2048 } : undefined
         }
       });
 
@@ -81,10 +83,11 @@ export const IAProviderManager = {
         await pool.query('UPDATE ai_keys SET last_checked = NOW(), error_count = 0 WHERE id = ?', [activeKeyFromDb.id]);
       }
 
-      // SRE COMPLIANCE: Direct .text access (not text())
+      // SRE COMPLIANCE: Acesso direto à propriedade .text (não chamar text())
       return response.text || "";
 
     } catch (error) {
+      console.error("[IA GATEWAY] EXECUTION_FAIL:", error.message);
       if (activeKeyFromDb) await this.markKeyError(activeKeyFromDb.id, 'ERROR', error.message);
       throw error;
     }

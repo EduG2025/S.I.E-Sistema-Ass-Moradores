@@ -3,8 +3,7 @@ import React, { useState, Suspense, lazy, useEffect } from 'react';
 import { MENU_ITEMS, DEFAULT_SYSTEM_INFO, DEFAULT_ID_CARD_TEMPLATE } from './constants';
 import { SystemInfo, User, IdCardTemplate } from './types';
 import {
-    LogOut, Menu, Loader2, Settings as SettingsIcon, Shield,
-    Search, X, ChevronLeft, ChevronRight
+    LogOut, Menu, Loader2, Shield, Search, X, ChevronLeft, ChevronRight, Bell
 } from 'lucide-react';
 import { systemService, authService, templateService } from './services/api';
 
@@ -32,6 +31,7 @@ const App = () => {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [templates, setTemplates] = useState<IdCardTemplate[]>([DEFAULT_ID_CARD_TEMPLATE]);
 
+    // BYPASS PARA CENSO PÚBLICO
     const isPublicCensus = window.location.pathname.startsWith('/census/');
 
     useEffect(() => {
@@ -102,8 +102,8 @@ const App = () => {
                         </div>
                         {!sidebarCollapsed && (
                             <div className="animate-fade-in min-w-0">
-                                <h1 className="font-black text-white text-base tracking-tighter uppercase truncate">{systemInfo.shortName || systemInfo.name}</h1>
-                                <p className="text-[9px] text-indigo-400 font-black uppercase tracking-widest mt-1">S.I.E PRO • Gestão Ativa</p>
+                                <h1 className="font-black text-white text-base tracking-tighter uppercase truncate leading-none">{systemInfo.shortName || systemInfo.name}</h1>
+                                <p className="text-[9px] text-indigo-400 font-black uppercase tracking-widest mt-2">S.I.E PRO • Gestão Ativa</p>
                             </div>
                         )}
                     </div>
@@ -125,17 +125,26 @@ const App = () => {
 
                 <div className="p-6 border-t border-white/5">
                     <button onClick={() => { localStorage.removeItem('sie_auth_token'); window.location.reload(); }} className={`flex items-center gap-4 p-4 rounded-2xl bg-rose-500/10 text-rose-500 hover:bg-rose-500 hover:text-white transition-all font-black text-[10px] uppercase tracking-widest ${sidebarCollapsed ? 'justify-center' : 'w-full'}`}>
-                        <LogOut size={18} /> {!sidebarCollapsed && <span>Encerrar</span>}
+                        <LogOut size={18} /> {!sidebarCollapsed && <span>Encerrar Sessão</span>}
                     </button>
                 </div>
             </aside>
 
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
                 <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-6 lg:px-10 shrink-0 z-50">
-                    <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-3 bg-slate-100 rounded-xl text-slate-600"><Menu size={20} /></button>
-                    <div className="hidden md:flex relative w-full max-w-lg">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
-                        <input className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-[11px] font-bold outline-none" placeholder="Consultar Kernel S.I.E..." />
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-3 bg-slate-100 rounded-xl text-slate-600"><Menu size={20} /></button>
+                        <div className="hidden md:flex relative w-full max-w-lg">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+                            <input className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl text-[11px] font-bold outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all" placeholder="Consultar Kernel S.I.E..." />
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-4 text-right hidden sm:block">
+                            <p className="text-[10px] font-black text-slate-800 uppercase leading-none">{currentUser?.name}</p>
+                            <p className="text-[9px] font-bold text-indigo-500 uppercase mt-1">{currentUser?.role}</p>
+                        </div>
+                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400"><Bell size={18}/></div>
                     </div>
                 </header>
 

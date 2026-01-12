@@ -19,7 +19,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// SRE DATA SHIELD
+// SRE UTILITIES
 const sanitizePayload = (payload) => {
     const data = { ...payload };
     delete data.id;
@@ -44,7 +44,7 @@ const authenticate = (req, res, next) => {
     } catch (err) { res.status(401).json({ error: 'INVALID_TOKEN' }); }
 };
 
-// --- CORE ENDPOINTS ---
+// --- AUTH & USER PROFILE ---
 
 app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body;
@@ -65,10 +65,47 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/auth/me', authenticate, async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT id, name, role, username, email, unit, cpf_cnpj FROM users WHERE id = ?', [req.user.id]);
+        const [rows] = await pool.query('SELECT id, name, role, username, email, unit, cpf_cnpj, socialData FROM users WHERE id = ?', [req.user.id]);
         if (rows.length === 0) return res.status(404).json({ error: 'USER_NOT_FOUND' });
-        const [perms] = await pool.query('SELECT permission_id FROM role_permissions WHERE role = ?', [rows[0].role]);
-        res.json({ ...rows[0], permissions: perms.map(p => p.permission_id) });
+        const user = rows[0];
+        user.socialData = safeJsonParse(user.socialData);
+        const [perms] = await pool.query('SELECT permission_id FROM role_permissions WHERE role = ?', [user.role]);
+        res.json({ ...user, permissions: perms.map(p => p.permission_id) });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- SETTINGS (FIXED) ---
+
+app.get('/api/settings/system', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM settings WHERE id = 1');
+        res.json(rows[0] || {});
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/settings/system', authenticate, async (req, res) => {
+    try {
+        const data = sanitizePayload(req.body);
+        // Garante que o ID 1 sempre exista ou seja atualizado
+        const [existing] = await pool.query('SELECT id FROM settings WHERE id = 1');
+        if (existing.length > 0) {
+            await pool.query('UPDATE settings SET ? WHERE id = 1', [data]);
+        } else {
+            await pool.query('INSERT INTO settings SET ?, id = 1', [data]);
+        }
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: "DB_WRITE_FAIL: " + e.message }); }
+});
+
+app.get('/api/settings/permissions', authenticate, async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT role, permission_id FROM role_permissions');
+        const matrix = {};
+        rows.forEach(r => {
+            if (!matrix[r.role]) matrix[r.role] = [];
+            matrix[r.role].push(r.permission_id);
+        });
+        res.json(matrix);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -87,10 +124,17 @@ app.get('/api/dashboard/stats', authenticate, async (req, res) => {
 app.get('/api/demographics/stats', authenticate, async (req, res) => {
     try {
         const [users] = await pool.query('SELECT socialData FROM users WHERE active = 1');
-        const stats = { totalPopulation: users.length, incomeDistribution: { low: 0, midLow: 0, mid: 0, high: 0 }, vulnerability: { low: 0, moderate: 0, critical: 0 } };
+        const stats = { 
+            totalPopulation: users.length, 
+            incomeDistribution: { low: 0, midLow: 0, mid: 0, high: 0 }, 
+            vulnerability: { low: 0, moderate: 0, critical: 0 } 
+        };
         users.forEach(u => {
             const data = safeJsonParse(u.socialData, {});
             if (data.incomeRange === 'LOW') stats.incomeDistribution.low++;
+            else if (data.incomeRange === 'HIGH') stats.incomeDistribution.high++;
+            else stats.incomeDistribution.mid++;
+
             if (data.vulnerabilityScore > 70) stats.vulnerability.critical++;
             else if (data.vulnerabilityScore > 30) stats.vulnerability.moderate++;
             else stats.vulnerability.low++;
@@ -99,7 +143,7 @@ app.get('/api/demographics/stats', authenticate, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- IA INTEGRATION ---
+// --- IA SERVICES ---
 
 app.post('/api/ai/chat', authenticate, async (req, res) => {
     try {
@@ -108,23 +152,38 @@ app.post('/api/ai/chat', authenticate, async (req, res) => {
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/ai/ocr', authenticate, async (req, res) => {
+app.post('/api/ai/generate-document', authenticate, async (req, res) => {
     try {
-        const { image, context } = req.body;
-        const prompt = `Analise este documento para ${context}. Extraia campos em JSON.`;
-        const result = await IAProviderManager.execute('analyzeImage', {
-            contents: { parts: [{ inlineData: { data: image.split(',')[1], mimeType: "image/jpeg" } }, { text: prompt }] }
+        const text = await IAProviderManager.execute('generateText', { 
+            contents: req.body.prompt,
+            config: { systemInstruction: "Você é um assistente jurídico especializado em governança condominial." }
         });
-        res.json(safeJsonParse(result, { error: "IA_PARSE_FAIL" }));
+        res.json({ text });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- PUBLIC CENSUS ENDPOINTS ---
+app.post('/api/ai/ocr', authenticate, async (req, res) => {
+    try {
+        const { image, context } = req.body;
+        const prompt = `Analise a imagem de documento no contexto de ${context}. Extraia todos os campos relevantes em um JSON puro.`;
+        const result = await IAProviderManager.execute('analyzeImage', {
+            contents: { 
+                parts: [
+                    { inlineData: { data: image.split(',')[1], mimeType: "image/jpeg" } }, 
+                    { text: prompt }
+                ] 
+            }
+        });
+        res.json(safeJsonParse(result, { error: "PARSE_FAIL" }));
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- PUBLIC SURVEYS (Link Externo) ---
 
 app.get('/api/surveys/public/:id', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM surveys WHERE id = ? AND status = "ACTIVE"', [req.params.id]);
-        if (!rows.length) return res.status(404).json({ error: 'Survey not found' });
+        if (!rows.length) return res.status(404).json({ error: 'Pesquisa não localizada ou inativa.' });
         const survey = rows[0];
         survey.questions = safeJsonParse(survey.questions);
         res.json(survey);
@@ -133,8 +192,30 @@ app.get('/api/surveys/public/:id', async (req, res) => {
 
 app.get('/api/surveys/public/check-resident/:cpf', async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT name, unit, email FROM users WHERE cpf_cnpj = ?', [req.params.cpf]);
-        res.json({ found: rows.length > 0, name: rows[0]?.name });
+        const cpf = req.params.cpf.replace(/\D/g, '');
+        const [rows] = await pool.query('SELECT name, unit, email, phone FROM users WHERE REPLACE(REPLACE(cpf_cnpj, ".", ""), "-", "") = ?', [cpf]);
+        if (rows.length) res.json({ found: true, ...rows[0] });
+        else res.json({ found: false });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/surveys/public/:id/submit', async (req, res) => {
+    try {
+        const { cpf, userData, answers } = req.body;
+        const cleanCpf = cpf.replace(/\D/g, '');
+        
+        await pool.query('INSERT INTO survey_responses (survey_id, user_cpf, answers) VALUES (?, ?, ?)', 
+            [req.params.id, cleanCpf, JSON.stringify(answers)]);
+        
+        const [existing] = await pool.query('SELECT id FROM users WHERE REPLACE(REPLACE(cpf_cnpj, ".", ""), "-", "") = ?', [cleanCpf]);
+        if (existing.length) {
+            await pool.query('UPDATE users SET socialData = JSON_MERGE_PATCH(socialData, ?) WHERE id = ?', 
+                [JSON.stringify(answers), existing[0].id]);
+        } else {
+            await pool.query('INSERT INTO users (name, cpf_cnpj, unit, email, phone, role, socialData, active) VALUES (?, ?, ?, ?, ?, "RESIDENT", ?, 1)',
+                [userData.name, cpf, userData.unit, userData.email, userData.phone, JSON.stringify(answers)]);
+        }
+        res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -143,7 +224,15 @@ app.get('/api/surveys/public/check-resident/:cpf', async (req, res) => {
 const createCrud = (table, route, jsonFields = []) => {
     app.get(`/api/${route}`, authenticate, async (req, res) => {
         try {
-            const [rows] = await pool.query(`SELECT * FROM ${table} ORDER BY id DESC`);
+            const { user_cpf } = req.query;
+            let query = `SELECT * FROM ${table}`;
+            let params = [];
+            if (user_cpf) {
+                query += ` WHERE user_cpf = ?`;
+                params.push(user_cpf);
+            }
+            query += ` ORDER BY id DESC`;
+            const [rows] = await pool.query(query, params);
             const data = rows.map(r => {
                 jsonFields.forEach(f => { r[f] = safeJsonParse(r[f]); });
                 return r;
@@ -188,18 +277,12 @@ createCrud('marketplace_items', 'marketplace');
 createCrud('assets', 'assets');
 createCrud('ai_keys', 'ai-keys');
 createCrud('surveys', 'surveys', ['questions']);
+createCrud('survey_responses', 'survey-responses', ['answers']);
 createCrud('notices', 'notices');
 createCrud('agenda', 'agenda');
-
-app.post('/api/system/hydrate', async (req, res) => {
-    try {
-        const hash = await bcrypt.hash('admin123', 10);
-        await pool.query('INSERT IGNORE INTO settings (id, name, shortName, cnpj) VALUES (1, "Associação de Moradores de Cacaria", "AMC", "00.000.000/0001-00")');
-        await pool.query('INSERT IGNORE INTO users (id, username, password_hash, name, role, active) VALUES (1, "admin", ?, "Admin SRE", "ADMIN", 1)', [hash]);
-        await pool.query('INSERT IGNORE INTO role_permissions (role, permission_id) VALUES ("ADMIN", "view_dashboard"), ("ADMIN", "manage_settings"), ("ADMIN", "manage_users"), ("ADMIN", "view_finances"), ("ADMIN", "view_operations"), ("ADMIN", "use_ai_chat")');
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+createCrud('suggestions', 'suggestions');
+createCrud('reservations', 'reservations');
 
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'dist/index.html')));
-app.listen(PORT, () => console.log(`🚀 SRE KERNEL ONLINE | ENGINE V25.5 | PORT ${PORT}`));
+
+app.listen(PORT, () => console.log(`🚀 SRE KERNEL ONLINE | ENGINE V25.9 | PORT ${PORT}`));
