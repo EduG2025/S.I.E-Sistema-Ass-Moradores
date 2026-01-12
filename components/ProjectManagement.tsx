@@ -32,7 +32,6 @@ const ProjectManagement = () => {
     setIsModalOpen(true);
   };
 
-  // FIX: Use any to bypass namespace 'React' error
   const handleSave = async (e: any) => {
     e.preventDefault();
     setIsSaving(true);
@@ -81,7 +80,7 @@ const ProjectManagement = () => {
           <h2 className="text-3xl font-black tracking-tightest leading-none">Co-Gestão: Ativos & Obras</h2>
           <p className="text-[10px] text-indigo-300 font-black uppercase tracking-[0.3em] mt-2">Transparência Total S.I.E</p>
         </div>
-        <button onClick={handleOpenCreate} className="flex items-center gap-3 px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-2xl hover:bg-indigo-500 transition-all">
+        <button onClick={handleOpenCreate} className="flex items-center gap-3 px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-2xl hover:bg-indigo-50 transition-all">
           <Plus size={20}/> Novo Projeto / Edital
         </button>
       </div>
@@ -161,11 +160,11 @@ const ProjectManagement = () => {
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</label>
-                    <select className="w-full font-bold" value={editingProject.status} onChange={e => setEditingProject({...editingProject, status: e.target.value})}>
+                    <select className="w-full font-bold" value={editingProject.status} onChange={e => setEditingProject({...editingProject, status: e.target.value as any})}>
                         <option value="PLANNING">Planejamento</option>
-                        <option value="IN_PROGRESS">Em Execução</option>
-                        <option value="COMPLETED">Concluído</option>
-                        <option value="VOTING">Votação</option>
+                        <option value="EM_EXECUÇÃO">Em Execução</option>
+                        <option value="CONCLUÍDO">Concluído</option>
+                        <option value="CANCELADO">Cancelado</option>
                     </select>
                   </div>
                 </div>

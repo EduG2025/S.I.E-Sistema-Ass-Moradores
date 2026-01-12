@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { financialService, demographicsService } from '../services/api';
+import { financialService, demographicsService, operationsService } from '../services/api';
 import { SystemInfo } from '../types';
 import { 
-  AlertTriangle, Users, Loader2, TrendingUp, 
-  Shield, ChevronRight, Activity, Zap, Landmark, Sparkles, 
-  ShoppingBag, Leaf, Building2
+  AlertTriangle, Users, Loader2, 
+  Shield, ChevronRight, Activity, Landmark, Sparkles, 
+  ShoppingBag, Building2, Zap
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -40,7 +40,7 @@ const Dashboard = ({ onNavigate, systemInfo }: DashboardProps) => {
   );
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 space-y-8 animate-fade-in max-w-[1600px] mx-auto overflow-y-auto custom-scrollbar pr-2">
+    <div className="flex-1 flex flex-col min-h-0 space-y-8 animate-fade-in max-w-[1600px] mx-auto overflow-y-auto custom-scrollbar pr-2 pb-10">
       {/* HEADER DINÂMICO S.I.E */}
       <div className="bg-slate-900 border border-white/5 rounded-[3rem] p-10 relative overflow-hidden shadow-2xl">
           <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
@@ -62,13 +62,10 @@ const Dashboard = ({ onNavigate, systemInfo }: DashboardProps) => {
                       Bem-vindo ao <br/>
                       <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-emerald-400 italic uppercase">{systemInfo.name}</span>
                   </h1>
-                  <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-xl">
-                      Painel centralizado de inteligência e governança para a gestão ativa de sua comunidade.
-                  </p>
               </div>
               <div className="lg:col-span-4 grid grid-cols-2 gap-4">
                   <div className="bg-white/5 border border-white/5 p-6 rounded-3xl backdrop-blur-xl text-center">
-                      <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-2">Membros</p>
+                      <p className="text-[8px] font-black text-indigo-400 uppercase tracking-widest mb-2">População</p>
                       <h3 className="text-3xl font-black text-white">{stats?.totalPopulation || '--'}</h3>
                   </div>
                   <div className="bg-white/5 border border-white/5 p-6 rounded-3xl backdrop-blur-xl text-center">
@@ -99,30 +96,30 @@ const Dashboard = ({ onNavigate, systemInfo }: DashboardProps) => {
       </div>
 
       {/* SHORTCUTS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-10">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm space-y-8">
               <h3 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-4">
                   <Activity size={20} className="text-indigo-600"/> Protocolos de Gestão
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <button onClick={() => onNavigate('surveys')} className="p-8 bg-slate-50 border border-slate-100 rounded-[2rem] text-left hover:bg-indigo-50 transition-all group flex items-center gap-6">
+                  <button onClick={() => onNavigate('demographics')} className="p-8 bg-slate-50 border border-slate-100 rounded-[2rem] text-left hover:bg-indigo-50 transition-all group flex items-center gap-6">
                       <div className="p-4 bg-white rounded-2xl shadow-sm text-indigo-600 group-hover:scale-110 transition-transform"><Sparkles size={24}/></div>
                       <div>
-                          <p className="font-black text-slate-800 text-sm">Disparar Censo</p>
+                          <p className="font-black text-slate-800 text-sm">Censo Social</p>
                           <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Coleta de Dados</p>
                       </div>
                   </button>
                   <button onClick={() => onNavigate('assemblies')} className="p-8 bg-slate-50 border border-slate-100 rounded-[2rem] text-left hover:bg-emerald-50 transition-all group flex items-center gap-6">
                       <div className="p-4 bg-white rounded-2xl shadow-sm text-emerald-600 group-hover:scale-110 transition-transform"><Landmark size={24}/></div>
                       <div>
-                          <p className="font-black text-slate-800 text-sm">Nova Assembleia</p>
+                          <p className="font-black text-slate-800 text-sm">Assembleia</p>
                           <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Governança Digital</p>
                       </div>
                   </button>
               </div>
           </div>
           
-          <div className="bg-indigo-600 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden flex flex-col justify-between">
+          <div className="bg-indigo-600 p-10 rounded-[3rem] text-white shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[320px]">
               <div className="absolute top-0 right-0 p-8 opacity-10"><Zap size={120}/></div>
               <div>
                   <h3 className="text-2xl font-black tracking-tightest">SRE Ghostwriter</h3>

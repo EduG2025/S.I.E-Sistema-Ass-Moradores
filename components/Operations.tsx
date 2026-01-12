@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Incident } from '../types';
 import { operationsService } from '../services/api';
@@ -114,18 +115,18 @@ const Operations = () => {
                         <form onSubmit={handleSave}>
                             <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
                                 <h3 className="font-black text-xl text-slate-800 tracking-tighter">Gerenciar Ocorrência</h3>
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-all"><X/></button>
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-all text-slate-400"><X/></button>
                             </div>
                             <div className="p-10 space-y-6 overflow-y-auto custom-scrollbar flex-1">
-                                <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Título do Assunto</label><input required className="w-full" value={editingIncident.title} onChange={e => setEditingIncident({...editingIncident, title: e.target.value})} /></div>
+                                <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Título do Assunto</label><input required className="w-full font-bold" value={editingIncident.title} onChange={e => setEditingIncident({...editingIncident, title: e.target.value})} /></div>
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Prioridade</label>
-                                        <select className="w-full" value={editingIncident.priority} onChange={e => setEditingIncident({...editingIncident, priority: e.target.value})}>
+                                        <select className="w-full" value={editingIncident.priority} onChange={e => setEditingIncident({...editingIncident, priority: e.target.value as any})}>
                                             <option value="LOW">Baixa</option><option value="MEDIUM">Média</option><option value="HIGH">Crítica</option>
                                         </select>
                                     </div>
                                     <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Status</label>
-                                        <select className="w-full" value={editingIncident.status} onChange={e => setEditingIncident({...editingIncident, status: e.target.value})}>
+                                        <select className="w-full" value={editingIncident.status} onChange={e => setEditingIncident({...editingIncident, status: e.target.value as any})}>
                                             <option value="OPEN">Aberto</option><option value="IN_PROGRESS">Em Curso</option><option value="RESOLVED">Resolvido</option>
                                         </select>
                                     </div>

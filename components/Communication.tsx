@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
-import { Alert, Notice } from '../types';
+// SRE FIX: Removed non-existent Alert export from types
+import { Notice } from '../types';
 import { communicationService } from '../services/api';
 import { 
     MessageSquare, Clock, Plus, Trash2, Edit2, X, Save, Printer, Loader2, Megaphone
