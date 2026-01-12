@@ -1,14 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
-import { OfficialDocument } from '../types';
+import { OfficialDocument, SystemInfo } from '../types';
 import { documentService, aiService } from '../services/api';
 import {
   FileText, Search, Plus, Sparkles, Save, Trash2, Edit2,
   FileDown, CheckCircle2, Loader2, X, MoreVertical,
-  ChevronRight, ArrowLeft, History, FileCheck
+  ChevronRight, ArrowLeft, History, FileCheck, Building2, User
 } from 'lucide-react';
 
-const DocumentHub = () => {
+interface DocumentHubProps {
+    systemInfo: SystemInfo;
+}
+
+const DocumentHub = ({ systemInfo }: DocumentHubProps) => {
   const [documents, setDocuments] = useState<OfficialDocument[]>([]);
   const [activeDoc, setActiveDoc] = useState<OfficialDocument | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,15 +43,27 @@ const DocumentHub = () => {
     
     setIsGenerating(true);
     try {
-      // Chamada neural via API Kernel
-      const res = await aiService.generateDocument(cleanPrompt);
+      // Protocolo SRE: Injeção de Metadados de Identidade Organizacional no Prompt da IA
+      const institutionalContext = `
+        A organização é: ${systemInfo.name}
+        CNPJ: ${systemInfo.cnpj}
+        Endereço: ${systemInfo.address}
+        
+        INSTRUÇÕES DE FORMATAÇÃO OBRIGATÓRIAS:
+        1. Comece o documento com um CABEÇALHO INSTITUCIONAL centralizado contendo o Nome da Organização, CNPJ e Endereço.
+        2. No final do documento, inclua um BLOCO DE ASSINATURA contendo:
+           - Texto: "[espaço para assinatura do presidente]"
+           - Uma linha de assinatura: "________________________________________"
+           - Abaixo da linha, centralize o Nome da Organização, CNPJ e Endereço.
+      `;
+
+      const res = await aiService.generateDocument(`${institutionalContext}\n\nO documento deve ser: ${cleanPrompt}`);
       const generatedContent = res.data?.text;
       
       if (!generatedContent) {
         throw new Error("O Kernel não retornou conteúdo válido.");
       }
 
-      // Se houver um documento aberto, injeta o texto. Se não, cria um rascunho temporário.
       if (activeDoc) {
         setActiveDoc({ ...activeDoc, content: generatedContent });
       } else {
@@ -62,7 +78,7 @@ const DocumentHub = () => {
         setActiveDoc(newDoc);
       }
       
-      setPrompt(''); // Limpa o comando após sucesso
+      setPrompt('');
       
     } catch (e: any) {
       console.error("[IA FAIL]", e);
@@ -203,11 +219,11 @@ const DocumentHub = () => {
                   <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl group-hover:scale-110 transition-transform pointer-events-none"></div>
                   <div className="flex items-center gap-3 mb-4 relative z-10">
                     <Sparkles size={20} className="text-indigo-400 animate-pulse"/>
-                    <h5 className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Ghostwriter Inteligente</h5>
+                    <h5 className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Ghostwriter Inteligente ({systemInfo.name})</h5>
                   </div>
                   <div className="flex gap-4 relative z-10">
                     <textarea
-                      placeholder="Descreva o que o documento deve conter para a IA redigir... (ex: Ata de assembléia sobre aprovação de contas)"
+                      placeholder="Descreva o que o documento deve conter... O Kernel injetará automaticamente o cabeçalho e rodapé de assinatura."
                       value={prompt}
                       onChange={e => setPrompt(e.target.value)}
                       className="flex-1 bg-white/5 border-white/10 text-white text-sm font-medium placeholder:text-white/20 rounded-2xl p-4 min-h-[80px]"
@@ -223,19 +239,26 @@ const DocumentHub = () => {
                   </div>
                 </div>
 
-                <textarea
-                  className="w-full h-full min-h-[500px] text-slate-700 text-base font-medium leading-relaxed bg-transparent border-none focus:ring-0 p-0 resize-none font-serif"
-                  value={activeDoc.content}
-                  onChange={e => setActiveDoc({...activeDoc, content: e.target.value})}
-                  placeholder="Inicie a redação aqui ou use a IA acima para gerar o texto completo..."
-                />
+                <div className="bg-slate-50 p-12 rounded-[2rem] border border-slate-200 min-h-[800px] shadow-inner relative overflow-hidden">
+                    <textarea
+                    className="w-full h-full min-h-[700px] text-slate-700 text-base font-medium leading-relaxed bg-transparent border-none focus:ring-0 p-0 resize-none font-serif"
+                    value={activeDoc.content}
+                    onChange={e => setActiveDoc({...activeDoc, content: e.target.value})}
+                    placeholder="Inicie a redação aqui..."
+                    />
+
+                    {/* Dica visual de assinatura */}
+                    <div className="mt-20 border-t-2 border-dashed border-slate-200 pt-10 text-center opacity-20 pointer-events-none select-none">
+                        <p className="text-xs font-black uppercase tracking-[0.3em]">Bloco de Assinatura SRE Presidencial</p>
+                    </div>
+                </div>
               </div>
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-slate-300 p-20 text-center">
               <div className="w-24 h-24 bg-slate-50 text-slate-100 rounded-full flex items-center justify-center mb-6 shadow-inner"><FileCheck size={48}/></div>
               <h4 className="text-xl font-black text-slate-400 tracking-tighter">Selecione um documento</h4>
-              <p className="text-[10px] font-black uppercase tracking-widest mt-2">ou utilize o Ghostwriter para iniciar uma nova redação assistida por IA.</p>
+              <p className="text-[10px] font-black uppercase tracking-widest mt-2">ou utilize o Ghostwriter para iniciar uma nova redação assistida pela Inteligência S.I.E.</p>
             </div>
           )}
         </div>

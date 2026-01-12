@@ -4,7 +4,7 @@ import { MENU_ITEMS, DEFAULT_SYSTEM_INFO, DEFAULT_ID_CARD_TEMPLATE } from './con
 import { SystemInfo, User, IdCardTemplate } from './types';
 import {
     LogOut, Menu, Loader2, Settings as SettingsIcon, Shield,
-    Bell, Zap, Search, Sparkles, X, Key, ChevronLeft, ChevronRight, Lock
+    Bell, Zap, Search, Sparkles, X, Key, ChevronLeft, ChevronRight, Lock, MapPin, Building2
 } from 'lucide-react';
 import { systemService, authService, templateService } from './services/api';
 
@@ -78,15 +78,11 @@ const App = () => {
 
     useEffect(() => { initKernel(); }, []);
 
-    // MOTOR DE VISIBILIDADE RBAC REAL
     const canSee = (permissionId: string) => {
         if (!currentUser) return false;
-        // Protocolo SRE: Bypass master removido para teste real de filtragem solicitado pelo usuário.
-        // Se desejar reativar o master absoluto: if (currentUser.id === 1) return true;
         return currentUser.permissions?.includes(permissionId);
     };
 
-    // Componente de Fallback para Acesso Negado
     const AccessDenied = () => (
         <div className="flex-1 flex flex-col items-center justify-center p-20 text-center animate-fade-in">
             <div className="w-24 h-24 bg-rose-50 text-rose-500 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-inner">
@@ -135,14 +131,18 @@ const App = () => {
         <div className="h-screen w-screen overflow-hidden flex bg-[#f8fafc] font-sans">
             <aside className={`fixed lg:static inset-y-0 left-0 z-[60] bg-slate-950 border-r border-white/5 flex flex-col shrink-0 transition-all duration-500 ${sidebarOpen ? 'translate-x-0 w-80' : '-translate-x-full w-80 lg:translate-x-0'} ${sidebarCollapsed ? 'lg:w-24' : 'lg:w-80'}`}>
                 <div className={`p-8 flex items-center justify-between ${sidebarCollapsed ? 'flex-col gap-4' : ''}`}>
-                    <div className="flex items-center gap-4">
-                        <div className={`bg-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl shrink-0 transition-all ${sidebarCollapsed ? 'w-10 h-10' : 'w-12 h-12'}`}>
-                            <Shield size={sidebarCollapsed ? 18 : 24} className="text-white" />
+                    <div className="flex items-center gap-4 min-w-0">
+                        <div className={`bg-white/10 rounded-2xl flex items-center justify-center shadow-2xl shrink-0 transition-all overflow-hidden ${sidebarCollapsed ? 'w-10 h-10' : 'w-12 h-12'}`}>
+                            {systemInfo.logoUrl ? (
+                                <img src={systemInfo.logoUrl} className="w-full h-full object-contain p-1" alt="Logo" />
+                            ) : (
+                                <Shield size={sidebarCollapsed ? 18 : 24} className="text-white" />
+                            )}
                         </div>
                         {!sidebarCollapsed && (
-                            <div className="animate-fade-in">
-                                <h1 className="font-black text-white text-xl tracking-tighter leading-none">S.I.E PRO</h1>
-                                <p className="text-[9px] text-indigo-400 font-black uppercase tracking-widest mt-1">Gestão Ativa</p>
+                            <div className="animate-fade-in min-w-0">
+                                <h1 className="font-black text-white text-base tracking-tighter leading-none truncate uppercase">{systemInfo.name}</h1>
+                                <p className="text-[9px] text-indigo-400 font-black uppercase tracking-widest mt-1">S.I.E PRO • Gestão Ativa</p>
                             </div>
                         )}
                     </div>
@@ -175,7 +175,23 @@ const App = () => {
                     })}
                 </nav>
 
-                <div className={`p-6 border-t border-white/5 space-y-6 ${sidebarCollapsed ? 'items-center' : ''}`}>
+                <div className={`border-t border-white/5 space-y-4 ${sidebarCollapsed ? 'p-4 items-center' : 'p-6'}`}>
+                    {!sidebarCollapsed && (
+                        <div className="bg-white/5 rounded-2xl p-4 space-y-2 border border-white/5 animate-fade-in">
+                            <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                <Building2 size={10}/> SEDE CORPORATIVA
+                            </p>
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-bold text-slate-300 flex items-center gap-2">
+                                    <span className="text-indigo-500 font-black">CNPJ:</span> {systemInfo.cnpj}
+                                </p>
+                                <p className="text-[9px] font-medium text-slate-500 leading-tight flex items-start gap-2">
+                                    <MapPin size={10} className="mt-0.5 shrink-0"/> {systemInfo.address}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
                     {!sidebarCollapsed && (
                         <div className="flex items-center gap-4 p-2 rounded-2xl bg-white/5 border border-white/5">
                             <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center font-black text-white text-xs border border-white/10 shadow-lg shrink-0">
@@ -225,7 +241,7 @@ const App = () => {
                 <main className="flex-1 flex flex-col min-h-0 bg-[#fcfcfd] overflow-hidden relative">
                     <div className="flex-1 flex flex-col min-h-0 w-full overflow-y-auto custom-scrollbar p-4 lg:p-8">
                         <Suspense fallback={<div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" size={40}/></div>}>
-                            {activeTab === 'dashboard' && (canSee('view_dashboard') ? <Dashboard onNavigate={setActiveTab} /> : <AccessDenied />)}
+                            {activeTab === 'dashboard' && (canSee('view_dashboard') ? <Dashboard onNavigate={setActiveTab} systemInfo={systemInfo} /> : <AccessDenied />)}
                             {activeTab === 'users' && (canSee('manage_users') ? <UserManagement /> : <AccessDenied />)}
                             {activeTab === 'finance' && (canSee('view_finances') ? <Finance /> : <AccessDenied />)}
                             {activeTab === 'settings' && (canSee('manage_settings') ? <Settings systemInfo={systemInfo} onUpdateSystemInfo={setSystemInfo} templates={templates} onUpdateTemplates={setTemplates} initialTab={settingsTab} /> : <AccessDenied />)}
@@ -237,7 +253,7 @@ const App = () => {
                             {activeTab === 'neural_chat' && (canSee('use_ai_chat') ? <ChatAssistant /> : <AccessDenied />)}
                             {activeTab === 'suggestions' && (canSee('view_suggestions') ? <SuggestionBox /> : <AccessDenied />)}
                             {activeTab === 'reservations' && (canSee('manage_reservations') ? <Reservations /> : <AccessDenied />)}
-                            {activeTab === 'documents' && (canSee('manage_documents') ? <DocumentHub /> : <AccessDenied />)}
+                            {activeTab === 'documents' && (canSee('manage_documents') ? <DocumentHub systemInfo={systemInfo} /> : <AccessDenied />)}
                             {activeTab === 'assemblies' && (canSee('manage_assemblies') ? <AssemblyManager /> : <AccessDenied />)}
                             {activeTab === 'timeline' && (canSee('view_timeline') ? <Timeline /> : <AccessDenied />)}
                             {activeTab === 'demographics' && (canSee('view_demographics') ? <DemographicAnalysis systemInfo={systemInfo} /> : <AccessDenied />)}

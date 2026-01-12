@@ -17,7 +17,6 @@ const Reservations = () => {
         setIsLoading(true);
         try {
             const res = await reservationService.getAll();
-            // SRE FIX: Kernel CRUD retorna { data: [], pagination: {} }. Normalizando para array.
             const data = res.data?.data || (Array.isArray(res.data) ? res.data : []);
             setReservations(data);
         } catch (e) {
@@ -86,28 +85,42 @@ const Reservations = () => {
             </div>
 
             {isModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/80 z-[1000] flex items-center justify-center p-4 backdrop-blur-md animate-fade-in">
-                    <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-white/10 animate-scale-in">
-                        <form onSubmit={handleSave}>
-                            <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                                <h3 className="font-black text-2xl tracking-tighter">Agendar Espaço</h3>
-                                <button type="button" onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-all text-slate-400"><X size={24}/></button>
+                <div className="fixed inset-0 flex items-center justify-center bg-slate-900/80 z-[9999] p-4 backdrop-blur-md animate-fade-in">
+                    <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-white/10 animate-scale-in flex flex-col">
+                        <form onSubmit={handleSave} className="flex flex-col h-full overflow-hidden">
+                            <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
+                                <h3 className="font-black text-2xl tracking-tighter uppercase">Agendar Espaço</h3>
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-all text-slate-400"><X size={32}/></button>
                             </div>
-                            <div className="p-10 space-y-6">
-                                <div className="space-y-1">
+                            <div className="p-10 space-y-6 overflow-y-auto custom-scrollbar flex-1 bg-[#fcfcfd]">
+                                <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Área Comum</label>
-                                    <select className="w-full font-bold h-14 bg-slate-50 border-slate-200 rounded-2xl px-6" value={newRes.area_name} onChange={e => setNewRes({...newRes, area_name: e.target.value})}>
+                                    <select className="w-full font-bold h-14 bg-white border-slate-200 rounded-2xl px-6 focus:border-indigo-500 shadow-inner" value={newRes.area_name} onChange={e => setNewRes({...newRes, area_name: e.target.value})}>
                                         <option value="SALÃO DE FESTAS">Salão de Festas</option>
                                         <option value="CHURRASQUEIRA 01">Churrasqueira 01</option>
                                         <option value="QUADRA POLIESPORTIVA">Quadra Poliesportiva</option>
+                                        <option value="ESPAÇO GOURMET">Espaço Gourmet</option>
                                     </select>
                                 </div>
-                                <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Data</label><input type="date" required className="w-full font-bold h-14 bg-slate-50 border-slate-200 rounded-2xl px-6" value={newRes.date} onChange={e => setNewRes({...newRes, date: e.target.value})} /></div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Data Desejada</label>
+                                    <input type="date" required className="w-full font-bold h-14 bg-white border-slate-200 rounded-2xl px-6 focus:border-indigo-500 shadow-inner" value={newRes.date} onChange={e => setNewRes({...newRes, date: e.target.value})} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Início</label>
+                                        <input type="time" className="w-full font-bold h-14 bg-white border-slate-200 rounded-2xl px-6 shadow-inner" value={newRes.startTime} onChange={e => setNewRes({...newRes, startTime: e.target.value})} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Término</label>
+                                        <input type="time" className="w-full font-bold h-14 bg-white border-slate-200 rounded-2xl px-6 shadow-inner" value={newRes.endTime} onChange={e => setNewRes({...newRes, endTime: e.target.value})} />
+                                    </div>
+                                </div>
                             </div>
-                            <div className="p-10 border-t border-slate-100 flex justify-end gap-4 bg-slate-50">
+                            <div className="p-10 border-t border-slate-100 flex justify-end gap-4 bg-slate-50 shrink-0">
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-10 py-4 text-slate-400 font-black text-xs uppercase">Cancelar</button>
-                                <button type="submit" disabled={isSaving} className="px-14 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase shadow-xl hover:bg-indigo-600 flex items-center gap-3">
-                                    {isSaving ? <Loader2 className="animate-spin"/> : <CheckCircle size={18}/>} Confirmar
+                                <button type="submit" disabled={isSaving} className="px-14 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase shadow-xl hover:bg-indigo-600 transition-all flex items-center gap-3">
+                                    {isSaving ? <Loader2 className="animate-spin"/> : <CheckCircle size={18}/>} Confirmar Agendamento
                                 </button>
                             </div>
                         </form>

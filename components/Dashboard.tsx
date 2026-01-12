@@ -1,17 +1,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { financialService, demographicsService } from '../services/api';
+import { SystemInfo } from '../types';
 import { 
   AlertTriangle, Users, Loader2, TrendingUp, 
   Shield, ChevronRight, Activity, Zap, Landmark, Sparkles, 
-  ShoppingBag, Leaf
+  ShoppingBag, Leaf, Building2
 } from 'lucide-react';
 
 interface DashboardProps {
   onNavigate: (tab: string) => void;
+  systemInfo: SystemInfo;
 }
 
-const Dashboard = ({ onNavigate }: DashboardProps) => {
+const Dashboard = ({ onNavigate, systemInfo }: DashboardProps) => {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +41,7 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-8 animate-fade-in max-w-[1600px] mx-auto overflow-y-auto custom-scrollbar pr-2">
-      {/* HEADER PADRÃO S.I.E */}
+      {/* HEADER DINÂMICO S.I.E */}
       <div className="bg-slate-900 border border-white/5 rounded-[3rem] p-10 relative overflow-hidden shadow-2xl">
           <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
@@ -47,15 +49,21 @@ const Dashboard = ({ onNavigate }: DashboardProps) => {
                   <div className="flex flex-wrap gap-3">
                     <div className="px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full flex items-center gap-2">
                         <Shield size={12} className="text-indigo-400"/>
-                        <span className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">SISTEMA ATIVO</span>
+                        <span className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">CLUSTER ATIVO</span>
                     </div>
+                    {systemInfo.cnpj && (
+                        <div className="px-4 py-1.5 bg-white/5 border border-white/10 rounded-full flex items-center gap-2">
+                            <Building2 size={12} className="text-slate-400"/>
+                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">CNPJ: {systemInfo.cnpj}</span>
+                        </div>
+                    )}
                   </div>
                   <h1 className="text-5xl font-black text-white tracking-tightest leading-none">
-                      S.I.E — Sistema <br/>
-                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-emerald-400 italic">Inteligente Ativo</span>
+                      Bem-vindo ao <br/>
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-emerald-400 italic uppercase">{systemInfo.name}</span>
                   </h1>
                   <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-xl">
-                      Plataforma integrada para governança e gestão colaborativa de associações e condomínios.
+                      Painel centralizado de inteligência e governança para a gestão ativa de sua comunidade.
                   </p>
               </div>
               <div className="lg:col-span-4 grid grid-cols-2 gap-4">

@@ -1,15 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
-import { Survey, SurveyQuestion } from '../types';
-import { surveyService } from '../services/api';
+import { Survey, SurveyQuestion, SystemInfo } from '../types';
+import { surveyService, systemService } from '../services/api';
 import { normalizeCPF, validateCPF, formatCPF } from '../utils/cpf';
 import {
     ShieldCheck, CheckCircle2, ArrowRight, X, Shield,
-    Fingerprint, Loader2, Heart, AlertTriangle, Lock, User, Home, Mail, Check, Sparkles, RefreshCw, Info, Wallet, Brain, Save, Phone
+    Fingerprint, Loader2, Heart, AlertTriangle, Lock, User, Home, Mail, Check, Sparkles, RefreshCw, Info, Wallet, Brain, Save, Phone, Building2
 } from 'lucide-react';
 import axios from 'axios';
 
 const PublicSenso = () => {
     const [survey, setSurvey] = useState(null as Survey | null);
+    const [systemInfo, setSystemInfo] = useState(null as SystemInfo | null);
     const [step, setStep] = useState('IDENTIFY' as 'IDENTIFY' | 'PERSONAL_INFO' | 'FORM' | 'SUCCESS');
     const [activeTab, setActiveTab] = useState<'PERSONAL' | 'SOCIAL' | 'AUDIT'>('PERSONAL');
     const [isLoading, setIsLoading] = useState(false);
@@ -22,8 +24,20 @@ const PublicSenso = () => {
 
     useEffect(() => {
         const id = window.location.pathname.split('/').pop();
-        if (id && id !== 'census') loadSurvey(id);
+        if (id && id !== 'census') {
+            loadSurvey(id);
+            loadSystemInfo();
+        }
     }, []);
+
+    const loadSystemInfo = async () => {
+        try {
+            const res = await systemService.getInfo();
+            setSystemInfo(res.data);
+        } catch (e) {
+            console.error("Identidade Offline");
+        }
+    };
 
     const loadSurvey = async (id: string) => {
         try {
@@ -94,6 +108,12 @@ const PublicSenso = () => {
                 </div>
                 <h2 className="text-4xl font-black text-slate-800 tracking-tighter mb-4">Registro Comitado</h2>
                 <p className="text-slate-500 font-medium mb-12 leading-relaxed">Sua participação ativa foi sincronizada com o Kernel S.I.E. A comunidade agradece sua colaboração.</p>
+                {systemInfo && (
+                    <div className="mb-10 p-6 bg-slate-50 rounded-3xl border border-slate-100 animate-fade-in">
+                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{systemInfo.name}</p>
+                        <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase">CNPJ: {systemInfo.cnpj}</p>
+                    </div>
+                )}
                 <button onClick={() => window.location.reload()} className="px-12 py-5 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-600 transition-all">Encerrar Sessão</button>
             </div>
         </div>
@@ -111,11 +131,12 @@ const PublicSenso = () => {
             {step === 'IDENTIFY' && (
                 <div className="absolute inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-xl animate-fade-in">
                     <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-2xl p-16 text-center border border-white/20 animate-scale-in">
-                        <div className="w-20 h-20 bg-indigo-600 rounded-3xl mx-auto flex items-center justify-center text-white shadow-xl mb-10">
-                            <Fingerprint size={40} />
+                        <div className="w-24 h-24 bg-indigo-600 rounded-[2rem] mx-auto flex items-center justify-center text-white shadow-xl mb-10 overflow-hidden border-4 border-slate-50">
+                            {systemInfo?.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain p-2" /> : <Fingerprint size={40} />}
                         </div>
-                        <h2 className="text-4xl font-black text-slate-800 tracking-tighter mb-4">Pesquisa Social</h2>
-                        <p className="text-slate-500 font-medium mb-10 leading-relaxed">Para iniciar sua participação no <span className="text-indigo-600 font-black">{survey?.title || 'Censo S.I.E'}</span>, identifique seu CPF oficial.</p>
+                        <h2 className="text-3xl font-black text-slate-800 tracking-tighter uppercase mb-2 leading-tight">{systemInfo?.name || 'Sistema de Pesquisa'}</h2>
+                        <p className="text-indigo-500 font-black text-[10px] uppercase tracking-[0.3em] mb-4 opacity-70">CNPJ: {systemInfo?.cnpj || 'CLUSTER SRE'}</p>
+                        <p className="text-slate-500 font-medium mb-10 leading-relaxed">Para iniciar sua participação no <span className="text-indigo-600 font-black">{survey?.title || 'Censo Corporativo'}</span>, identifique seu CPF oficial.</p>
 
                         {error && <div className="mb-6 p-4 bg-rose-50 text-rose-600 rounded-2xl text-[10px] font-black uppercase flex items-center justify-center gap-2 border border-rose-100 animate-bounce"><AlertTriangle size={14} /> {error}</div>}
 
@@ -139,47 +160,51 @@ const PublicSenso = () => {
                 <div className="w-full h-[98vh] flex flex-col relative z-10 animate-slide-up mt-auto">
                     <div className="bg-white rounded-t-[3.5rem] shadow-[0_-25px_80px_-15px_rgba(0,0,0,0.5)] w-full h-full flex flex-col overflow-hidden border-t border-x border-white/10">
 
-                        {/* HEADER DA FICHA - FIXO NO TOPO DO CONTAINER */}
+                        {/* HEADER DA FICHA */}
                         <div className="p-8 lg:p-10 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
-                            <div>
-                                <h3 className="font-black text-3xl lg:text-4xl tracking-tighter flex items-center gap-5 text-slate-800 uppercase">
-                                    <Shield size={36} className="text-indigo-600" />
-                                    Ficha de Participação Ativa
-                                </h3>
-                                <p className="text-[10px] lg:text-[11px] text-slate-400 font-black uppercase tracking-[0.2em] mt-2">
-                                    Protocolo de Inteligência Social • {survey?.title} • SRE V22.15
-                                </p>
+                            <div className="flex items-center gap-6">
+                                <div className="w-20 h-20 bg-white rounded-2xl shadow-sm flex items-center justify-center overflow-hidden p-1 border border-slate-100">
+                                    {systemInfo?.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain" /> : <Shield size={36} className="text-indigo-600" />}
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-3xl lg:text-4xl tracking-tighter text-slate-800 uppercase leading-none">
+                                        Ficha de Participação
+                                    </h3>
+                                    <div className="flex gap-4 mt-2">
+                                        <p className="text-[10px] text-indigo-600 font-black uppercase tracking-widest">{systemInfo?.name}</p>
+                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">CNPJ: {systemInfo?.cnpj}</p>
+                                    </div>
+                                </div>
                             </div>
                             <button onClick={() => window.location.reload()} className="p-5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 rounded-full transition-all border border-slate-100 bg-white">
                                 <X size={36} />
                             </button>
                         </div>
 
-                        {/* TABS DE NAVEGAÇÃO - FIXO */}
+                        {/* TABS DE NAVEGAÇÃO */}
                         <div className="flex bg-slate-50 p-3 border-b shrink-0">
                             <button
                                 onClick={() => step === 'PERSONAL_INFO' && setActiveTab('PERSONAL')}
                                 className={`flex-1 py-5 rounded-[2rem] text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-4 ${activeTab === 'PERSONAL' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                             >
-                                <Info size={18} /> Identificação e Localidade
+                                <Info size={18} /> Identificação Local
                             </button>
                             <button
                                 onClick={() => step === 'FORM' && setActiveTab('SOCIAL')}
                                 className={`flex-1 py-5 rounded-[2rem] text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-4 ${activeTab === 'SOCIAL' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400'}`}
                                 disabled={step === 'PERSONAL_INFO'}
                             >
-                                <Heart size={18} /> Levantamento de Atributos
+                                <Heart size={18} /> Levantamento Social
                             </button>
                             <button className="flex-1 py-5 rounded-[2rem] text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-4 text-slate-300 cursor-not-allowed">
-                                <Brain size={18} /> Análise Auditiva IA
+                                <Brain size={18} /> Auditoria Ativa
                             </button>
                         </div>
 
-                        {/* ÁREA DE CONTEÚDO - FLEX-1 PARA OCUPAR TODO O VÁCUO ENTRE HEADER E FOOTER */}
+                        {/* ÁREA DE CONTEÚDO */}
                         <div className="flex-1 overflow-y-auto p-8 lg:p-16 bg-[#f8fafc] custom-scrollbar">
                             <div className="w-full h-full max-w-[1600px] mx-auto">
 
-                                {/* PASSO: DADOS PESSOAIS */}
                                 {activeTab === 'PERSONAL' && (
                                     <div className="space-y-12 animate-fade-in h-full flex flex-col">
                                         <div className="flex items-center gap-5 mb-10 shrink-0">
@@ -242,7 +267,7 @@ const PublicSenso = () => {
                                             </div>
                                         </div>
 
-                                        <div className="flex-1"></div> {/* Spacer dinâmico */}
+                                        <div className="flex-1"></div>
 
                                         <div className="pt-10 shrink-0">
                                             <button
@@ -255,7 +280,6 @@ const PublicSenso = () => {
                                     </div>
                                 )}
 
-                                {/* PASSO: QUESTIONÁRIO DINÂMICO */}
                                 {activeTab === 'SOCIAL' && (
                                     <div className="space-y-12 animate-fade-in pb-32">
                                         <div className="bg-slate-900 p-12 rounded-[4rem] text-white relative overflow-hidden shadow-2xl border border-white/5 shrink-0">
@@ -323,8 +347,14 @@ const PublicSenso = () => {
                             </div>
                         </div>
 
-                        {/* RODAPÉ DO FORMULÁRIO - FIXO NA BASE DA JANELA */}
-                        <div className="p-8 border-t border-slate-100 bg-white/95 backdrop-blur-xl shrink-0 sticky bottom-0 z-[50] flex justify-center shadow-[0_-15px_40px_-10px_rgba(0,0,0,0.1)]">
+                        {/* RODAPÉ DO FORMULÁRIO */}
+                        <div className="p-8 border-t border-slate-100 bg-white/95 backdrop-blur-xl shrink-0 sticky bottom-0 z-[50] flex flex-col items-center gap-6 shadow-[0_-15px_40px_-10px_rgba(0,0,0,0.1)]">
+                            {systemInfo && (
+                                <div className="text-center opacity-40">
+                                    <p className="text-[10px] font-black uppercase tracking-widest">{systemInfo.name} • CNPJ: {systemInfo.cnpj}</p>
+                                    <p className="text-[9px] font-bold uppercase mt-1">{systemInfo.address}</p>
+                                </div>
+                            )}
                             <button
                                 onClick={activeTab === 'PERSONAL' ? () => setActiveTab('SOCIAL') : handleSubmit}
                                 disabled={isLoading}

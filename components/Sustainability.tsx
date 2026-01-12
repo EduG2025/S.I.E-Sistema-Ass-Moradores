@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Leaf, Droplets, Zap, Trash2, TrendingDown, ArrowUpRight, Loader2, BarChart3, ShieldCheck, Sparkles } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Cell } from 'recharts';
@@ -13,6 +14,7 @@ const Sustainability = () => {
                 const res = await systemService.getSustainabilityStats();
                 setStats(res.data);
             } catch (e) {
+                console.error("[SRE ESG] API Error, using fallback.");
                 // Mock data para demonstração caso a API não esteja pronta
                 setStats({
                     energy: [
@@ -42,6 +44,9 @@ const Sustainability = () => {
             <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest">Compilando Indicadores ESG...</p>
         </div>
     );
+
+    // SRE Safety Check
+    if (!stats || !stats.energy) return <div className="p-20 text-center text-slate-400">Falha ao sincronizar métricas ESG.</div>;
 
     return (
         <div className="space-y-8 animate-fade-in pb-12">

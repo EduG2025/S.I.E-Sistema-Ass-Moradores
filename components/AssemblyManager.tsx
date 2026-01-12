@@ -229,9 +229,9 @@ const AssemblyManager = () => {
             )}
 
             {isModalOpen && (
-                <div className="fixed inset-0 bg-slate-900/95 z-[2000] flex items-center justify-center p-4 backdrop-blur-xl animate-fade-in">
-                    <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-white/10 animate-scale-in flex flex-col max-h-[90vh]">
-                        <form onSubmit={handleSave} className="flex flex-col h-full">
+                <div className="fixed inset-0 flex items-center justify-center bg-slate-900/95 z-[9999] p-4 backdrop-blur-xl animate-fade-in">
+                    <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-white/10 animate-scale-in flex flex-col max-h-[95vh]">
+                        <form onSubmit={handleSave} className="flex flex-col h-full overflow-hidden">
                             <div className="p-10 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
                                 <div className="flex items-center gap-4">
                                     <div className="p-4 bg-indigo-600 text-white rounded-2xl shadow-xl"><Plus size={24}/></div>
@@ -240,12 +240,27 @@ const AssemblyManager = () => {
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="p-3 text-slate-400 hover:bg-slate-100 rounded-full transition-all"><X size={32}/></button>
                             </div>
                             <div className="p-10 space-y-8 overflow-y-auto custom-scrollbar flex-1 bg-[#fcfcfd]">
-                                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Título Oficial da Sessão</label><input required className="w-full font-bold h-16 bg-white border-slate-200 rounded-2xl px-8 shadow-inner text-lg" value={editingAssembly.title} onChange={e => setEditingAssembly({...editingAssembly, title: e.target.value})} placeholder="Ex: Assembleia Ordinária Q1/2025" /></div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data e Hora de Abertura</label><input type="datetime-local" className="w-full font-bold h-16 bg-white border-slate-200 rounded-2xl px-8 shadow-inner" value={editingAssembly.date} onChange={e => setEditingAssembly({...editingAssembly, date: e.target.value})} /></div>
-                                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo de Edital</label><select className="w-full font-black h-16 bg-white border-slate-200 rounded-2xl px-8 shadow-inner appearance-none uppercase text-xs" value={editingAssembly.status} onChange={e => setEditingAssembly({...editingAssembly, status: e.target.value})}><option value="SCHEDULED">Ordinária (Agendada)</option><option value="FINISHED">Sessão Encerrada</option></select></div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Título Oficial da Sessão</label>
+                                    <input required className="w-full font-bold h-16 bg-white border-slate-200 rounded-2xl px-8 shadow-inner text-lg focus:border-indigo-500" value={editingAssembly.title} onChange={e => setEditingAssembly({...editingAssembly, title: e.target.value})} placeholder="Ex: Assembleia Ordinária Q1/2025" />
                                 </div>
-                                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Pautas Deliberativas (Separadas por virgula)</label><textarea rows={4} className="w-full font-medium bg-white border-slate-200 rounded-2xl p-8 shadow-inner" value={editingAssembly.description} onChange={e => setEditingAssembly({...editingAssembly, description: e.target.value})} placeholder="Descreva os pontos que serão votados..." /></div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data e Hora de Abertura</label>
+                                        <input type="datetime-local" className="w-full font-bold h-16 bg-white border-slate-200 rounded-2xl px-8 shadow-inner" value={editingAssembly.date} onChange={e => setEditingAssembly({...editingAssembly, date: e.target.value})} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo de Edital</label>
+                                        <select className="w-full font-black h-16 bg-white border-slate-200 rounded-2xl px-8 shadow-inner appearance-none uppercase text-xs" value={editingAssembly.status} onChange={e => setEditingAssembly({...editingAssembly, status: e.target.value})}>
+                                            <option value="SCHEDULED">Ordinária (Agendada)</option>
+                                            <option value="FINISHED">Sessão Encerrada</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Pautas Deliberativas</label>
+                                    <textarea rows={4} className="w-full font-medium bg-white border-slate-200 rounded-2xl p-8 shadow-inner focus:border-indigo-500" value={editingAssembly.description} onChange={e => setEditingAssembly({...editingAssembly, description: e.target.value})} placeholder="Descreva os pontos que serão votados..." />
+                                </div>
                             </div>
                             <div className="p-10 border-t border-slate-100 flex justify-end gap-6 bg-slate-50 shrink-0">
                                 <button type="button" onClick={() => setIsModalOpen(false)} className="px-10 py-5 text-slate-400 font-black text-xs uppercase tracking-widest">Cancelar</button>
