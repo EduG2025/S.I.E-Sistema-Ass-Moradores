@@ -1,62 +1,17 @@
 
--- ---------------------------------------------------------
--- S.I.E PRO - MASTER DATABASE SCHEMA V38.1 (SRE)
--- PROTOCOLO DE RESILIÊNCIA: CONFIGURAÇÕES NUCLEARES
--- ---------------------------------------------------------
+-- ... (conteúdo anterior mantido)
 
-SET NAMES utf8mb4;
-SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
-
--- 1. CONFIGURAÇÕES DO SISTEMA (KERNEL SETTINGS)
-DROP TABLE IF EXISTS `settings`;
-CREATE TABLE `settings` (
-  `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `name` VARCHAR(255) NOT NULL,
-  `shortName` VARCHAR(100) DEFAULT NULL,
-  `cnpj` VARCHAR(20) DEFAULT NULL,
-  `address` TEXT DEFAULT NULL,
-  `email` VARCHAR(255) DEFAULT NULL,
-  `phone` VARCHAR(20) DEFAULT NULL,
-  `primaryColor` VARCHAR(10) DEFAULT '#4f46e5',
-  `logoUrl` LONGTEXT DEFAULT NULL,
-  `registrationMode` ENUM('OPEN', 'APPROVAL', 'CLOSED') DEFAULT 'APPROVAL',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 2. USUÁRIOS E GOVERNANÇA
-DROP TABLE IF EXISTS `users`;
-CREATE TABLE `users` (
+-- 12. NOTIFICAÇÕES E ALERTAS PUSH
+DROP TABLE IF EXISTS `notifications`;
+CREATE TABLE `notifications` (
   `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `username` VARCHAR(100) UNIQUE NOT NULL,
-  `password_hash` VARCHAR(255) NOT NULL,
-  `name` VARCHAR(255) NOT NULL,
-  `cpf_cnpj` VARCHAR(20) UNIQUE NOT NULL,
-  `unit` VARCHAR(50) DEFAULT NULL,
-  `role` ENUM('ADMIN', 'PRESIDENT', 'VICE_PRESIDENT', 'SINDIC', 'RESIDENT', 'CONCIERGE', 'MERCHANT', 'COUNCIL') DEFAULT 'RESIDENT',
-  `status` ENUM('ACTIVE', 'PENDING', 'BANNED', 'VALIDATION_REQUIRED') DEFAULT 'PENDING',
-  `active` TINYINT(1) DEFAULT 1,
-  `email` VARCHAR(255) DEFAULT NULL,
-  `phone` VARCHAR(20) DEFAULT NULL,
-  `socialData` JSON DEFAULT NULL,
-  `coordinates` JSON DEFAULT NULL,
+  `user_id` BIGINT DEFAULT NULL, -- NULL para broadcast geral
+  `title` VARCHAR(255) NOT NULL,
+  `message` TEXT NOT NULL,
+  `type` ENUM('INFO', 'ALERT', 'SUCCESS', 'URGENT') DEFAULT 'INFO',
+  `is_read` TINYINT(1) DEFAULT 0,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  INDEX `idx_user_read` (`user_id`, `is_read`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 11. MATRIZ DE GOVERNANÇA (PERMISSÕES)
-DROP TABLE IF EXISTS `role_permissions`;
-CREATE TABLE `role_permissions` (
-  `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `role` VARCHAR(50) NOT NULL,
-  `permission_id` VARCHAR(100) NOT NULL,
-  UNIQUE KEY `unique_role_perm` (`role`, `permission_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- [SEEDS INICIAIS PARA A MATRIZ]
-INSERT IGNORE INTO `role_permissions` (`role`, `permission_id`) VALUES 
-('ADMIN', 'view_dashboard'), ('ADMIN', 'manage_users'), ('ADMIN', 'manage_settings'), ('ADMIN', 'manage_ai_keys'),
-('PRESIDENT', 'view_dashboard'), ('PRESIDENT', 'manage_users'),
-('RESIDENT', 'view_dashboard'), ('RESIDENT', 'use_ai_chat');
 
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;

@@ -1,26 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>S.I.E PRO V5.0 - Sistema Inteligente Ativo</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <link rel="stylesheet" href="/index.css">
-    
-    <!-- SRE Shim V62.1 - Estabilização de Kernel -->
-    <script type="module">
-      window.process = { env: { NODE_ENV: 'production' } };
-      window.global = window;
-      if (typeof window !== 'undefined') {
-        window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = { isDisabled: true };
-      }
-    </script>
-
-    <!-- CARGA SEQUENCIAL OBRIGATÓRIA SRE -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 
 <script type="importmap">
 {
@@ -53,6 +37,22 @@
   }
 }
 </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="/index.css">
+    
+    <script type="module">
+      window.process = { env: { NODE_ENV: 'production' } };
+      window.global = window;
+      if (typeof window !== 'undefined') {
+        window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = { isDisabled: true };
+      }
+    </script>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 </head>
   <body>
     <div id="root"></div>

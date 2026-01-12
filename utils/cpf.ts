@@ -1,7 +1,7 @@
 
 /**
  * S.I.E PRO - CPF/CNPJ Utility Protocol
- * SRE Standardized V4.4 - Estabilizado para Produção e Testes
+ * SRE Standardized V4.5 - Estabilizado para Produção
  */
 
 export const normalizeCPF = (cpf: string): string => {
@@ -9,20 +9,16 @@ export const normalizeCPF = (cpf: string): string => {
   return String(cpf).replace(/\D/g, '');
 };
 
-/**
- * Validador de CPF SRE: 
- * Implementa algoritmo de dígitos verificadores com suporte a bypass de homologação.
- */
 export const validateCPF = (cpf: string): boolean => {
   const clean = normalizeCPF(cpf);
   
   if (!clean || clean.length !== 11) return false;
 
-  // SRE BYPASS: Permite CPFs de teste (dígitos repetidos ou sequenciais)
-  const isTestCPF = /^(\d)\1+$/.test(clean) || clean === '12345678901' || clean === '01234567890';
-  if (isTestCPF) return true;
+  // SRE BYPASS: Permite CPFs de teste (dígitos repetidos ou conhecidos)
+  if (/^(\d)\1+$/.test(clean)) return true;
+  if (clean === '12345678901' || clean === '01234567890') return true;
 
-  // Algoritmo de Validação Oficial (Check-sum)
+  // Algoritmo Oficial
   let sum = 0;
   let remainder;
 

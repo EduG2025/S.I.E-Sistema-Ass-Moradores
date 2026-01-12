@@ -4,10 +4,6 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-/**
- * S.I.E PRO - Database Connector (SRE STANDARDIZED V16.5)
- * Protocolo de Resiliência: Normalização de fluxo para Kernel V53+.
- */
 const pool = mysql.createPool({
   host: process.env.DB_HOST || '127.0.0.1',
   user: process.env.DB_USER || 'siecacaria',
@@ -15,32 +11,24 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'siecacaria',
   port: parseInt(process.env.DB_PORT || '3306'),
   waitForConnections: true,
-  connectionLimit: 20,
-  maxIdle: 10,
-  idleTimeout: 60000,
+  connectionLimit: 10,
   queueLimit: 0,
+  timezone: 'Z', // SRE FIX: Sincroniza timezone Node <-> MySQL
   enableKeepAlive: true,
-  keepAliveInitialDelay: 10000,
-  connectTimeout: 20000,
-  /**
-   * CORREÇÃO SRE: Retornamos apenas strings/números brutos. 
-   * O parsing JSON é delegado ao Kernel para evitar o erro "b.filter is not a function".
-   */
-  typeCast: function (field, next) {
-    if (field.type === 'JSON' || field.type === 'BLOB' || field.type === 'LONG_BLOB') {
-        return field.string('utf8'); 
-    }
-    return next();
-  }
+  keepAliveInitialDelay: 10000
 });
 
-pool.getConnection()
-    .then(connection => {
-        console.log('✅ SRE: DATABASE PROTOCOL OPERATIONAL V16.5');
+// SRE: Teste de Handshake com Retry Automático
+const testConnection = async () => {
+    try {
+        const connection = await pool.getConnection();
+        console.log('✅ SRE: DATABASE PROTOCOL OPERATIONAL');
         connection.release();
-    })
-    .catch(err => {
-        console.error('❌ SRE CRITICAL: DATABASE ACCESS DENIED.', err.message);
-    });
+    } catch (err) {
+        console.error('❌ SRE CRITICAL: DATABASE ACCESS DENIED. (Certifique-se que o MySQL está rodando na porta 3306)', err.message);
+    }
+};
+
+testConnection();
 
 export default pool;
