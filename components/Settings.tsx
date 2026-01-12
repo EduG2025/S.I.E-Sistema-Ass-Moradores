@@ -5,7 +5,7 @@ import { SystemInfo, IdCardTemplate, AIKey } from '../types';
 import { aiKeyService, systemService } from '../services/api';
 import {
   Settings as SettingsIcon, Save, Building, Shield, Check, X, Upload,
-  Image as ImageIcon, Plus, Trash2, Loader2, Key, Database, Server
+  Image as ImageIcon, Plus, Trash2, Loader2, Key, Database, Server, Zap, Search, Fingerprint
 } from 'lucide-react';
 
 interface SettingsProps {
@@ -21,6 +21,10 @@ const Settings = ({ systemInfo, onUpdateSystemInfo, templates, onUpdateTemplates
   const [localInfo, setLocalInfo] = useState<SystemInfo>(systemInfo || DEFAULT_SYSTEM_INFO);
   const [aiKeys, setAiKeys] = useState<AIKey[]>([]);
   const [isLoadingKeys, setIsLoadingKeys] = useState(false);
+  
+  // Modal de Nova Chave
+  const [isKeyModalOpen, setIsKeyModalOpen] = useState(false);
+  const [newKey, setNewKey] = useState<Partial<AIKey>>({ label: '', key_value: '', provider: 'GOOGLE', tier: 'FREE', priority: 1, status: 'ACTIVE' });
 
   useEffect(() => {
     if (systemInfo) setLocalInfo(systemInfo);
@@ -30,7 +34,7 @@ const Settings = ({ systemInfo, onUpdateSystemInfo, templates, onUpdateTemplates
     setIsLoadingKeys(true);
     try {
       const res = await aiKeyService.getAll();
-      setAiKeys(res.data?.data || []);
+      setAiKeys(res.data?.data || (Array.isArray(res.data) ? res.data : []));
     } finally { setIsLoadingKeys(false); }
   }, []);
 
@@ -42,19 +46,28 @@ const Settings = ({ systemInfo, onUpdateSystemInfo, templates, onUpdateTemplates
     setIsSaving(true);
     try {
         const payload = { ...localInfo };
-        // SRE Sanitization: Limpa campos automáticos se existirem
         delete (payload as any).created_at;
         delete (payload as any).updated_at;
-        
-        // CORREÇÃO: Utilizando systemService (com interceptor de token) em vez de axios puro
         await systemService.updateInfo(payload);
-        
         onUpdateSystemInfo(localInfo);
         alert("✅ Parâmetros de Kernel sincronizados com sucesso.");
     } catch (e: any) {
-        console.error("SRE SETTINGS_FAIL:", e);
-        const errorMsg = e.response?.data?.error || "FALHA CRÍTICA: Erro de autorização ou conexão.";
-        alert(errorMsg);
+        alert(e.response?.data?.error || "FALHA CRÍTICA: Erro de autorização ou conexão.");
+    } finally { setIsSaving(false); }
+  };
+
+  const handleCreateKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newKey.label || !newKey.key_value) return alert("Preencha todos os campos.");
+    setIsSaving(true);
+    try {
+        await aiKeyService.create(newKey);
+        setIsKeyModalOpen(false);
+        setNewKey({ label: '', key_value: '', provider: 'GOOGLE', tier: 'FREE', priority: 1, status: 'ACTIVE' });
+        loadAIKeys();
+        alert("✅ Chave de IA registrada no Hub.");
+    } catch (e) {
+        alert("Erro ao salvar chave.");
     } finally { setIsSaving(false); }
   };
 
@@ -123,9 +136,6 @@ const Settings = ({ systemInfo, onUpdateSystemInfo, templates, onUpdateTemplates
                   <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Telefone Principal</label>
                       <input className="w-full font-bold h-16 bg-slate-50 border-slate-200 rounded-2xl px-6 focus:bg-white focus:border-indigo-500 transition-all" value={localInfo.phone || ''} onChange={e => setLocalInfo({...localInfo, phone: e.target.value})} />
                   </div>
-                  <div className="md:col-span-2 space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Endereço da Sede Administrativa</label>
-                      <input className="w-full font-bold h-16 bg-slate-50 border-slate-200 rounded-2xl px-6 focus:bg-white focus:border-indigo-500 transition-all" value={localInfo.address || ''} onChange={e => setLocalInfo({...localInfo, address: e.target.value})} />
-                  </div>
               </div>
 
               <div className="pt-10 flex justify-end">
@@ -143,7 +153,9 @@ const Settings = ({ systemInfo, onUpdateSystemInfo, templates, onUpdateTemplates
                       <h3 className="text-2xl font-black text-slate-800 tracking-tight">AI Cluster Gateway</h3>
                       <p className="text-slate-400 text-sm mt-1">Gestão de chaves de redundância para os modelos Gemini 3 (Pro/Flash).</p>
                     </div>
-                    <button onClick={loadAIKeys} className="p-4 bg-slate-100 rounded-xl text-slate-600 hover:bg-indigo-50 transition-colors"><Database size={20}/></button>
+                    <button onClick={() => setIsKeyModalOpen(true)} className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 transition-all flex items-center gap-2 shadow-lg">
+                        <Plus size={16}/> Registrar Nova Chave
+                    </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {isLoadingKeys ? <div className="col-span-full py-20 text-center"><Loader2 className="animate-spin text-indigo-600 mx-auto" size={40}/></div> : 
@@ -153,10 +165,13 @@ const Settings = ({ systemInfo, onUpdateSystemInfo, templates, onUpdateTemplates
                                 <div className="p-5 bg-indigo-100 text-indigo-600 rounded-[1.5rem] group-hover:bg-indigo-600 group-hover:text-white transition-colors"><Key size={24}/></div>
                                 <div>
                                     <h4 className="font-black text-slate-800 uppercase text-xs">{key.label}</h4>
-                                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">{key.provider} • {key.tier}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">{key.provider} • {key.tier} • Prioridade {key.priority}</p>
                                 </div>
                             </div>
-                            <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase border ${key.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>{key.status}</span>
+                            <div className="flex items-center gap-4">
+                                <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase border ${key.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>{key.status}</span>
+                                <button className="p-2 text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={16}/></button>
+                            </div>
                         </div>
                     ))}
                     {!isLoadingKeys && aiKeys.length === 0 && (
@@ -168,6 +183,47 @@ const Settings = ({ systemInfo, onUpdateSystemInfo, templates, onUpdateTemplates
             </div>
           )}
       </div>
+
+      {/* MODAL DE NOVA CHAVE */}
+      {isKeyModalOpen && (
+          <div className="fixed inset-0 bg-slate-900/95 z-[5000] flex items-center justify-center p-4 backdrop-blur-xl animate-fade-in">
+              <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-xl overflow-hidden border border-white/10 animate-scale-in">
+                  <form onSubmit={handleCreateKey}>
+                    <div className="p-10 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                            <div className="p-4 bg-indigo-600 text-white rounded-2xl"><Zap size={24}/></div>
+                            <h3 className="font-black text-2xl tracking-tighter uppercase">Injetar Token IA</h3>
+                        </div>
+                        <button type="button" onClick={() => setIsKeyModalOpen(false)} className="p-3 hover:bg-white rounded-full transition-all text-slate-400 border border-transparent hover:border-slate-100"><X size={24}/></button>
+                    </div>
+                    <div className="p-10 space-y-6">
+                        <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Rótulo Identificador (Ex: Gemini Pro Primária)</label>
+                            <input required className="w-full font-bold h-14 bg-slate-50 border-slate-200 rounded-2xl px-6 focus:bg-white transition-all shadow-inner" value={newKey.label} onChange={e => setNewKey({...newKey, label: e.target.value})} />
+                        </div>
+                        <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Valor da API Key (Google AI Studio)</label>
+                            <input required type="password" className="w-full font-mono font-bold h-14 bg-slate-50 border-slate-200 rounded-2xl px-6 focus:bg-white transition-all shadow-inner" value={newKey.key_value} onChange={e => setNewKey({...newKey, key_value: e.target.value})} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-6">
+                            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Tier do Token</label>
+                                <select className="w-full font-bold h-14 bg-slate-50 border-slate-200 rounded-2xl px-6 shadow-inner" value={newKey.tier} onChange={e => setNewKey({...newKey, tier: e.target.value as any})}>
+                                    <option value="FREE">FREE (Limitado)</option><option value="PAID">PAID (Alta Performance)</option>
+                                </select>
+                            </div>
+                            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Prioridade SRE (1 = Max)</label>
+                                <input type="number" min="1" className="w-full font-bold h-14 bg-slate-50 border-slate-200 rounded-2xl px-6 shadow-inner" value={newKey.priority} onChange={e => setNewKey({...newKey, priority: Number(e.target.value)})} />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="p-10 border-t border-slate-100 flex justify-end gap-4 bg-slate-50">
+                        <button type="button" onClick={() => setIsKeyModalOpen(false)} className="px-10 py-5 text-slate-400 font-black text-xs uppercase tracking-widest">Abortar</button>
+                        <button type="submit" disabled={isSaving} className="px-16 py-5 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl hover:bg-indigo-600 transition-all flex items-center gap-3">
+                            {isSaving ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Comitar no Hub
+                        </button>
+                    </div>
+                  </form>
+              </div>
+          </div>
+      )}
     </div>
   );
 };

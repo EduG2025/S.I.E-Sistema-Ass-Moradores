@@ -27,6 +27,8 @@ const Reservations = lazy(() => import('./components/Reservations')) as any;
 const SuggestionBox = lazy(() => import('./components/SuggestionBox')) as any;
 const Assets = lazy(() => import('./components/Assets')) as any;
 const Surveys = lazy(() => import('./components/Surveys')) as any;
+const Concierge = lazy(() => import('./components/Concierge')) as any;
+const Sustainability = lazy(() => import('./components/Sustainability')) as any;
 
 const App = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -101,7 +103,6 @@ const App = () => {
 
     return (
         <div className="h-screen w-screen overflow-hidden flex bg-[#f8fafc] font-sans">
-            {/* SIDEBAR REESTRUTURADA */}
             <aside className={`fixed lg:static inset-y-0 left-0 z-[60] bg-slate-950 border-r border-white/5 flex flex-col shrink-0 transition-all duration-500 ease-in-out ${sidebarOpen ? 'translate-x-0 w-80' : '-translate-x-full w-80 lg:translate-x-0'} ${sidebarCollapsed ? 'lg:w-24' : 'lg:w-80'}`}>
                 <div className={`p-8 flex items-center justify-between transition-all ${sidebarCollapsed ? 'flex-col gap-6' : ''}`}>
                     <div className="flex items-center gap-4 min-w-0">
@@ -115,11 +116,9 @@ const App = () => {
                             </div>
                         )}
                     </div>
-                    {/* Botão de colapso desktop */}
                     <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden lg:flex p-2 bg-white/5 hover:bg-white/10 rounded-xl text-slate-500 transition-colors">
                         {sidebarCollapsed ? <ChevronRight size={16}/> : <ChevronLeft size={16}/>}
                     </button>
-                    {/* Botão fechar mobile */}
                     <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 text-slate-400"><X size={24}/></button>
                 </div>
 
@@ -159,6 +158,7 @@ const App = () => {
                     <Suspense fallback={<div className="flex-1 flex items-center justify-center py-20"><Loader2 className="animate-spin text-indigo-600" size={40}/></div>}>
                         {activeTab === 'dashboard' && <Dashboard onNavigate={setActiveTab} systemInfo={systemInfo} />}
                         {activeTab === 'users' && <UserManagement />}
+                        {activeTab === 'concierge' && <Concierge />}
                         {activeTab === 'finance' && <Finance />}
                         {activeTab === 'settings' && <Settings systemInfo={systemInfo} onUpdateSystemInfo={setSystemInfo} templates={templates} onUpdateTemplates={setTemplates} />}
                         {activeTab === 'operations' && <Operations />}
@@ -171,6 +171,7 @@ const App = () => {
                         {activeTab === 'timeline' && <Timeline />}
                         {activeTab === 'marketplace' && <MarketPlace />}
                         {activeTab === 'reservations' && <Reservations />}
+                        {activeTab === 'sustainability' && <Sustainability />}
                         {activeTab === 'suggestions' && <SuggestionBox />}
                         {activeTab === 'assets' && <Assets />}
                         {activeTab === 'surveys' && <Surveys />}

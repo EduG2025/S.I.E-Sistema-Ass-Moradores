@@ -2,13 +2,14 @@ import {
   LayoutDashboard, Wallet, Users, Bell, ShieldAlert, CalendarClock, 
   Settings, ClipboardList, BarChart3, Map as MapIcon, Briefcase, ShoppingBag,
   Landmark, Shield, FileText, Gavel, MessageSquareText, MessageSquare, 
-  Calendar, Camera, Leaf, Package, Megaphone, HelpCircle, Box
+  Calendar, Camera, Leaf, Package, Megaphone, HelpCircle, Box, UserPlus, Zap
 } from 'lucide-react';
 
 export const MENU_ITEMS = [
   { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard, permissionId: 'view_dashboard' },
   { id: 'neural_chat', label: 'IA Especialista', icon: MessageSquareText, permissionId: 'use_ai_chat' },
   { id: 'users', label: 'Famílias & Membros', icon: Users, permissionId: 'manage_users' },
+  { id: 'concierge', label: 'Portaria & Acesso', icon: Shield, permissionId: 'view_operations' },
   { id: 'demographics', label: 'Observatório Social', icon: BarChart3, permissionId: 'view_demographics' },
   { id: 'finance', label: 'Financeiro', icon: Wallet, permissionId: 'view_finances' },
   { id: 'operations', label: 'Ocorrências (Watchdog)', icon: ShieldAlert, permissionId: 'view_operations' },
@@ -19,6 +20,7 @@ export const MENU_ITEMS = [
   { id: 'projects', label: 'Obras & Projetos', icon: Landmark, permissionId: 'view_projects' },
   { id: 'marketplace', label: 'Marketplace Local', icon: ShoppingBag, permissionId: 'view_dashboard' },
   { id: 'reservations', label: 'Reservas de Áreas', icon: Calendar, permissionId: 'view_dashboard' },
+  { id: 'sustainability', label: 'Sustentabilidade ESG', icon: Leaf, permissionId: 'view_dashboard' },
   { id: 'suggestions', label: 'Ouvidoria Digital', icon: HelpCircle, permissionId: 'view_dashboard' },
   { id: 'assets', label: 'Patrimônio', icon: Box, permissionId: 'manage_users' },
   { id: 'surveys', label: 'Censo & Pesquisas', icon: ClipboardList, permissionId: 'manage_users' },

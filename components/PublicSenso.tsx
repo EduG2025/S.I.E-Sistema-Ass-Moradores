@@ -61,6 +61,7 @@ const PublicSenso = () => {
         setError('');
 
         try {
+            // SRE FIX: Garantir que a URL de verificação passe o CPF limpo
             const res = await axios.get(`/api/surveys/public/check-resident/${cleanCPF}`);
             if (res.data.found) {
                 setUserData({ 
@@ -69,12 +70,16 @@ const PublicSenso = () => {
                     email: res.data.email || '', 
                     phone: res.data.phone || '' 
                 });
+                // CORREÇÃO: Pula 'PERSONAL_INFO' e vai direto para 'FORM'
                 setStep('FORM');
                 setActiveTab('SOCIAL');
+                console.log("[SRE] Membro identificado via Database. Redirecionando para Censo Neural.");
             } else { 
+                console.log("[SRE] Novo CPF detectado. Solicitando Ficha de Inclusão.");
                 setStep('PERSONAL_INFO'); 
             }
         } catch (e) { 
+            console.error("ID_SYNC_FAIL:", e);
             setError('Falha de sincronização com o Hub. Tente novamente.'); 
         } finally { 
             setIsLoading(false); 
