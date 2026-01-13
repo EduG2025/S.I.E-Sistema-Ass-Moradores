@@ -11,10 +11,10 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'siecacaria',
   port: parseInt(process.env.DB_PORT || '3306'),
   waitForConnections: true,
-  connectionLimit: 20, // Aumentado para suportar picos de censo
+  connectionLimit: 30, 
   queueLimit: 0,
   timezone: '-03:00',
-  dateStrings: true, // SRE FIX: Força o motor a tratar datas como strings para evitar o erro de ISO/Z
+  dateStrings: true, // Crucial para evitar o erro de Incorrect datetime value
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000,
   connectTimeout: 60000
@@ -27,7 +27,7 @@ const testConnection = async () => {
         connection.release();
     } catch (err) {
         console.error('❌ SRE CRITICAL: DATABASE ACCESS DENIED.', err.message);
-        console.error('DICA SRE: Verifique se o MySQL está rodando: "sudo systemctl status mysql"');
+        console.error('DICA SRE: Se estiver em Docker, mude DB_HOST para o nome do serviço.');
     }
 };
 

@@ -32,6 +32,16 @@ const DEFAULT_PERMISSIONS = {
 const ensureSystemReady = async () => {
     try {
         await pool.query(`CREATE TABLE IF NOT EXISTS role_permissions (role VARCHAR(50) NOT NULL, permission_id VARCHAR(100) NOT NULL, PRIMARY KEY (role, permission_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+        
+        // Garantir tabelas críticas para evitar 500
+        const tables = [
+            'CREATE TABLE IF NOT EXISTS timeline (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255), description TEXT, date DATETIME, type VARCHAR(50), status VARCHAR(50), location VARCHAR(255))',
+            'CREATE TABLE IF NOT EXISTS visitors (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), document VARCHAR(50), unit VARCHAR(50), phone VARCHAR(50), status VARCHAR(50), arrival_time DATETIME)',
+            'CREATE TABLE IF NOT EXISTS deliveries (id INT AUTO_INCREMENT PRIMARY KEY, courier VARCHAR(255), company VARCHAR(255), unit VARCHAR(50), recipient VARCHAR(255), status VARCHAR(50), arrival_time DATETIME)',
+            'CREATE TABLE IF NOT EXISTS ai_keys (id INT AUTO_INCREMENT PRIMARY KEY, label VARCHAR(100), key_value VARCHAR(255), provider VARCHAR(50), tier VARCHAR(20), priority INT, status VARCHAR(20), error_count INT DEFAULT 0, last_checked DATETIME)'
+        ];
+        for (const sql of tables) { await pool.query(sql); }
+
         const [permsCount] = await pool.query('SELECT COUNT(*) as total FROM role_permissions');
         if (permsCount[0].total === 0) {
             const values = [];
@@ -40,6 +50,7 @@ const ensureSystemReady = async () => {
             });
             await pool.query('INSERT INTO role_permissions (role, permission_id) VALUES ?', [values]);
         }
+        
         const [admins] = await pool.query('SELECT id FROM users WHERE role = "ADMIN" LIMIT 1');
         if (admins.length === 0) {
             const hash = await bcrypt.hash('Gegerminal180', 10);
@@ -48,15 +59,7 @@ const ensureSystemReady = async () => {
                 email: 'admin@sie.pro', password_hash: hash, role: 'ADMIN', status: 'ACTIVE', active: 1
             }]);
         }
-        const [settings] = await pool.query('SELECT id FROM settings WHERE id = 1');
-        if (settings.length === 0) {
-            await pool.query('INSERT INTO settings SET ?', [{
-                id: 1, name: 'Associação Residencial S.I.E', shortName: 'S.I.E PRO',
-                cnpj: '00.000.000/0001-00', address: 'Sede Administrativa Central',
-                primaryColor: '#4f46e5', registrationMode: 'APPROVAL'
-            }]);
-        }
-    } catch (e) { console.error('❌ Falha na provisão:', e.message); }
+    } catch (e) { console.error('❌ Falha na provisão SRE:', e.message); }
 };
 
 const authenticate = (req, res, next) => {
@@ -82,13 +85,20 @@ const authorize = (permission) => async (req, res, next) => {
 const cleanForDB = (data) => {
     const protectedFields = ['id', 'created_at', 'updated_at', 'deleted_at', 'last_login'];
     const clean = { ...data };
+    
+    // Remove campos protegidos para evitar erro de escrita em colunas de sistema
     protectedFields.forEach(f => delete clean[f]);
+
+    // Conversão agressiva de ISO para MySQL Standard
     Object.keys(clean).forEach(key => {
         let val = clean[key];
-        if (typeof val === 'string' && val.includes('T') && val.includes('Z') && val.length > 18) {
+        if (typeof val === 'string' && (val.includes('T') || val.includes('Z')) && val.length > 10) {
             try {
                 const date = new Date(val);
-                if (!isNaN(date.getTime())) clean[key] = date.toISOString().slice(0, 19).replace('T', ' ');
+                if (!isNaN(date.getTime())) {
+                    // Formato: YYYY-MM-DD HH:mm:ss
+                    clean[key] = date.toISOString().slice(0, 19).replace('T', ' ');
+                }
             } catch (e) { }
         }
     });
@@ -142,6 +152,20 @@ const createCrud = (table, route, jsonFields = [], perm = 'view_dashboard') => {
     });
 };
 
+// Rota OCR Vision (FIX 404)
+app.post('/api/ai/ocr', authenticate, async (req, res) => {
+    try {
+        const { image, context } = req.body;
+        const prompt = `Analise este documento de contexto ${context}. Extraia todos os dados biográficos e estruturados em formato JSON puro.`;
+        const result = await IAProviderManager.execute('analyzeImage', { 
+            contents: { parts: [{ inlineData: { data: image.split(',')[1], mimeType: 'image/jpeg' } }, { text: prompt }] }
+        });
+        // Tenta extrair JSON da resposta da IA
+        const jsonMatch = result.match(/\{[\s\S]*\}/);
+        res.json(jsonMatch ? JSON.parse(jsonMatch[0]) : { text: result });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/settings/permissions', authenticate, authorize('manage_settings'), async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM role_permissions');
@@ -161,21 +185,6 @@ app.put('/api/settings/permissions', authenticate, authorize('manage_settings'),
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/financials/stats', authenticate, authorize('view_finances'), async (req, res) => {
-    try {
-        const [[balance]] = await pool.query('SELECT SUM(CASE WHEN type="INCOME" THEN amount ELSE -amount END) as total FROM financials');
-        const [[incidents]] = await pool.query('SELECT COUNT(*) as count FROM incidents WHERE status != "RESOLVED"');
-        res.json({ balance: balance.total || 0, openIncidents: incidents.count || 0 });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/demographics/stats', authenticate, authorize('view_demographics'), async (req, res) => {
-    try {
-        const [[pop]] = await pool.query('SELECT COUNT(*) as total FROM users');
-        res.json({ totalPopulation: pop.total, incomeDistribution: { low: 25, midLow: 40, mid: 20, high: 15 }, vulnerability: { low: 80, moderate: 15, critical: 5 } });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
 app.post('/api/ai/chat', authenticate, authorize('use_ai_chat'), async (req, res) => {
     try {
         const text = await IAProviderManager.execute('generateText', { contents: req.body.contents });
@@ -188,23 +197,8 @@ app.get('/api/ai/user-dossier/:userId', authenticate, authorize('manage_users'),
         const userId = req.params.userId;
         const [[user]] = await pool.query('SELECT * FROM users WHERE id = ?', [userId]);
         if (!user) return res.status(404).json({ error: 'USER_NOT_FOUND' });
-
         const [finances] = await pool.query('SELECT * FROM financials WHERE user_id = ? ORDER BY date DESC LIMIT 20', [userId]);
-        
-        const prompt = `Analise o perfil deste membro da associação S.I.E PRO:
-        NOME: ${user.name}
-        PAPEL: ${user.role}
-        STATUS: ${user.status}
-        EXTRATO FINANCEIRO (Últimos 20 registros): ${JSON.stringify(finances)}
-        DADOS SOCIAIS: ${user.socialData || 'Não informados'}
-
-        Instrução: Gere um dossiê analítico de governança contendo:
-        1. Resumo do Perfil e Comportamento.
-        2. Score de Confiança SRE (0 a 100).
-        3. Identificação de riscos (inadimplência, vulnerabilidade social).
-        4. Recomendações para a gestão.
-        Responda em Markdown estruturado e profissional.`;
-
+        const prompt = `Analise o perfil deste membro: ${user.name}, Papel: ${user.role}. Extrato: ${JSON.stringify(finances)}. Gere dossiê Markdown.`;
         const text = await IAProviderManager.execute('generateText', { contents: prompt });
         res.json({ text });
     } catch (e) { res.status(500).json({ error: e.message }); }

@@ -37,7 +37,6 @@ const Operations = () => {
 
     return (
         <div className="flex-1 flex flex-col min-h-0 space-y-4 animate-fade-in h-full relative">
-             {/* Slim Header - Compacto */}
              <div className="flex flex-row justify-between items-center bg-slate-900 p-4 rounded-2xl text-white shadow-lg shrink-0">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-rose-600 rounded-lg"><ShieldAlert size={18}/></div>
@@ -73,36 +72,33 @@ const Operations = () => {
                 )}
             </div>
 
-            {/* TRUE FULL-CANVAS OVERLAY */}
             {isModalOpen && editingIncident && (
-                <div className="fixed inset-y-0 right-0 z-[1000] bg-[#fcfcfd] flex flex-col animate-slide-left shadow-2xl transition-all duration-300"
-                     style={{ left: document.querySelector('aside')?.classList.contains('lg:w-24') ? '96px' : '288px' }}>
-                    
-                    <div className="h-14 px-6 bg-slate-900 text-white flex justify-between items-center shrink-0 shadow-lg">
+                <div className="sie-editor-overlay">
+                    <div className="h-16 px-6 bg-slate-900 text-white flex justify-between items-center shrink-0 shadow-lg relative z-20">
                         <div className="flex items-center gap-3">
-                            <Shield size={16} className="text-rose-400"/>
-                            <h3 className="font-black text-[10px] uppercase tracking-widest leading-none">Protocolar Ocorrência</h3>
+                            <Shield size={20} className="text-rose-400"/>
+                            <h3 className="font-black text-xs uppercase tracking-widest leading-none">Protocolar Ocorrência</h3>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button onClick={handleSave} disabled={isSaving} className="px-5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg font-black text-[9px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg active:scale-95">
-                                {isSaving ? <Loader2 className="animate-spin" size={12}/> : <Save size={12}/>} Commitar Chamado
+                            <button onClick={handleSave} disabled={isSaving} className="px-6 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg active:scale-95">
+                                {isSaving ? <Loader2 className="animate-spin" size={12}/> : <Save size={14}/>} Commitar Chamado
                             </button>
-                            <button onClick={() => setIsModalOpen(false)} className="p-2 text-slate-400 hover:text-rose-400 transition-all border border-white/10 rounded-lg"><X size={20}/></button>
+                            <button onClick={() => setIsModalOpen(false)} className="p-2 text-slate-400 hover:text-rose-400 transition-all ml-2"><X size={32}/></button>
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-10 custom-scrollbar bg-[#fcfcfd]">
-                        <div className="max-w-3xl mx-auto space-y-6 pb-10">
-                            <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-                                <div className="space-y-1">
-                                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Título</label>
-                                    <input required className="w-full font-bold h-12 bg-slate-50 border rounded-xl px-4 focus:bg-white shadow-inner" placeholder="Ex: Vazamento no Bloco B" value={editingIncident.title} onChange={e => setEditingIncident({...editingIncident, title: e.target.value})} />
+                    <div className="flex-1 overflow-y-auto p-12 custom-scrollbar bg-[#fcfcfd]">
+                        <div className="max-w-3xl mx-auto space-y-8 pb-10">
+                            <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-10">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Título do Incidente</label>
+                                    <input required className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-3xl px-8 text-xl focus:bg-white focus:border-rose-500 transition-all shadow-inner" placeholder="Ex: Vazamento no Bloco B" value={editingIncident.title} onChange={e => setEditingIncident({...editingIncident, title: e.target.value})} />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Severidade</label><select className="w-full font-bold h-12 bg-slate-50 border rounded-xl px-4 shadow-inner" value={editingIncident.priority} onChange={e => setEditingIncident({...editingIncident, priority: e.target.value as any})}><option value="LOW">Baixa</option><option value="MEDIUM">Média</option><option value="HIGH">Alta</option></select></div>
-                                    <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label><select className="w-full font-bold h-12 bg-slate-50 border rounded-xl px-4 shadow-inner" value={editingIncident.status} onChange={e => setEditingIncident({...editingIncident, status: e.target.value as any})}><option value="OPEN">Aberto</option><option value="IN_PROGRESS">Em Curso</option><option value="RESOLVED">Resolvido</option></select></div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Severidade</label><select className="w-full font-bold h-14 bg-slate-50 border rounded-2xl px-6 shadow-inner" value={editingIncident.priority} onChange={e => setEditingIncident({...editingIncident, priority: e.target.value as any})}><option value="LOW">Informativo (Baixa)</option><option value="MEDIUM">Operacional (Média)</option><option value="HIGH">Crítico (Alta)</option><option value="CRITICAL">EMERGÊNCIA SRE</option></select></div>
+                                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label><select className="w-full font-bold h-14 bg-slate-50 border rounded-2xl px-6 shadow-inner" value={editingIncident.status} onChange={e => setEditingIncident({...editingIncident, status: e.target.value as any})}><option value="OPEN">Aberto / Novo</option><option value="IN_PROGRESS">Em Curso</option><option value="RESOLVED">Resolvido</option></select></div>
                                 </div>
-                                <div className="space-y-1"><label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Localização</label><input required className="w-full font-bold h-12 bg-slate-50 border rounded-xl px-4 shadow-inner" value={editingIncident.location} onChange={e => setEditingIncident({...editingIncident, location: e.target.value})} /></div>
+                                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Localização Exata</label><input required className="w-full font-bold h-14 bg-slate-50 border rounded-2xl px-6 shadow-inner" value={editingIncident.location} onChange={e => setEditingIncident({...editingIncident, location: e.target.value})} /></div>
                             </div>
                         </div>
                     </div>
