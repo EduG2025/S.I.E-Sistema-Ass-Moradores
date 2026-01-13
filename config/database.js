@@ -11,21 +11,23 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'siecacaria',
   port: parseInt(process.env.DB_PORT || '3306'),
   waitForConnections: true,
-  connectionLimit: 20, // Aumentado para suportar picos
+  connectionLimit: 20, // Aumentado para suportar picos de censo
   queueLimit: 0,
-  timezone: '-03:00', // SRE FIX: Força timezone Brasil para compatibilidade total
+  timezone: '-03:00',
+  dateStrings: true, // SRE FIX: Força o motor a tratar datas como strings para evitar o erro de ISO/Z
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000,
-  connectTimeout: 20000 // Aumentado para 20s para evitar quedas em boot de VPS
+  connectTimeout: 60000
 });
 
 const testConnection = async () => {
     try {
         const connection = await pool.getConnection();
-        console.log('✅ SRE: DATABASE PROTOCOL OPERATIONAL');
+        console.log('✅ SRE DATABASE CONNECTED & SYNCED');
         connection.release();
     } catch (err) {
-        console.error('❌ SRE CRITICAL: DATABASE ACCESS DENIED. Verifique se o MySQL Server está ATIVO na VPS.', err.message);
+        console.error('❌ SRE CRITICAL: DATABASE ACCESS DENIED.', err.message);
+        console.error('DICA SRE: Verifique se o MySQL está rodando: "sudo systemctl status mysql"');
     }
 };
 

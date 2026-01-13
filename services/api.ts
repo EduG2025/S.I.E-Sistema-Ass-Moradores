@@ -1,12 +1,10 @@
 
 import axios from 'axios';
 
-// SRE PROTOCOL: Centralized API client for Kernel V25.9
 const api = axios.create({
     baseURL: '/api',
 });
 
-// Protocolo SRE: Interceptor para injeção de Token JWT para persistência de sessão administrativa
 api.interceptors.request.use((config) => {
     const token = localStorage.getItem('sie_auth_token');
     if (token) {
@@ -37,11 +35,6 @@ export const financialService = {
     delete: (id: string | number) => api.delete(`/financials/${id}`),
 };
 
-export const notificationService = {
-    getAll: () => api.get('/notifications'),
-    markAllRead: () => api.put('/notifications/read-all'),
-};
-
 export const surveyService = {
     getAll: () => api.get('/surveys'),
     getPublic: (id: string) => api.get(`/surveys/public/${id}`),
@@ -50,10 +43,6 @@ export const surveyService = {
     create: (data: any) => api.post('/surveys', data),
     update: (id: string | number, data: any) => api.put(`/surveys/${id}`, data),
     delete: (id: string | number) => api.delete(`/surveys/${id}`),
-};
-
-export const mapService = {
-    getUnits: () => api.get('/users'),
 };
 
 export const demographicsService = {
@@ -70,6 +59,8 @@ export const systemService = {
     getInfo: () => api.get('/settings/system'),
     updateInfo: (data: any) => api.put('/settings/system', data),
     getSustainabilityStats: () => api.get('/sustainability/stats'),
+    getPermissions: () => api.get('/settings/permissions'),
+    updatePermissions: (matrix: any[]) => api.put('/settings/permissions', { matrix }),
 };
 
 export const operationsService = {
@@ -79,10 +70,6 @@ export const operationsService = {
     deleteIncident: (id: string | number) => api.delete(`/incidents/${id}`),
 };
 
-export const templateService = {
-    getAll: () => api.get('/templates'),
-};
-
 export const communicationService = {
     getNotices: () => api.get('/notices'),
     sendNotice: (data: any) => api.post('/notices', data),
@@ -90,7 +77,6 @@ export const communicationService = {
     deleteNotice: (id: string | number) => api.delete(`/notices/${id}`),
 };
 
-// SRE FIX: Agenda direcionada para /timeline exclusivo
 export const agendaService = {
     getAll: () => api.get('/timeline'),
     create: (data: any) => api.post('/timeline', data),
@@ -123,11 +109,7 @@ export const aiService = {
     chat: (prompt: string) => api.post('/ai/chat', { contents: prompt }),
     generateDocument: (prompt: string) => api.post('/ai/generate-document', { contents: prompt }),
     generateAssemblyAta: (data: any) => api.post('/ai/generate-ata', data),
-};
-
-export const censusService = {
-    register: (data: any) => api.post('/census/register', data),
-    createProfile: (registryId: number, data: any) => api.post(`/census/profile/${registryId}`, data),
+    generateUserDossier: (userId: string | number) => api.get(`/ai/user-dossier/${userId}`),
 };
 
 export const documentService = {
@@ -148,6 +130,17 @@ export const reservationService = {
     getAll: () => api.get('/reservations'),
     create: (data: any) => api.post('/reservations', data),
     delete: (id: string | number) => api.delete(`/reservations/${id}`),
+};
+
+// SRE FIX: Added missing mapService for SmartMap component compatibility
+export const mapService = {
+    getUnits: () => api.get('/users'),
+};
+
+// SRE FIX: Added missing censusService for CensusRegister and SocioProfile components compatibility
+export const censusService = {
+    register: (data: any) => api.post('/census/register', data),
+    createProfile: (registryId: number | string, data: any) => api.post(`/census/profile/${registryId}`, data),
 };
 
 export { api };

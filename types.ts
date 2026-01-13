@@ -133,7 +133,6 @@ export interface Notice {
   date: string;
 }
 
-// SRE FIX: AgendaEvent interface added for Timeline component
 export interface AgendaEvent {
   id: string | number;
   title: string;
