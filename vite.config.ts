@@ -40,10 +40,14 @@ export default defineConfig({
         'lucide-react',
         'recharts',
         'leaflet',
-        'axios'
+        'axios',
+        '@google/genai'
       ],
       output: {
         format: 'esm',
+        entryFileNames: `assets/[name].js`,
+        chunkFileNames: `assets/[name].js`,
+        assetFileNames: `assets/[name].[ext]`,
         globals: {
           react: 'React',
           'react-dom': 'ReactDOM',

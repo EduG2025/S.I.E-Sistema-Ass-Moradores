@@ -28,9 +28,12 @@ const DocumentHub = ({ systemInfo }: DocumentHubProps) => {
     setIsLoading(true);
     try {
       const res = await documentService.getAll();
-      setDocuments(Array.isArray(res.data.data) ? res.data.data : (Array.isArray(res.data) ? res.data : []));
+      // SRE FIX: Mapeia dados vindos do Kernel MySQL correctly
+      const list = res.data?.data || (Array.isArray(res.data) ? res.data : []);
+      setDocuments(list);
     } catch (e) {
       console.error("[SRE] Erro ao carregar documentos.");
+      setDocuments([]);
     } finally {
       setIsLoading(false);
     }
@@ -78,7 +81,6 @@ const DocumentHub = ({ systemInfo }: DocumentHubProps) => {
               updated_at: new Date().toISOString()
           });
       }
-      alert("✅ Texto digitalizado e inserido no editor.");
   };
 
   const handleSave = async () => {
@@ -87,10 +89,11 @@ const DocumentHub = ({ systemInfo }: DocumentHubProps) => {
     
     setIsSaving(true);
     try {
+      const payload = { ...activeDoc };
       if (typeof activeDoc.id === 'string' && activeDoc.id.startsWith('temp_')) {
-          await documentService.create(activeDoc);
+          await documentService.create(payload);
       } else {
-          await documentService.update(String(activeDoc.id), activeDoc);
+          await documentService.update(String(activeDoc.id), payload);
       }
       loadDocuments();
       alert("✅ Documento sincronizado com o Kernel.");
@@ -142,7 +145,7 @@ const DocumentHub = ({ systemInfo }: DocumentHubProps) => {
             <div className="p-4 bg-indigo-600 rounded-2xl shadow-lg"><FileText size={28}/></div>
             <div>
               <h2 className="text-2xl font-black tracking-tighter uppercase leading-none">Hub de Documentos</h2>
-              <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mt-1.5 opacity-80">Kernel Governança Imobiliária V25.9</p>
+              <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mt-1.5 opacity-80">SRE Governança Imobiliária V25.9</p>
             </div>
         </div>
         <div className="flex gap-3">
@@ -150,24 +153,23 @@ const DocumentHub = ({ systemInfo }: DocumentHubProps) => {
                 <Camera size={18}/> Scanner Vision
             </button>
             <button onClick={() => setActiveDoc({ id: `temp_${Date.now()}`, title: '', content: '', type: 'OFICIO', status: 'DRAFT', updated_at: '' })} className="px-8 py-3.5 bg-white text-slate-900 rounded-xl font-black text-[11px] uppercase tracking-widest shadow-xl hover:bg-indigo-50 transition-all flex items-center gap-2">
-                <Plus size={18}/> Novo Registro
+                <Plus size={18}/> Novo Documento
             </button>
         </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 overflow-hidden">
-        {/* Sidebar de Listagem */}
         <div className="lg:col-span-4 bg-white rounded-[3rem] border border-slate-200 shadow-sm flex flex-col overflow-hidden">
           <div className="p-6 border-b bg-slate-50/50">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18}/>
-              <input type="text" placeholder="Filtrar por título ou tipo..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:border-indigo-500 shadow-inner" />
+              <input type="text" placeholder="Filtrar por título..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:border-indigo-500 shadow-inner" />
             </div>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
             {isLoading ? <div className="p-10 text-center"><Loader2 className="animate-spin mx-auto text-indigo-500" size={32}/></div> : 
              documents.filter(d => (d.title || '').toLowerCase().includes(searchTerm.toLowerCase())).map(doc => (
-              <button key={doc.id} onClick={() => setActiveDoc(doc)} className={`w-full p-6 rounded-[2rem] border transition-all text-left flex justify-between items-center group ${activeDoc?.id === doc.id ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl scale-[1.02]' : 'bg-white border-slate-100 hover:border-indigo-200 text-slate-600'}`}>
+              <button key={doc.id} onClick={() => setActiveDoc(doc)} className={`w-full p-6 rounded-[2.5rem] border transition-all text-left flex justify-between items-center group ${activeDoc?.id === doc.id ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl scale-[1.02]' : 'bg-white border-slate-100 hover:border-indigo-200 text-slate-600'}`}>
                 <div className="flex items-center gap-4">
                     <div className={`p-3 rounded-xl transition-colors ${activeDoc?.id === doc.id ? 'bg-white/10' : 'bg-slate-50 group-hover:bg-indigo-50 group-hover:text-indigo-600'}`}><FileText size={20}/></div>
                     <div className="min-w-0">
@@ -178,28 +180,18 @@ const DocumentHub = ({ systemInfo }: DocumentHubProps) => {
                 <ChevronRight size={18} className={`transition-all ${activeDoc?.id === doc.id ? 'opacity-100 translate-x-1' : 'opacity-0'}`} />
               </button>
             ))}
-            {!isLoading && documents.length === 0 && (
-                <div className="py-20 text-center text-slate-300">
-                    <FileCheck size={48} className="mx-auto mb-4 opacity-10"/>
-                    <p className="text-[10px] font-black uppercase">Nenhum documento protocolado</p>
-                </div>
-            )}
           </div>
         </div>
 
-        {/* Workspace de Edição e Ghostwriter */}
         <div className="lg:col-span-8 bg-white rounded-[3rem] border border-slate-200 shadow-sm flex flex-col overflow-hidden relative">
           {activeDoc ? (
             <div className="flex flex-col h-full">
               <div className="p-8 border-b bg-white flex flex-col md:flex-row justify-between items-center gap-6 shrink-0 z-10">
                 <div className="flex-1 w-full">
-                    <input className="text-2xl font-black text-slate-800 tracking-tighter bg-transparent border-none p-0 outline-none w-full placeholder:text-slate-200" value={activeDoc.title} onChange={e => setActiveDoc({...activeDoc, title: e.target.value})} placeholder="Dê um título ao protocolo..." />
+                    <input className="text-2xl font-black text-slate-800 tracking-tighter bg-transparent border-none p-0 outline-none w-full placeholder:text-slate-200" value={activeDoc.title} onChange={e => setActiveDoc({...activeDoc, title: e.target.value})} placeholder="Título do Protocolo..." />
                     <div className="flex gap-4 mt-2">
                         <select className="bg-slate-50 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border border-slate-100 cursor-pointer" value={activeDoc.type} onChange={e => setActiveDoc({...activeDoc, type: e.target.value as any})}>
                             <option value="OFICIO">Ofício</option><option value="ATA">Ata</option><option value="EDITAL">Edital</option><option value="CONTRATO">Contrato</option><option value="RELATÓRIO">Relatório</option>
-                        </select>
-                        <select className="bg-slate-50 text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border border-slate-100 cursor-pointer" value={activeDoc.status} onChange={e => setActiveDoc({...activeDoc, status: e.target.value as any})}>
-                            <option value="DRAFT">Rascunho</option><option value="SIGNED">Assinado</option><option value="ARCHIVED">Arquivado</option>
                         </select>
                     </div>
                 </div>
@@ -213,63 +205,42 @@ const DocumentHub = ({ systemInfo }: DocumentHubProps) => {
               </div>
 
               <div className="flex-1 overflow-y-auto p-8 lg:p-12 custom-scrollbar bg-[#fdfdfe] relative">
-                {/* Ghostwriter Bar */}
                 <div className="bg-slate-900 p-8 rounded-[2.5rem] mb-12 text-white relative overflow-hidden shadow-2xl border border-white/5">
                   <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] -mr-32 -mt-32"></div>
                   <div className="flex items-center gap-3 mb-6 relative z-10">
                       <div className="p-2 bg-indigo-600 rounded-lg animate-pulse"><Sparkles size={16} className="text-white"/></div>
-                      <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">SRE Ghostwriter Neural Ativo</h5>
+                      <h5 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">SRE Ghostwriter Ativo</h5>
                   </div>
                   <div className="flex flex-col md:flex-row gap-4 relative z-10">
                       <textarea 
-                        placeholder="Ex: Redija um edital de convocação para assembleia extraordinária no dia 15/03 focada em obras de lazer..." 
+                        placeholder="Ex: Redija uma convocação para assembleia de prestação de contas..." 
                         value={prompt} 
                         onChange={e => setPrompt(e.target.value)} 
-                        className="flex-1 bg-white/5 border border-white/10 text-white text-sm rounded-2xl p-5 min-h-[100px] outline-none focus:bg-white/10 transition-all placeholder:text-slate-500" 
+                        className="flex-1 bg-white/5 border border-white/10 text-white text-sm rounded-2xl p-5 min-h-[80px] outline-none focus:bg-white/10 transition-all" 
                       />
                       <button 
                         onClick={handleGenerate} 
                         disabled={isGenerating || !prompt.trim()} 
-                        className="px-10 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl hover:bg-indigo-50 transition-all active:scale-95 disabled:opacity-30 flex items-center justify-center gap-3 min-h-[60px]"
+                        className="px-10 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl hover:bg-indigo-50 transition-all active:scale-95 disabled:opacity-30 flex items-center justify-center gap-3"
                       >
-                        {isGenerating ? <Loader2 className="animate-spin" size={20}/> : <Sparkles size={20}/>} {isGenerating ? 'Processando' : 'Gerar Redação'}
+                        {isGenerating ? <Loader2 className="animate-spin" size={20}/> : <Sparkles size={20}/>} {isGenerating ? 'Drafting...' : 'Gerar'}
                       </button>
-                  </div>
-                  <div className="mt-4 flex items-center gap-2 opacity-40">
-                      <Info size={12}/>
-                      <span className="text-[9px] font-bold uppercase tracking-widest">O Ghostwriter utiliza Gemini 3 para drafting administrativo avançado.</span>
                   </div>
                 </div>
 
-                {/* Editor Textarea */}
-                <div className="relative group">
-                    <div className="absolute -left-6 top-0 bottom-0 w-1 bg-slate-100 rounded-full group-focus-within:bg-indigo-500 transition-colors"></div>
-                    <textarea 
-                        className="w-full h-full min-h-[800px] text-slate-700 text-lg font-serif leading-[1.8] bg-transparent border-none focus:ring-0 p-0 resize-none placeholder:text-slate-200" 
-                        value={activeDoc.content} 
-                        onChange={e => setActiveDoc({...activeDoc, content: e.target.value})} 
-                        placeholder="Inicie o texto do documento ou use o Ghostwriter acima para gerar um rascunho automático..." 
-                    />
-                </div>
+                <textarea 
+                    className="w-full h-full min-h-[800px] text-slate-700 text-lg font-serif leading-[1.8] bg-transparent border-none focus:ring-0 p-0 resize-none placeholder:text-slate-200" 
+                    value={activeDoc.content} 
+                    onChange={e => setActiveDoc({...activeDoc, content: e.target.value})} 
+                    placeholder="Conteúdo do documento..." 
+                />
               </div>
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-slate-300 p-20 text-center animate-fade-in">
-              <div className="w-32 h-32 bg-slate-50 rounded-[3rem] flex items-center justify-center mb-8 shadow-inner border border-slate-100">
-                  <FileCheck size={64} className="text-slate-200"/>
-              </div>
+              <FileCheck size={80} className="mb-6 opacity-10"/>
               <h4 className="text-2xl font-black text-slate-400 tracking-tightest uppercase">Protocolo de Documentos</h4>
-              <p className="text-slate-400 text-sm mt-4 max-w-sm font-medium">Selecione um documento no hub lateral ou inicie um novo protocolo administrativo para utilizar o Ghostwriter.</p>
-              <div className="mt-10 grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
-                      <Sparkles size={16} className="text-indigo-400"/>
-                      <span className="text-[9px] font-black uppercase text-slate-500">IA Ghostwriter</span>
-                  </div>
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center gap-3">
-                      <Printer size={16} className="text-indigo-400"/>
-                      <span className="text-[9px] font-black uppercase text-slate-500">Exportação PDF</span>
-                  </div>
-              </div>
+              <p className="text-slate-400 text-sm mt-4 max-w-sm">Selecione um registro no hub lateral ou crie um novo para começar o drafting.</p>
             </div>
           )}
         </div>
@@ -278,7 +249,7 @@ const DocumentHub = ({ systemInfo }: DocumentHubProps) => {
       {showOCR && (
           <OCRScanner 
             context="DOCUMENT" 
-            title="Digitalizar Documento Físico" 
+            title="Digitalizar Protocolo Físico" 
             onResult={handleOCRResult} 
             onClose={() => setShowOCR(false)} 
           />

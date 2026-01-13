@@ -5,7 +5,7 @@ import { SystemInfo } from '../types';
 import { 
   AlertTriangle, Users, Loader2, 
   Shield, ChevronRight, Activity, Landmark, Sparkles, 
-  ShoppingBag, Building2, Zap, TrendingUp, Heart
+  ShoppingBag, Building2, Zap, TrendingUp, Heart, MapPin, Mail, Phone, Info
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -40,7 +40,8 @@ const Dashboard = ({ onNavigate, systemInfo }: DashboardProps) => {
   );
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 space-y-8 animate-fade-in max-w-[1600px] mx-auto overflow-y-auto custom-scrollbar pr-2 pb-10">
+    <div className="flex-1 flex flex-col min-h-0 space-y-8 animate-fade-in max-w-[1600px] mx-auto pb-10">
+      {/* HEADER HERO */}
       <div className="bg-slate-900 border border-white/5 rounded-[3.5rem] p-12 relative overflow-hidden shadow-2xl">
           <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-[100px] -mr-40 -mt-40"></div>
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
@@ -70,24 +71,52 @@ const Dashboard = ({ onNavigate, systemInfo }: DashboardProps) => {
           </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[
-          { title: "Saúde de Caixa", value: `R$ ${(stats?.balance || 0).toLocaleString('pt-BR')}`, icon: Landmark, color: 'text-emerald-500', tab: 'finance' },
-          { title: "Watchdog (Ocorr.)", value: stats?.openIncidents || 0, icon: AlertTriangle, color: 'text-rose-500', tab: 'operations' },
-          { title: "Projetos Ativos", value: "08", icon: Zap, color: 'text-indigo-500', tab: 'projects' },
-          { title: "Economia Local", value: "24", icon: ShoppingBag, color: 'text-amber-500', tab: 'marketplace' }
-        ].map((item) => (
-          <div key={item.title} onClick={() => onNavigate(item.tab)} className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm hover:shadow-2xl transition-all cursor-pointer group flex flex-col justify-between h-full">
-              <div className="flex justify-between items-start mb-8">
-                  <div className={`p-5 rounded-2xl bg-slate-50 ${item.color} group-hover:scale-110 transition-transform shadow-inner`}><item.icon size={28}/></div>
-                  <ChevronRight size={20} className="text-slate-200 group-hover:text-indigo-500 transition-colors"/>
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* IDENTIDADE CORPORATIVA CARD */}
+          <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col justify-between">
               <div>
-                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">{item.title}</p>
-                <h3 className="text-3xl font-black text-slate-800 tracking-tighter leading-none">{item.value}</h3>
+                  <div className="flex items-center gap-4 mb-8">
+                      <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center overflow-hidden p-2 shadow-inner">
+                          {systemInfo.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain" alt="Identity" /> : <Building2 size={28} className="text-indigo-600" />}
+                      </div>
+                      <div>
+                          <h3 className="font-black text-slate-800 text-sm uppercase tracking-tight leading-none">{systemInfo.shortName || 'Identidade'}</h3>
+                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">Registro Master S.I.E</p>
+                      </div>
+                  </div>
+                  <div className="space-y-4">
+                      <div className="flex items-start gap-3">
+                          <MapPin size={14} className="text-indigo-500 shrink-0 mt-0.5"/>
+                          <p className="text-[10px] font-medium text-slate-500 leading-relaxed uppercase">{systemInfo.address || 'Endereço não configurado'}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                          <Info size={14} className="text-indigo-500 shrink-0"/>
+                          <p className="text-[10px] font-black text-slate-800 uppercase">CNPJ: {systemInfo.cnpj || 'Aguardando Registro'}</p>
+                      </div>
+                  </div>
               </div>
+              <button onClick={() => onNavigate('settings')} className="mt-8 w-full py-3 bg-slate-50 border border-slate-100 text-indigo-600 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all">Configurar Perfil</button>
           </div>
-        ))}
+
+          <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { title: "Saúde de Caixa", value: `R$ ${(stats?.balance || 0).toLocaleString('pt-BR')}`, icon: Landmark, color: 'text-emerald-500', tab: 'finance' },
+              { title: "Watchdog (Ocorr.)", value: stats?.openIncidents || 0, icon: AlertTriangle, color: 'text-rose-500', tab: 'operations' },
+              { title: "Projetos Ativos", value: "08", icon: Zap, color: 'text-indigo-500', tab: 'projects' },
+              { title: "Economia Local", value: "24", icon: ShoppingBag, color: 'text-amber-500', tab: 'marketplace' }
+            ].map((item) => (
+              <div key={item.title} onClick={() => onNavigate(item.tab)} className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-2xl transition-all cursor-pointer group flex flex-col justify-between h-full">
+                  <div className="flex justify-between items-start mb-6">
+                      <div className={`p-4 rounded-2xl bg-slate-50 ${item.color} group-hover:scale-110 transition-transform shadow-inner`}><item.icon size={24}/></div>
+                      <ChevronRight size={18} className="text-slate-200 group-hover:text-indigo-500 transition-colors"/>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{item.title}</p>
+                    <h3 className="text-2xl font-black text-slate-800 tracking-tighter leading-none">{item.value}</h3>
+                  </div>
+              </div>
+            ))}
+          </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-10">
@@ -124,7 +153,7 @@ const Dashboard = ({ onNavigate, systemInfo }: DashboardProps) => {
                       Gerador autônomo de atas e documentos normativos com base em discussões do cluster.
                   </p>
               </div>
-              <button onClick={() => onNavigate('neural_chat')} className="w-full py-6 bg-white text-indigo-600 rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-xl hover:bg-indigo-50 transition-all active:scale-95 relative z-10">
+              <button onClick={() => onNavigate('neural_chat')} className="w-full py-6 bg-white text-indigo-600 rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-xl hover:bg-indigo-50 transition-all active:scale-95 relative z-10">
                   Iniciar Mentor Neural
               </button>
           </div>

@@ -11,21 +11,21 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'siecacaria',
   port: parseInt(process.env.DB_PORT || '3306'),
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: 20, // Aumentado para suportar picos
   queueLimit: 0,
-  timezone: 'Z', // SRE FIX: Sincroniza timezone Node <-> MySQL
+  timezone: '-03:00', // SRE FIX: Força timezone Brasil para compatibilidade total
   enableKeepAlive: true,
-  keepAliveInitialDelay: 10000
+  keepAliveInitialDelay: 10000,
+  connectTimeout: 20000 // Aumentado para 20s para evitar quedas em boot de VPS
 });
 
-// SRE: Teste de Handshake com Retry Automático
 const testConnection = async () => {
     try {
         const connection = await pool.getConnection();
         console.log('✅ SRE: DATABASE PROTOCOL OPERATIONAL');
         connection.release();
     } catch (err) {
-        console.error('❌ SRE CRITICAL: DATABASE ACCESS DENIED. (Certifique-se que o MySQL está rodando na porta 3306)', err.message);
+        console.error('❌ SRE CRITICAL: DATABASE ACCESS DENIED. Verifique se o MySQL Server está ATIVO na VPS.', err.message);
     }
 };
 

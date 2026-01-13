@@ -90,11 +90,12 @@ export const communicationService = {
     deleteNotice: (id: string | number) => api.delete(`/notices/${id}`),
 };
 
+// SRE FIX: Agenda direcionada para /timeline exclusivo
 export const agendaService = {
-    getAll: () => api.get('/assemblies'),
-    create: (data: any) => api.post('/assemblies', data),
-    update: (id: string | number, data: any) => api.put(`/assemblies/${id}`, data),
-    delete: (id: string | number) => api.delete(`/assemblies/${id}`),
+    getAll: () => api.get('/timeline'),
+    create: (data: any) => api.post('/timeline', data),
+    update: (id: string | number, data: any) => api.put(`/timeline/${id}`, data),
+    delete: (id: string | number) => api.delete(`/timeline/${id}`),
 };
 
 export const projectService = {

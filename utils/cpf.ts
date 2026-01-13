@@ -1,12 +1,13 @@
 
 /**
  * S.I.E PRO - CPF/CNPJ Utility Protocol
- * SRE Standardized V4.5 - Estabilizado para Produção
+ * SRE Standardized V5.0 - Resiliência Total
  */
 
 export const normalizeCPF = (cpf: string): string => {
   if (!cpf) return '';
-  return String(cpf).replace(/\D/g, '');
+  const clean = String(cpf).replace(/\D/g, '');
+  return clean;
 };
 
 export const validateCPF = (cpf: string): boolean => {
@@ -14,11 +15,14 @@ export const validateCPF = (cpf: string): boolean => {
   
   if (!clean || clean.length !== 11) return false;
 
-  // SRE BYPASS: Permite CPFs de teste (dígitos repetidos ou conhecidos)
-  if (/^(\d)\1+$/.test(clean)) return true;
+  // SRE BYPASS: Permite CPFs conhecidos de teste ou strings de dígitos iguais
+  const knownFakes = ['00000000000', '11111111111', '22222222222', '33333333333', '44444444444', '55555555555', '66666666666', '77777777777', '88888888888', '99999999999'];
+  if (knownFakes.includes(clean)) return true;
+
+  // SRE: CPFs Administrativos Padrão
   if (clean === '12345678901' || clean === '01234567890') return true;
 
-  // Algoritmo Oficial
+  // Algoritmo Oficial Mod 11
   let sum = 0;
   let remainder;
 
@@ -45,9 +49,11 @@ export const validateCPF = (cpf: string): boolean => {
 export const formatCPF = (cpf: string): string => {
   const clean = normalizeCPF(cpf);
   if (!clean) return '';
-  return clean
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d)/, '$1.$2')
-    .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-    .replace(/(-\d{2})\d+?$/, '$1');
+  if (clean.length <= 11) {
+    return clean
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})/, '$1-$2');
+  }
+  return clean;
 };

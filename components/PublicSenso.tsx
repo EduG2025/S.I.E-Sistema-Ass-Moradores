@@ -29,15 +29,24 @@ const PublicSenso = () => {
     }, []);
 
     const loadSystemInfo = async () => {
-        try { const res = await systemService.getInfo(); setSystemInfo(res.data); } 
-        catch (e) { console.error("[SRE] Identity Offline"); }
+        try { 
+            const res = await systemService.getInfo(); 
+            setSystemInfo(res.data); 
+        } catch (e) { 
+            console.error("[SRE] Identity Offline"); 
+        }
     };
 
     const loadSurvey = async (id: string) => {
         setIsLoading(true);
-        try { const res = await surveyService.getPublic(id); setSurvey(res.data); } 
-        catch (e) { setError('Formulário de pesquisa indisponível.'); } 
-        finally { setIsLoading(false); }
+        try { 
+            const res = await surveyService.getPublic(id); 
+            setSurvey(res.data); 
+        } catch (e) { 
+            setError('Formulário de pesquisa indisponível ou desativado.'); 
+        } finally { 
+            setIsLoading(false); 
+        }
     };
 
     const handleIdentify = async () => {
@@ -47,23 +56,20 @@ const PublicSenso = () => {
 
         setIsLoading(true); setError('');
         try {
-            // SRE FIX: Busca profunda no banco para reconhecer morador
             const res = await axios.get(`/api/surveys/public/check-resident/${cleanCPF}`);
-            if (res.data.found) {
+            if (res.data && res.data.found) {
                 setUserData({ 
                     name: res.data.name, 
                     unit: res.data.unit || '', 
                     email: res.data.email || '', 
                     phone: res.data.phone || '' 
                 });
-                console.log("[SRE] Morador identificado. Iniciando Bypass de Ficha.");
-                setStep('FORM'); // BYPASS TOTAL
+                setStep('FORM'); 
             } else { 
-                console.log("[SRE] Novo CPF detectado. Exigindo Ficha de Inclusão.");
                 setStep('PERSONAL_INFO'); 
             }
         } catch (e) { 
-            setError('Serviço de identificação instável. Tente novamente.'); 
+            setError('Falha no serviço de identificação do Kernel.'); 
         } finally { 
             setIsLoading(false); 
         }
@@ -72,143 +78,153 @@ const PublicSenso = () => {
     const handleSubmit = async () => {
         if (!survey) return;
         const missing = survey.questions.find(q => q.required && !answers[q.id]);
-        if (missing) { alert(`Por favor, responda a questão: ${missing.text}`); return; }
+        if (missing) { alert(`Por favor, responda a questão obrigatória: ${missing.text}`); return; }
 
         setIsLoading(true);
         try {
             await surveyService.submitPublic(String(survey.id), {
                 cpf: cpfIdentifier,
-                userData,
-                answers: { core: userData, social: answers }
+                userData, // IMPORTANTE: Enviado para auto-registro caso seja novo morador
+                answers: { 
+                    core: userData, 
+                    social: answers,
+                    metadata: { submitted_at: new Date().toISOString() }
+                }
             });
             setStep('SUCCESS');
         } catch (e) { 
-            alert('Falha ao comitar respostas no Kernel.'); 
+            alert('Falha ao comitar respostas. Tente novamente mais tarde.'); 
         } finally { 
             setIsLoading(false); 
         }
     };
 
     if (step === 'SUCCESS') return (
-        <div className="h-screen bg-slate-950 flex items-center justify-center p-6 animate-fade-in text-center">
-            <div className="bg-white p-20 rounded-[4rem] shadow-2xl max-w-2xl relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-2 bg-emerald-500"></div>
-                <div className="w-32 h-32 bg-emerald-50 text-emerald-500 rounded-[2.5rem] flex items-center justify-center mx-auto mb-10 shadow-inner animate-bounce">
-                    <CheckCircle2 size={72} />
+        <div className="h-screen w-screen bg-[#020617] flex items-center justify-center p-6 text-center overflow-hidden">
+            <div className="bg-white p-12 lg:p-20 rounded-[3rem] shadow-2xl max-w-2xl w-full border border-emerald-100 relative">
+                <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 bg-emerald-500 text-white rounded-[2rem] flex items-center justify-center shadow-xl animate-bounce">
+                    <CheckCircle2 size={56} />
                 </div>
-                <h2 className="text-4xl font-black text-slate-800 tracking-tightest leading-none">Protocolo Finalizado</h2>
-                <p className="text-slate-500 font-medium text-lg mt-6 mb-12 leading-relaxed">Sua participação foi sincronizada com o Kernel S.I.E PRO. Obrigado por colaborar.</p>
-                <button onClick={() => window.location.reload()} className="px-16 py-6 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-[0.4em] shadow-xl hover:bg-indigo-600 transition-all">Encerrar Sessão</button>
+                <h2 className="text-3xl font-black text-slate-800 tracking-tight mt-6">Protocolo Finalizado</h2>
+                <p className="text-slate-500 font-medium mt-4 mb-10 leading-relaxed uppercase text-[10px] tracking-widest">Sua participação foi auditada e registrada <br/>no Kernel do {systemInfo?.shortName || 'S.I.E PRO'}.</p>
+                <button onClick={() => window.location.reload()} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all shadow-xl active:scale-95">Sair do Portal</button>
             </div>
         </div>
     );
 
     return (
-        <div className="h-screen w-screen bg-slate-950 flex flex-col items-center justify-end font-sans overflow-hidden relative">
+        <div className="h-screen w-screen bg-[#020617] flex flex-col font-sans overflow-hidden relative">
             <div className="absolute inset-0 z-0">
                 <div className="absolute top-0 -left-40 w-[40rem] h-[40rem] bg-indigo-600/10 rounded-full blur-[120px]"></div>
+                <div className="absolute bottom-0 -right-40 w-[40rem] h-[40rem] bg-emerald-600/5 rounded-full blur-[120px]"></div>
             </div>
 
-            {step === 'IDENTIFY' && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-xl animate-fade-in">
-                    <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-2xl p-16 text-center animate-scale-in border border-white/20">
-                        <div className="w-24 h-24 bg-indigo-600 rounded-[2rem] mx-auto flex items-center justify-center text-white shadow-xl mb-10 overflow-hidden p-2">
-                            {systemInfo?.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain" /> : <Fingerprint size={48} />}
+            <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-4">
+                {step === 'IDENTIFY' ? (
+                    <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-xl p-10 lg:p-16 text-center animate-scale-in border border-white/20 backdrop-blur-sm">
+                        <div className="w-24 h-24 bg-indigo-600 rounded-[2rem] mx-auto flex items-center justify-center text-white shadow-xl mb-8 overflow-hidden p-1">
+                            {systemInfo?.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain p-2" /> : <Fingerprint size={48} />}
                         </div>
-                        <h2 className="text-3xl font-black text-slate-800 tracking-tightest uppercase mb-2">Portal de Identificação</h2>
-                        <p className="text-slate-500 mb-12 leading-relaxed">Informe seu CPF para iniciar a participação no <br/><span className="font-black text-indigo-600 uppercase text-sm tracking-widest">{survey?.title || 'Censo de Governança'}</span>.</p>
-                        <input 
-                            type="text" 
-                            value={cpfIdentifier} 
-                            onChange={e => setCpfIdentifier(formatCPF(e.target.value))} 
-                            className="w-full py-10 bg-slate-50 border border-slate-200 rounded-[2.5rem] text-center text-5xl font-black outline-none mb-10 shadow-inner focus:bg-white focus:border-indigo-500 transition-all" 
-                            placeholder="000.000.000-00" 
-                            maxLength={14} 
-                        />
-                        <button onClick={handleIdentify} disabled={isLoading} className="w-full py-8 bg-slate-900 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.4em] hover:bg-indigo-600 shadow-2xl transition-all flex items-center justify-center gap-4">
-                            {isLoading ? <Loader2 className="animate-spin" /> : <>Validar Identidade <ChevronRight size={24}/></>}
-                        </button>
-                        {error && <p className="text-rose-500 font-black text-[10px] uppercase mt-6 tracking-widest">{error}</p>}
+                        <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase mb-2">Portal do Morador</h2>
+                        <p className="text-slate-400 mb-10 text-[10px] font-black uppercase tracking-widest">Identifique-se para acessar o protocolo: <br/><span className="text-indigo-600">{survey?.title || 'FORMULÁRIO S.I.E'}</span></p>
+                        
+                        <div className="space-y-6">
+                            <div className="relative">
+                                <input 
+                                    type="text" 
+                                    value={cpfIdentifier} 
+                                    onChange={e => setCpfIdentifier(formatCPF(e.target.value))} 
+                                    className="w-full py-7 bg-slate-50 border border-slate-200 rounded-[2rem] text-center text-3xl font-black outline-none shadow-inner focus:bg-white focus:border-indigo-500 transition-all placeholder:text-slate-200" 
+                                    placeholder="000.000.000-00" 
+                                    maxLength={14} 
+                                />
+                            </div>
+                            <button onClick={handleIdentify} disabled={isLoading} className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] hover:bg-indigo-600 shadow-xl transition-all flex items-center justify-center gap-3 active:scale-95">
+                                {isLoading ? <Loader2 className="animate-spin" /> : <>Acessar Formulário <ChevronRight size={20}/></>}
+                            </button>
+                            {error && <p className="text-rose-500 font-black text-[10px] uppercase tracking-widest bg-rose-50 py-3 rounded-xl border border-rose-100">{error}</p>}
+                        </div>
                     </div>
-                </div>
-            )}
-
-            {(step === 'PERSONAL_INFO' || step === 'FORM') && (
-                <div className="w-full h-[98vh] flex flex-col relative z-10 animate-slide-up mt-auto">
-                    <div className="bg-[#fcfcfd] rounded-t-[4rem] shadow-[0_-20px_100px_rgba(0,0,0,0.3)] w-full h-full flex flex-col overflow-hidden">
-                        <div className="p-10 border-b bg-white flex justify-between items-center shrink-0">
-                            <div className="flex items-center gap-6">
-                                <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg"><ShieldCheck size={32}/></div>
+                ) : (
+                    <div className="bg-[#fcfcfd] rounded-[3.5rem] shadow-2xl w-full max-w-5xl h-[95vh] flex flex-col overflow-hidden animate-slide-up border border-white/20">
+                        <div className="px-8 py-6 border-b bg-white flex justify-between items-center shrink-0">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-indigo-600 rounded-xl text-white shadow-md"><ShieldCheck size={24}/></div>
                                 <div>
-                                    <h3 className="font-black text-3xl tracking-tightest uppercase text-slate-800">{step === 'PERSONAL_INFO' ? 'Ficha de Inclusão' : 'Questionário Social'}</h3>
-                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">SRE Governança • Coleta Ativa</p>
+                                    <h3 className="font-black text-lg text-slate-800 uppercase leading-none tracking-tight">{step === 'PERSONAL_INFO' ? 'Ficha Administrativa' : survey?.title}</h3>
+                                    <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1">SRE HANDSHAKE • {systemInfo?.shortName || 'S.I.E'}</p>
                                 </div>
                             </div>
-                            <button onClick={() => window.location.reload()} className="p-4 hover:bg-rose-50 text-slate-300 hover:text-rose-500 rounded-full transition-all"><X size={32}/></button>
+                            <button onClick={() => window.location.reload()} className="p-2 hover:bg-rose-50 text-slate-300 hover:text-rose-500 rounded-full transition-all"><X size={24}/></button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-12 lg:p-20 custom-scrollbar">
-                            <div className="max-w-4xl mx-auto">
+                        <div className="flex-1 overflow-y-auto p-8 lg:p-12 custom-scrollbar">
+                            <div className="max-w-3xl mx-auto h-full flex flex-col">
                                 {step === 'PERSONAL_INFO' && (
-                                    <div className="space-y-12 animate-fade-in">
-                                        <div className="bg-indigo-50 p-8 rounded-3xl border border-indigo-100 mb-10 flex items-start gap-4">
-                                            <AlertTriangle className="text-indigo-600 shrink-0" size={24}/>
-                                            <p className="text-sm text-indigo-700 font-medium leading-relaxed">Você ainda não possui cadastro mestre no S.I.E. Preencha os dados abaixo para criar sua identidade administrativa e prosseguir.</p>
+                                    <div className="space-y-10 animate-fade-in">
+                                        <div className="bg-indigo-50 p-8 rounded-[2.5rem] border border-indigo-100 flex items-start gap-6 shadow-sm">
+                                            <div className="p-3 bg-white rounded-2xl shadow-sm text-indigo-600"><AlertTriangle size={24}/></div>
+                                            <div>
+                                                <h4 className="font-black text-indigo-900 uppercase text-xs tracking-widest">Nova Provisão Detectada</h4>
+                                                <p className="text-[11px] text-indigo-700 font-medium leading-relaxed mt-1 uppercase tracking-tight">Seu CPF não possui registro ativo no Kernel S.I.E. <br/>Complete sua ficha cadastral para liberar o censo.</p>
+                                            </div>
                                         </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome Completo</label><input className="w-full font-bold h-18 bg-white border-slate-200 text-xl rounded-3xl px-8 focus:border-indigo-500 shadow-sm" value={userData.name} onChange={e => setUserData({ ...userData, name: e.target.value })} /></div>
-                                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Unidade / Lote</label><input className="w-full font-bold h-18 bg-white border-slate-200 text-xl rounded-3xl px-8 focus:border-indigo-500 shadow-sm" value={userData.unit} onChange={e => setUserData({ ...userData, unit: e.target.value })} /></div>
-                                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">E-mail de Contato</label><input className="w-full font-bold h-18 bg-white border-slate-200 text-xl rounded-3xl px-8 focus:border-indigo-500 shadow-sm" value={userData.email} onChange={e => setUserData({ ...userData, email: e.target.value })} /></div>
-                                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Telefone / WhatsApp</label><input className="w-full font-bold h-18 bg-white border-slate-200 text-xl rounded-3xl px-8 focus:border-indigo-500 shadow-sm" value={userData.phone} onChange={e => setUserData({ ...userData, phone: e.target.value })} /></div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label><input className="w-full font-bold h-14 bg-white border border-slate-200 rounded-2xl px-6 focus:border-indigo-500 shadow-sm" value={userData.name} onChange={e => setUserData({ ...userData, name: e.target.value })} /></div>
+                                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidade / Lote / Bloco</label><input className="w-full font-bold h-14 bg-white border border-slate-200 rounded-2xl px-6 focus:border-indigo-500 shadow-sm" value={userData.unit} onChange={e => setUserData({ ...userData, unit: e.target.value })} /></div>
+                                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail de Contato</label><input className="w-full font-bold h-14 bg-white border border-slate-200 rounded-2xl px-6 focus:border-indigo-500 shadow-sm" value={userData.email} onChange={e => setUserData({ ...userData, email: e.target.value })} /></div>
+                                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">WhatsApp / Telefone</label><input className="w-full font-bold h-14 bg-white border border-slate-200 rounded-2xl px-6 focus:border-indigo-500 shadow-sm" value={userData.phone} onChange={e => setUserData({ ...userData, phone: e.target.value })} /></div>
                                         </div>
-                                        <button onClick={() => { if(userData.name && userData.unit) setStep('FORM'); else alert("Nome e Unidade são obrigatórios."); }} className="w-full py-10 bg-slate-900 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.4em] shadow-2xl hover:bg-indigo-600 transition-all">Confirmar Identidade e Iniciar Pesquisa</button>
+                                        <button onClick={() => { if(userData.name && userData.unit) setStep('FORM'); else alert("Os campos 'Nome' e 'Unidade' são obrigatórios para o protocolo."); }} className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl hover:bg-indigo-600 transition-all active:scale-95">Iniciar Questionário Neural</button>
                                     </div>
                                 )}
 
                                 {step === 'FORM' && (
-                                    <div className="space-y-12 animate-fade-in pb-20">
-                                        <div className="bg-slate-900 p-12 rounded-[3.5rem] text-white relative overflow-hidden shadow-2xl border border-white/5">
-                                            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 rounded-full blur-[80px] -mr-20 -mt-20"></div>
-                                            <h3 className="text-4xl font-black uppercase tracking-tightest leading-none mb-4">{survey?.title}</h3>
-                                            <p className="text-slate-400 text-lg font-medium leading-relaxed">{survey?.description}</p>
+                                    <div className="space-y-8 animate-fade-in h-full flex flex-col pb-10">
+                                        <div className="bg-slate-900 p-10 rounded-[2.5rem] text-white relative overflow-hidden shrink-0 shadow-xl">
+                                            <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-500/10 rounded-full blur-[60px]"></div>
+                                            <h3 className="text-2xl font-black uppercase tracking-tightest leading-none">{survey?.title}</h3>
+                                            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-3">{survey?.description}</p>
                                         </div>
 
-                                        <div className="grid grid-cols-1 gap-10">
+                                        <div className="flex-1 space-y-6 mt-4">
                                             {survey?.questions?.map((q: SurveyQuestion, idx: number) => (
-                                                <div key={q.id} className="p-12 bg-white rounded-[3.5rem] border border-slate-100 hover:border-indigo-300 transition-all shadow-sm">
-                                                    <div className="flex flex-col lg:flex-row items-start lg:items-center gap-10">
-                                                        <div className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black text-xl shrink-0 shadow-lg">{idx + 1}</div>
-                                                        <div className="flex-1 space-y-6 w-full">
-                                                            <label className="text-2xl font-black text-slate-800 tracking-tight leading-tight block">{q.text} {q.required && <span className="text-rose-500 text-[10px] ml-4 font-black uppercase bg-rose-50 px-3 py-1 rounded-lg">Obrigatório</span>}</label>
+                                                <div key={q.id} className="p-8 bg-white rounded-[2rem] border border-slate-100 hover:border-indigo-200 transition-all shadow-sm group">
+                                                    <div className="flex gap-6 items-start">
+                                                        <div className="w-12 h-12 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 border border-slate-100 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors shadow-inner">{idx + 1}</div>
+                                                        <div className="flex-1 space-y-5">
+                                                            <label className="text-base font-black text-slate-800 tracking-tight block uppercase leading-tight">{q.text} {q.required && <span className="text-rose-500 ml-2 text-xl">*</span>}</label>
                                                             {q.type === 'select' ? (
-                                                                <select value={answers[q.id] || ''} onChange={e => setAnswers({ ...answers, [q.id]: e.target.value })} className="w-full bg-slate-50 font-bold h-20 px-8 rounded-[2rem] border-slate-200 text-xl appearance-none cursor-pointer focus:bg-white transition-all shadow-inner">
+                                                                <select value={answers[q.id] || ''} onChange={e => setAnswers({ ...answers, [q.id]: e.target.value })} className="w-full bg-slate-50 font-bold h-14 px-6 rounded-2xl border-slate-200 text-sm focus:bg-white focus:border-indigo-500 shadow-inner appearance-none">
                                                                     <option value="">Selecione uma opção...</option>
                                                                     {q.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                                                                 </select>
                                                             ) : q.type === 'boolean' ? (
-                                                                <div className="grid grid-cols-2 gap-6">
+                                                                <div className="flex gap-4">
                                                                     {['SIM', 'NÃO'].map(val => (
-                                                                        <button key={val} type="button" onClick={() => setAnswers({ ...answers, [q.id]: val })} className={`py-8 rounded-[2rem] font-black text-xl tracking-widest transition-all border-2 ${answers[q.id] === val ? 'bg-indigo-600 border-indigo-600 text-white shadow-2xl' : 'bg-white border-slate-100 text-slate-400 hover:border-indigo-200'}`}>{val}</button>
+                                                                        <button key={val} type="button" onClick={() => setAnswers({ ...answers, [q.id]: val })} className={`flex-1 py-5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all border-2 ${answers[q.id] === val ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl scale-[1.02]' : 'bg-white border-slate-100 text-slate-400 hover:bg-slate-50'}`}>{val}</button>
                                                                     ))}
                                                                 </div>
                                                             ) : (
-                                                                <input type={q.type} value={answers[q.id] || ''} onChange={e => setAnswers({ ...answers, [q.id]: e.target.value })} className="w-full h-20 px-8 bg-slate-50 border-slate-200 rounded-[2rem] font-bold text-2xl focus:bg-white transition-all shadow-inner" />
+                                                                <input type={q.type} value={answers[q.id] || ''} onChange={e => setAnswers({ ...answers, [q.id]: e.target.value })} className="w-full h-14 px-6 bg-slate-50 border-slate-200 rounded-2xl font-bold text-sm focus:bg-white focus:border-indigo-500 shadow-inner" placeholder="Escreva sua resposta..." />
                                                             )}
                                                         </div>
                                                     </div>
                                                 </div>
                                             ))}
                                         </div>
-                                        <button onClick={handleSubmit} disabled={isLoading} className="w-full py-10 bg-indigo-600 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.4em] shadow-2xl hover:bg-emerald-600 transition-all flex items-center justify-center gap-6">
-                                            {isLoading ? <Loader2 className="animate-spin" size={32} /> : <><Save size={32} /> Commitar Respostas no Kernel</>}
-                                        </button>
+                                        <div className="pt-10 sticky bottom-0 bg-[#fcfcfd]/80 backdrop-blur-md">
+                                            <button onClick={handleSubmit} disabled={isLoading} className="w-full py-8 bg-indigo-600 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.4em] shadow-2xl hover:bg-emerald-600 transition-all flex items-center justify-center gap-4 active:scale-95 shrink-0 border-b-4 border-indigo-800">
+                                                {isLoading ? <Loader2 className="animate-spin" /> : <><Save size={24} /> Comitar Respostas no Kernel</>}
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 };

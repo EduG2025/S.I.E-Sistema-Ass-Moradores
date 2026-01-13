@@ -50,7 +50,7 @@ const SocialQuestionnaire = ({ user, onSave, onCancel }: SocialQuestionnaireProp
       }
 
       setSurvey(targetSurvey);
-      setFormData(initialAnswers);
+      setFormData(initialAnswers || {});
 
     } catch (e) {
       console.error("[SRE] Falha crítica na sincronização do Dossiê.");
@@ -67,8 +67,8 @@ const SocialQuestionnaire = ({ user, onSave, onCancel }: SocialQuestionnaireProp
   };
 
   const calculateRisk = () => {
-      const questions = survey?.questions || [];
-      if (!Array.isArray(questions) || questions.length === 0) return 0;
+      const questions = survey?.questions;
+      if (!questions || !Array.isArray(questions) || questions.length === 0) return 0;
       let risk = 0;
       questions.forEach(q => {
           const val = formData[q.id];
