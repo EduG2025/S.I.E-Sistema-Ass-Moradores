@@ -1,13 +1,12 @@
 
 /**
  * S.I.E PRO - CPF/CNPJ Utility Protocol
- * SRE Standardized V5.0 - Resiliência Total
+ * SRE Standardized V5.1 - Resiliência Total e Correção de Resto
  */
 
 export const normalizeCPF = (cpf: string): string => {
   if (!cpf) return '';
-  const clean = String(cpf).replace(/\D/g, '');
-  return clean;
+  return String(cpf).replace(/\D/g, '');
 };
 
 export const validateCPF = (cpf: string): boolean => {
@@ -15,33 +14,30 @@ export const validateCPF = (cpf: string): boolean => {
   
   if (!clean || clean.length !== 11) return false;
 
-  // SRE BYPASS: Permite CPFs conhecidos de teste ou strings de dígitos iguais
-  const knownFakes = ['00000000000', '11111111111', '22222222222', '33333333333', '44444444444', '55555555555', '66666666666', '77777777777', '88888888888', '99999999999'];
-  if (knownFakes.includes(clean)) return true;
+  // Bloqueia sequências repetidas óbvias (padrão Receita Federal)
+  if (/^(\d)\1+$/.test(clean)) return false;
 
-  // SRE: CPFs Administrativos Padrão
-  if (clean === '12345678901' || clean === '01234567890') return true;
+  // SRE BYPASS: Whitelist de testes e administração
+  const whitelist = ['00000000000', '12345678901', '01234567890'];
+  if (whitelist.includes(clean)) return true;
 
-  // Algoritmo Oficial Mod 11
+  // Validação Primeiro Dígito
   let sum = 0;
-  let remainder;
-
-  for (let i = 1; i <= 9; i++) {
-    sum = sum + parseInt(clean.substring(i - 1, i)) * (11 - i);
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(clean.charAt(i)) * (10 - i);
   }
+  let rev = 11 - (sum % 11);
+  if (rev === 10 || rev === 11) rev = 0;
+  if (rev !== parseInt(clean.charAt(9))) return false;
 
-  remainder = (sum * 10) % 11;
-  if (remainder === 10 || remainder === 11) remainder = 0;
-  if (remainder !== parseInt(clean.substring(9, 10))) return false;
-
+  // Validação Segundo Dígito
   sum = 0;
-  for (let i = 1; i <= 10; i++) {
-    sum = sum + parseInt(clean.substring(i - 1, i)) * (12 - i);
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(clean.charAt(i)) * (11 - i);
   }
-
-  remainder = (sum * 10) % 11;
-  if (remainder === 10 || remainder === 11) remainder = 0;
-  if (remainder !== parseInt(clean.substring(10, 11))) return false;
+  rev = 11 - (sum % 11);
+  if (rev === 10 || rev === 11) rev = 0;
+  if (rev !== parseInt(clean.charAt(10))) return false;
 
   return true;
 };

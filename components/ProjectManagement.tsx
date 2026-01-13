@@ -6,13 +6,12 @@ import {
   Plus, Search, Briefcase, TrendingUp, DollarSign, 
   Calendar, CheckCircle, Clock, Loader2, ChevronRight,
   Filter, BarChart3, Building2, ShieldAlert, X, Save,
-  Users, MessageSquare, ThumbsUp, Camera, Landmark, Trash2, Edit2, Printer
+  Users, MessageSquare, ThumbsUp, Camera, Landmark, Trash2, Edit2, Printer, Zap, Shield
 } from 'lucide-react';
 
 const ProjectManagement = () => {
   const [projects, setProjects] = useState([] as CommunityProject[]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'VOTING' | 'FINISHED'>('ACTIVE');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingProject, setEditingProject] = useState<any>(null);
@@ -75,13 +74,13 @@ const ProjectManagement = () => {
 
   return (
     <div className="space-y-8 animate-fade-in pb-12">
-      <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-slate-900 p-10 rounded-[3rem] text-white shadow-xl">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-slate-900 p-10 rounded-[3rem] text-white shadow-xl shrink-0">
         <div>
-          <h2 className="text-3xl font-black tracking-tightest leading-none">Co-Gestão: Ativos & Obras</h2>
-          <p className="text-[10px] text-indigo-300 font-black uppercase tracking-[0.3em] mt-2">Transparência Total S.I.E</p>
+          <h2 className="text-3xl font-black tracking-tightest leading-none uppercase">Obras & Projetos</h2>
+          <p className="text-[10px] text-indigo-300 font-black uppercase tracking-[0.3em] mt-2">SRE Infrastructure Pipeline</p>
         </div>
         <button onClick={handleOpenCreate} className="flex items-center gap-3 px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-2xl hover:bg-indigo-50 transition-all">
-          <Plus size={20}/> Novo Projeto / Edital
+          <Plus size={20}/> Novo Edital
         </button>
       </div>
 
@@ -131,50 +130,47 @@ const ProjectManagement = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/80 z-[200] flex items-center justify-center p-4 backdrop-blur-md">
-          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl overflow-hidden border border-slate-200 animate-scale-in">
-            <form onSubmit={handleSave}>
-              <div className="p-8 border-b border-slate-100 flex justify-between items-center">
-                <h3 className="font-black text-xl text-slate-800 tracking-tighter">Gerenciar Projeto</h3>
-                <button type="button" onClick={() => setIsModalOpen(false)}><X/></button>
+        <div className="sie-editor-overlay">
+          <div className="h-20 px-8 bg-slate-900 text-white flex justify-between items-center shrink-0 shadow-xl relative z-20">
+              <div className="flex items-center gap-4">
+                  <div className="p-3 bg-indigo-600 rounded-xl shadow-lg"><Zap size={24}/></div>
+                  <div>
+                    <h3 className="font-black text-sm uppercase tracking-widest leading-none">Protocolar Edital / Obra</h3>
+                    <p className="text-indigo-400 text-[8px] font-black uppercase mt-1 tracking-widest">SRE Asset Planning</p>
+                  </div>
               </div>
-              <div className="p-10 space-y-6">
-                <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Título</label>
-                    <input required className="w-full font-bold" value={editingProject.title} onChange={e => setEditingProject({...editingProject, title: e.target.value})} />
-                </div>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Orçamento (R$)</label>
-                    <input type="number" className="w-full font-bold" value={editingProject.budget} onChange={e => setEditingProject({...editingProject, budget: e.target.value})} />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gasto (R$)</label>
-                    <input type="number" className="w-full font-bold" value={editingProject.spent} onChange={e => setEditingProject({...editingProject, spent: e.target.value})} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Progresso (%)</label>
-                    <input type="number" min="0" max="100" className="w-full font-bold" value={editingProject.progress} onChange={e => setEditingProject({...editingProject, progress: e.target.value})} />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</label>
-                    <select className="w-full font-bold" value={editingProject.status} onChange={e => setEditingProject({...editingProject, status: e.target.value as any})}>
-                        <option value="PLANNING">Planejamento</option>
-                        <option value="EM_EXECUÇÃO">Em Execução</option>
-                        <option value="CONCLUÍDO">Concluído</option>
-                        <option value="CANCELADO">Cancelado</option>
-                    </select>
-                  </div>
-                </div>
+              <div className="flex items-center gap-4">
+                  <button onClick={handleSave} disabled={isSaving} className="px-10 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center gap-3 shadow-2xl active:scale-95">
+                      {isSaving ? <Loader2 className="animate-spin" size={16}/> : <Save size={18}/>} Commitar Edital
+                  </button>
+                  <button onClick={() => setIsModalOpen(false)} className="p-3 hover:bg-rose-500 hover:text-white text-slate-400 rounded-2xl transition-all border border-white/5 ml-2"><X size={28}/></button>
               </div>
-              <div className="p-10 border-t border-slate-100 flex justify-end gap-4 bg-slate-50">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-8 py-3 text-slate-500 font-black text-xs uppercase">Cancelar</button>
-                <button type="submit" disabled={isSaving} className="px-12 py-3 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase shadow-xl flex items-center gap-3">
-                  {isSaving ? <Loader2 className="animate-spin"/> : <Save size={18}/>} Salvar Projeto
-                </button>
-              </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-12 lg:p-20 custom-scrollbar bg-white">
+            <form onSubmit={handleSave} className="max-w-5xl mx-auto space-y-16 pb-20">
+                <div className="bg-slate-50 p-12 rounded-[4rem] border border-slate-200 shadow-inner space-y-12">
+                    <div className="space-y-4">
+                        <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Título do Empreendimento</label>
+                        <input required className="w-full font-black h-20 bg-white border border-slate-200 rounded-[2rem] px-8 text-3xl focus:border-indigo-500 transition-all shadow-sm" value={editingProject.title} onChange={e => setEditingProject({...editingProject, title: e.target.value})} />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                        <div className="space-y-4"><label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Orçamento Previsto (R$)</label><input type="number" className="w-full font-black h-16 bg-white border border-slate-200 rounded-[1.5rem] px-8 text-2xl focus:border-indigo-500" value={editingProject.budget} onChange={e => setEditingProject({...editingProject, budget: e.target.value})} /></div>
+                        <div className="space-y-4"><label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Gasto Efetivado (R$)</label><input type="number" className="w-full font-black h-16 bg-white border border-slate-200 rounded-[1.5rem] px-8 text-2xl focus:border-indigo-500" value={editingProject.spent} onChange={e => setEditingProject({...editingProject, spent: e.target.value})} /></div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                        <div className="space-y-4"><label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Progresso Atual (%)</label><input type="number" min="0" max="100" className="w-full font-black h-16 bg-white border border-slate-200 rounded-[1.5rem] px-8 text-2xl focus:border-indigo-500" value={editingProject.progress} onChange={e => setEditingProject({...editingProject, progress: e.target.value})} /></div>
+                        <div className="space-y-4"><label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Fase de Projeto</label>
+                            <select className="w-full font-black h-16 bg-white border border-slate-200 rounded-[1.5rem] px-8 text-sm uppercase appearance-none" value={editingProject.status} onChange={e => setEditingProject({...editingProject, status: e.target.value as any})}>
+                                <option value="PLANNING">Planejamento</option>
+                                <option value="EM_EXECUÇÃO">Em Execução</option>
+                                <option value="CONCLUÍDO">Concluído</option>
+                                <option value="CANCELADO">Cancelado</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="space-y-4"><label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Descrição Técnica</label><textarea rows={6} className="w-full font-medium bg-white border border-slate-200 rounded-[2rem] p-8 text-lg focus:border-indigo-500" value={editingProject.description} onChange={e => setEditingProject({...editingProject, description: e.target.value})} /></div>
+                </div>
             </form>
           </div>
         </div>

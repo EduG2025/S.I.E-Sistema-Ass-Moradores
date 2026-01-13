@@ -1,12 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { Survey, SurveyQuestion, SystemInfo } from '../types';
-import { surveyService, systemService } from '../services/api';
+import { surveyService, systemService, api } from '../services/api';
 import { normalizeCPF, validateCPF, formatCPF } from '../utils/cpf';
 import {
     ShieldCheck, CheckCircle2, ArrowRight, X, Fingerprint, Loader2, Heart, AlertTriangle, Save, Sparkles, ChevronRight
 } from 'lucide-react';
-import axios from 'axios';
 
 const PublicSenso = () => {
     const [survey, setSurvey] = useState(null as Survey | null);
@@ -52,11 +51,11 @@ const PublicSenso = () => {
     const handleIdentify = async () => {
         const cleanCPF = normalizeCPF(cpfIdentifier);
         if (cleanCPF.length !== 11) { setError('O CPF deve conter 11 dígitos.'); return; }
-        if (!validateCPF(cleanCPF)) { setError('Assinatura de CPF inválida.'); return; }
+        if (!validateCPF(cleanCPF)) { setError('Assinatura de CPF inválida no protocolo.'); return; }
 
         setIsLoading(true); setError('');
         try {
-            const res = await axios.get(`/api/surveys/public/check-resident/${cleanCPF}`);
+            const res = await api.get(`/surveys/public/check-resident/${cleanCPF}`);
             if (res.data && res.data.found) {
                 setUserData({ 
                     name: res.data.name, 
@@ -84,7 +83,7 @@ const PublicSenso = () => {
         try {
             await surveyService.submitPublic(String(survey.id), {
                 cpf: cpfIdentifier,
-                userData, // IMPORTANTE: Enviado para auto-registro caso seja novo morador
+                userData, 
                 answers: { 
                     core: userData, 
                     social: answers,
@@ -142,7 +141,7 @@ const PublicSenso = () => {
                             <button onClick={handleIdentify} disabled={isLoading} className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] hover:bg-indigo-600 shadow-xl transition-all flex items-center justify-center gap-3 active:scale-95">
                                 {isLoading ? <Loader2 className="animate-spin" /> : <>Acessar Formulário <ChevronRight size={20}/></>}
                             </button>
-                            {error && <p className="text-rose-500 font-black text-[10px] uppercase tracking-widest bg-rose-50 py-3 rounded-xl border border-rose-100">{error}</p>}
+                            {error && <p className="text-rose-500 font-black text-[10px] uppercase tracking-widest bg-rose-50 py-3 rounded-xl border border-rose-100 mt-4">{error}</p>}
                         </div>
                     </div>
                 ) : (

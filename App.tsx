@@ -49,11 +49,13 @@ const App = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     
+    // Roteador de Bypass Público para o Censo
     const isPublicCensus = window.location.pathname.startsWith('/census/');
 
     useEffect(() => {
         const initKernel = async () => {
             const token = localStorage.getItem('sie_auth_token');
+            
             if (isPublicCensus) {
                 try {
                     const infoRes = await systemService.getInfo();
@@ -61,7 +63,9 @@ const App = () => {
                 } finally { setIsLoading(false); }
                 return;
             }
+
             if (!token) { setIsLoading(false); return; }
+
             try {
                 const userRes = await authService.me();
                 setCurrentUser(userRes.data);
@@ -76,154 +80,159 @@ const App = () => {
         initKernel();
     }, [isPublicCensus]);
 
+    // SRE FIX: Completed the handleLoginSuccess function and component logic
     const handleLoginSuccess = (user: User, token: string) => {
         localStorage.setItem('sie_auth_token', token);
         setCurrentUser(user);
         setIsAuthenticated(true);
-        setTimeout(() => setActiveTab('dashboard'), 100);
     };
 
-    const hasPermission = (permissionId: string) => {
+    const handleLogout = () => {
+        localStorage.removeItem('sie_auth_token');
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+    };
+
+    if (isLoading) {
+        return (
+            <div className="h-screen w-screen flex items-center justify-center bg-[#020617]">
+                <Loader2 className="animate-spin text-indigo-500" size={48} />
+            </div>
+        );
+    }
+
+    if (isPublicCensus) {
+        return (
+            <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-[#020617]"><Loader2 className="animate-spin text-indigo-500" size={48} /></div>}>
+                <PublicSenso />
+            </Suspense>
+        );
+    }
+
+    if (!isAuthenticated) {
+        return (
+            <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-[#020617]"><Loader2 className="animate-spin text-indigo-500" size={48} /></div>}>
+                <LoginScreen onLoginSuccess={handleLoginSuccess} systemInfo={systemInfo} />
+            </Suspense>
+        );
+    }
+
+    const renderContent = () => {
+        switch (activeTab) {
+            case 'dashboard': return <Dashboard onNavigate={setActiveTab} systemInfo={systemInfo} />;
+            case 'settings': return <Settings systemInfo={systemInfo} onUpdateSystemInfo={setSystemInfo} templates={[]} onUpdateTemplates={() => {}} />;
+            case 'users': return <UserManagement />;
+            case 'operations': return <Operations />;
+            case 'demographics': return <DemographicAnalysis systemInfo={systemInfo} />;
+            case 'projects': return <ProjectManagement />;
+            case 'documents': return <DocumentHub systemInfo={systemInfo} />;
+            case 'assemblies': return <AssemblyManager currentUser={currentUser} />;
+            case 'neural_chat': return <ChatAssistant />;
+            case 'finance': return <Finance />;
+            case 'communication': return <Communication />;
+            case 'timeline': return <Timeline />;
+            case 'marketplace': return <MarketPlace />;
+            case 'reservations': return <Reservations />;
+            case 'sustainability': return <Sustainability />;
+            case 'suggestions': return <SuggestionBox />;
+            case 'assets': return <Assets />;
+            case 'surveys': return <Surveys />;
+            case 'concierge': return <Concierge />;
+            default: return <Dashboard onNavigate={setActiveTab} systemInfo={systemInfo} />;
+        }
+    };
+
+    const filteredMenu = MENU_ITEMS.filter(item => {
         if (!currentUser) return false;
+        if (currentUser.role === 'ADMIN') return true;
         const perms = ROLE_PERMISSIONS[currentUser.role] || [];
-        return perms.includes('*') || perms.includes(permissionId);
-    };
-
-    const filteredMenu = MENU_ITEMS.filter(item => hasPermission(item.permissionId));
-
-    if (isLoading) return (
-        <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#020617]">
-            <Loader2 className="animate-spin text-indigo-500 mb-4" size={48} />
-            <p className="text-slate-400 font-black text-[10px] uppercase tracking-[0.4em] animate-pulse">Kernel Loading...</p>
-        </div>
-    );
-
-    if (isPublicCensus) return <Suspense fallback={null}><PublicSenso /></Suspense>;
-    if (!isAuthenticated) return <Suspense fallback={null}><LoginScreen onLoginSuccess={handleLoginSuccess} systemInfo={systemInfo} /></Suspense>;
+        return perms.includes('*') || perms.includes(item.permissionId);
+    });
 
     return (
-        <div className="h-screen w-screen flex bg-[#f8fafc] font-sans overflow-hidden">
-            <aside className={`fixed lg:static inset-y-0 left-0 z-[60] bg-slate-950 border-r border-white/5 flex flex-col shrink-0 transition-all duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0 w-80' : '-translate-x-full lg:translate-x-0'} ${sidebarCollapsed ? 'lg:w-24' : 'lg:w-72'}`}>
-                <div className={`p-6 flex items-center justify-between min-h-[100px] ${sidebarCollapsed ? 'flex-col gap-4' : ''}`}>
-                    <div className="flex items-center gap-3 min-w-0">
-                        <div className={`bg-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl shrink-0 transition-all ${sidebarCollapsed ? 'w-12 h-12' : 'w-10 h-10'} overflow-hidden`}>
-                            {systemInfo.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain p-1.5" alt="Logo" /> : <Shield size={20} className="text-white" />}
-                        </div>
+        <div className="flex h-screen bg-[#f8fafc] font-sans text-slate-900 overflow-hidden">
+            {/* Mobile Sidebar Overlay */}
+            {sidebarOpen && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] lg:hidden" onClick={() => setSidebarOpen(false)}></div>
+            )}
+
+            {/* Sidebar */}
+            <aside className={`fixed inset-y-0 left-0 z-[101] bg-slate-950 text-slate-400 transition-all duration-300 lg:static lg:block ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${sidebarCollapsed ? 'lg:w-24' : 'lg:w-72'}`}>
+                <div className="flex flex-col h-full">
+                    <div className="p-8 flex items-center justify-between shrink-0">
                         {!sidebarCollapsed && (
-                            <div className="min-w-0">
-                                <h1 className="font-black text-white text-base tracking-tighter uppercase truncate leading-none">{systemInfo.shortName || "S.I.E PRO"}</h1>
-                                <p className="text-[7px] text-indigo-400 font-black uppercase tracking-[0.2em] mt-1 truncate opacity-70">Active Governance</p>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-indigo-600 rounded-lg text-white"><Shield size={20}/></div>
+                                <span className="font-black text-xl text-white tracking-tighter uppercase">S.I.E PRO</span>
                             </div>
                         )}
-                    </div>
-                    <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="p-2 hover:bg-white/5 rounded-xl text-slate-500 transition-colors">
-                        {sidebarCollapsed ? <PanelLeft size={20} /> : <PanelLeftClose size={20} />}
-                    </button>
-                </div>
-                
-                <nav className="flex-1 overflow-y-auto px-4 py-2 space-y-1 custom-scrollbar">
-                    {filteredMenu.map((item) => (
-                        <button 
-                            key={item.id} 
-                            onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }} 
-                            className={`w-full flex items-center p-3.5 rounded-2xl transition-all group ${activeTab === item.id ? 'bg-indigo-600 text-white shadow-2xl' : 'text-slate-400 hover:bg-white/5'} ${sidebarCollapsed ? 'justify-center' : 'justify-start gap-4'}`}
-                            title={sidebarCollapsed ? item.label : ''}
-                        >
-                            <item.icon size={22} className={activeTab === item.id ? 'text-white' : 'text-slate-50 group-hover:text-indigo-400'} />
-                            {!sidebarCollapsed && <span className="text-[11px] font-black uppercase tracking-[0.1em] truncate">{item.label}</span>}
+                        {sidebarCollapsed && <div className="mx-auto p-2 bg-indigo-600 rounded-lg text-white"><Shield size={20}/></div>}
+                        <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden lg:block text-slate-500 hover:text-white">
+                            {sidebarCollapsed ? <PanelLeft size={20}/> : <PanelLeftClose size={20}/>}
                         </button>
-                    ))}
-                </nav>
-                
-                <div className={`p-4 border-t border-white/5 ${sidebarCollapsed ? 'flex justify-center' : ''}`}>
-                    <button onClick={() => { localStorage.removeItem('sie_auth_token'); window.location.reload(); }} className={`flex items-center p-4 rounded-2xl bg-rose-500/10 text-rose-500 w-full font-black text-[10px] uppercase tracking-widest transition-all hover:bg-rose-600 hover:text-white ${sidebarCollapsed ? 'w-14 h-14 justify-center p-0' : 'gap-4'}`}>
-                        <LogOut size={20} /> 
-                        {!sidebarCollapsed && <span>Sair do Cluster</span>}
-                    </button>
+                    </div>
+
+                    <nav className="flex-1 overflow-y-auto custom-scrollbar px-4 space-y-1 py-4">
+                        {filteredMenu.map(item => (
+                            <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }} className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all ${activeTab === item.id ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' : 'hover:bg-white/5 hover:text-white'}`}>
+                                <item.icon size={22} className="shrink-0" />
+                                {!sidebarCollapsed && <span className="text-xs font-black uppercase tracking-widest">{item.label}</span>}
+                            </button>
+                        ))}
+                    </nav>
+
+                    <div className="p-6 border-t border-white/5 space-y-4">
+                        <div className={`flex items-center gap-4 ${sidebarCollapsed ? 'justify-center' : ''}`}>
+                            <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-black text-xs shrink-0 shadow-lg">
+                                {currentUser?.name?.charAt(0) || 'U'}
+                            </div>
+                            {!sidebarCollapsed && (
+                                <div className="min-w-0">
+                                    <p className="text-xs font-black text-white truncate">{currentUser?.name}</p>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">{currentUser?.role}</p>
+                                </div>
+                            )}
+                        </div>
+                        <button onClick={handleLogout} className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}>
+                            <LogOut size={20} className="shrink-0" />
+                            {!sidebarCollapsed && <span className="text-[10px] font-black uppercase tracking-widest">Desconectar</span>}
+                        </button>
+                    </div>
                 </div>
             </aside>
 
-            <div className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden bg-[#fcfcfd]">
-                <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-4 lg:px-10 shrink-0 z-50">
+            {/* Main Content Area */}
+            <main className="flex-1 flex flex-col min-w-0 bg-white relative">
+                {/* Header */}
+                <header className="h-20 border-b border-slate-100 flex items-center justify-between px-8 bg-white/80 backdrop-blur-md sticky top-0 z-50">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-3 hover:bg-slate-100 rounded-xl text-slate-600 transition-colors">
-                            <Menu size={24} />
-                        </button>
-                        <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 lg:block hidden">
-                            Protocolo: {MENU_ITEMS.find(m => m.id === activeTab)?.label}
+                        <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 text-slate-500"><Menu size={24}/></button>
+                        <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest hidden md:block">
+                            {MENU_ITEMS.find(i => i.id === activeTab)?.label || 'Ambiente Operacional'}
                         </h2>
                     </div>
-                    
-                    <div className="flex items-center gap-5">
-                        <div className="flex items-center gap-4">
-                            <div className="text-right hidden sm:block">
-                                <p className="text-[11px] font-black text-slate-800 uppercase leading-none">{currentUser?.name}</p>
-                                <p className="text-[9px] font-black text-indigo-500 uppercase mt-1.5 tracking-widest">{currentUser?.role}</p>
-                            </div>
-                            <div className="w-11 h-11 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 font-black text-sm uppercase shadow-sm">
-                                {currentUser?.name?.[0]}
-                            </div>
+                    <div className="flex items-center gap-6">
+                        <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 bg-slate-50 border border-slate-100 rounded-full">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sincronizado</span>
                         </div>
+                        <button className="p-2 text-slate-400 hover:text-indigo-600 transition-colors relative">
+                            <Bell size={20}/>
+                            <span className="absolute top-1 right-1 w-2 h-2 bg-indigo-600 rounded-full border-2 border-white"></span>
+                        </button>
                     </div>
                 </header>
 
-                <main className="flex-1 overflow-hidden relative flex flex-col">
-                    <Suspense fallback={<div className="flex-1 flex flex-col items-center justify-center"><Loader2 className="animate-spin text-indigo-600 mb-2" size={48}/><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sincronizando Módulo...</p></div>}>
-                        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-10">
-                            <div className="max-w-[1700px] mx-auto min-h-full flex flex-col">
-                                <div className="flex-1">
-                                    {activeTab === 'dashboard' && <Dashboard onNavigate={setActiveTab} systemInfo={systemInfo} />}
-                                    {activeTab === 'users' && <UserManagement />}
-                                    {activeTab === 'concierge' && <Concierge />}
-                                    {activeTab === 'finance' && <Finance />}
-                                    {activeTab === 'settings' && <Settings systemInfo={systemInfo} onUpdateSystemInfo={setSystemInfo} templates={[]} onUpdateTemplates={() => {}} />}
-                                    {activeTab === 'operations' && <Operations />}
-                                    {activeTab === 'projects' && <ProjectManagement />}
-                                    {activeTab === 'neural_chat' && <ChatAssistant />}
-                                    {activeTab === 'documents' && <DocumentHub systemInfo={systemInfo} />}
-                                    {activeTab === 'assemblies' && <AssemblyManager currentUser={currentUser} />}
-                                    {activeTab === 'demographics' && <DemographicAnalysis systemInfo={systemInfo} />}
-                                    {activeTab === 'communication' && <Communication />}
-                                    {activeTab === 'timeline' && <Timeline />}
-                                    {activeTab === 'marketplace' && <MarketPlace />}
-                                    {activeTab === 'reservations' && <Reservations />}
-                                    {activeTab === 'sustainability' && <Sustainability />}
-                                    {activeTab === 'suggestions' && <SuggestionBox />}
-                                    {activeTab === 'assets' && <Assets />}
-                                    {activeTab === 'surveys' && <Surveys />}
-                                </div>
-
-                                {/* CORPORATE FOOTER - SRE COMPLIANCE */}
-                                <footer className="mt-12 pt-8 border-t border-slate-100 pb-10">
-                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center overflow-hidden p-2">
-                                                {systemInfo.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain" alt="Logo Footer" /> : <Building2 size={24} className="text-slate-400" />}
-                                            </div>
-                                            <div>
-                                                <h4 className="font-black text-slate-800 text-[11px] uppercase tracking-tight">{systemInfo.name}</h4>
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">CNPJ: {systemInfo.cnpj || '00.000.000/0001-00'}</p>
-                                            </div>
-                                        </div>
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-[9px] font-black uppercase tracking-widest text-slate-400">
-                                            <div className="flex items-center gap-2"><MapPin size={14} className="text-indigo-500"/> {systemInfo.address || 'Sede Administrativa Central'}</div>
-                                            <div className="flex items-center gap-2"><Mail size={14} className="text-indigo-500"/> {systemInfo.email || 'governanca@sie.pro'}</div>
-                                            <div className="flex items-center gap-2"><Phone size={14} className="text-indigo-500"/> {systemInfo.phone || '(11) 4002-8922'}</div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-[9px] font-black text-slate-300 uppercase tracking-[0.3em]">S.I.E PRO V100.0 • SRE CLUSTER 2025</p>
-                                        </div>
-                                    </div>
-                                </footer>
-                            </div>
-                        </div>
+                {/* Tab Content */}
+                <div className="flex-1 overflow-y-auto p-8 lg:p-12 custom-scrollbar bg-[#f8fafc]">
+                    <Suspense fallback={<div className="flex items-center justify-center p-20"><Loader2 className="animate-spin text-indigo-600" size={48}/></div>}>
+                        {renderContent()}
                     </Suspense>
-                </main>
-            </div>
-            
-            {sidebarOpen && <div onClick={() => setSidebarOpen(false)} className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[55] lg:hidden"></div>}
+                </div>
+            </main>
         </div>
     );
 };
 
+// SRE FIX: Added missing default export
 export default App;

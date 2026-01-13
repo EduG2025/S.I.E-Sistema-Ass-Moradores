@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Upload, X, Loader2, ShieldCheck, Zap, ScanLine, AlertCircle, CheckCircle2, ChevronRight } from 'lucide-react';
-import axios from 'axios';
+import api from '../services/api';
 
 interface OCRScannerProps {
     onResult: (data: any) => void;
@@ -51,7 +51,7 @@ const OCRScanner = ({ onResult, onClose, context, title }: OCRScannerProps) => {
         setMode('PROCESSING');
         setIsLoading(true);
         try {
-            const res = await axios.post('/api/ai/ocr', { image: b64, context });
+            const res = await api.post('/ai/ocr', { image: b64, context });
             setResult(res.data);
             setMode('REVIEW');
         } catch (e) {

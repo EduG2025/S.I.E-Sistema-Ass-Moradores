@@ -33,12 +33,12 @@ const ensureSystemReady = async () => {
     try {
         await pool.query(`CREATE TABLE IF NOT EXISTS role_permissions (role VARCHAR(50) NOT NULL, permission_id VARCHAR(100) NOT NULL, PRIMARY KEY (role, permission_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
         
-        // Garantir tabelas críticas para evitar 500
         const tables = [
             'CREATE TABLE IF NOT EXISTS timeline (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255), description TEXT, date DATETIME, type VARCHAR(50), status VARCHAR(50), location VARCHAR(255))',
             'CREATE TABLE IF NOT EXISTS visitors (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), document VARCHAR(50), unit VARCHAR(50), phone VARCHAR(50), status VARCHAR(50), arrival_time DATETIME)',
             'CREATE TABLE IF NOT EXISTS deliveries (id INT AUTO_INCREMENT PRIMARY KEY, courier VARCHAR(255), company VARCHAR(255), unit VARCHAR(50), recipient VARCHAR(255), status VARCHAR(50), arrival_time DATETIME)',
-            'CREATE TABLE IF NOT EXISTS ai_keys (id INT AUTO_INCREMENT PRIMARY KEY, label VARCHAR(100), key_value VARCHAR(255), provider VARCHAR(50), tier VARCHAR(20), priority INT, status VARCHAR(20), error_count INT DEFAULT 0, last_checked DATETIME)'
+            'CREATE TABLE IF NOT EXISTS ai_keys (id INT AUTO_INCREMENT PRIMARY KEY, label VARCHAR(100), key_value VARCHAR(255), provider VARCHAR(50), tier VARCHAR(20), priority INT, status VARCHAR(20), error_count INT DEFAULT 0, last_checked DATETIME)',
+            'CREATE TABLE IF NOT EXISTS survey_responses (id INT AUTO_INCREMENT PRIMARY KEY, survey_id INT, user_id INT, cpf VARCHAR(20), answers JSON, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'
         ];
         for (const sql of tables) { await pool.query(sql); }
 
@@ -62,6 +62,45 @@ const ensureSystemReady = async () => {
     } catch (e) { console.error('❌ Falha na provisão SRE:', e.message); }
 };
 
+// ENDPOINTS PÚBLICOS (BYPASS AUTH)
+app.get('/api/surveys/public/check-resident/:cpf', async (req, res) => {
+    try {
+        const cpf = String(req.params.cpf).replace(/\D/g, '');
+        const [rows] = await pool.query('SELECT name, unit, email, phone FROM users WHERE cpf_cnpj = ? LIMIT 1', [cpf]);
+        if (rows.length > 0) return res.json({ found: true, ...rows[0] });
+        res.json({ found: false });
+    } catch (e) { res.status(500).json({ error: 'DATABASE_OFFLINE' }); }
+});
+
+app.post('/api/surveys/public/:id/submit', async (req, res) => {
+    try {
+        const { cpf, userData, answers } = req.body;
+        const cleanCpf = String(cpf).replace(/\D/g, '');
+        const [existing] = await pool.query('SELECT id FROM users WHERE cpf_cnpj = ?', [cleanCpf]);
+        
+        let userId;
+        if (existing.length > 0) {
+            userId = existing[0].id;
+            await pool.query('UPDATE users SET socialData = ? WHERE id = ?', [JSON.stringify(answers), userId]);
+        } else {
+            const [result] = await pool.query('INSERT INTO users SET ?', [{
+                name: userData.name || 'NOVO MORADOR (CENSO)',
+                cpf_cnpj: cleanCpf,
+                email: userData.email,
+                unit: userData.unit,
+                role: 'RESIDENT',
+                status: 'PENDING',
+                active: 1,
+                socialData: JSON.stringify(answers)
+            }]);
+            userId = result.insertId;
+        }
+        await pool.query('INSERT INTO survey_responses (survey_id, user_id, cpf, answers) VALUES (?, ?, ?, ?)', 
+            [req.params.id, userId, cleanCpf, JSON.stringify(answers)]);
+        res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 const authenticate = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'UNAUTHORIZED' });
@@ -83,24 +122,19 @@ const authorize = (permission) => async (req, res, next) => {
 };
 
 const cleanForDB = (data) => {
-    const protectedFields = ['id', 'created_at', 'updated_at', 'deleted_at', 'last_login'];
+    const protectedFields = ['id', 'created_at', 'updated_at', 'deleted_at', 'last_login', 'password_hash'];
     const clean = { ...data };
-    
-    // Remove campos protegidos para evitar erro de escrita em colunas de sistema
     protectedFields.forEach(f => delete clean[f]);
-
-    // Conversão agressiva de ISO para MySQL Standard
     Object.keys(clean).forEach(key => {
         let val = clean[key];
-        if (typeof val === 'string' && (val.includes('T') || val.includes('Z')) && val.length > 10) {
+        if (typeof val === 'string' && val.length >= 10 && (val.includes('T') || val.includes('Z'))) {
             try {
                 const date = new Date(val);
-                if (!isNaN(date.getTime())) {
-                    // Formato: YYYY-MM-DD HH:mm:ss
-                    clean[key] = date.toISOString().slice(0, 19).replace('T', ' ');
-                }
-            } catch (e) { }
+                if (!isNaN(date.getTime())) clean[key] = date.toISOString().slice(0, 19).replace('T', ' ');
+                else if (val === "") clean[key] = null;
+            } catch (e) {}
         }
+        if (val === "" || val === undefined) clean[key] = null;
     });
     return clean;
 };
@@ -111,12 +145,10 @@ const createCrud = (table, route, jsonFields = [], perm = 'view_dashboard') => {
             let sql = `SELECT * FROM ${table}`;
             const params = [];
             const filters = Object.keys(req.query).filter(k => k !== 'page' && k !== 'limit' && k !== 'search');
-            
             if (filters.length > 0) {
                 sql += ' WHERE ' + filters.map(f => `${f} = ?`).join(' AND ');
                 filters.forEach(f => params.push(req.query[f]));
             }
-            
             sql += ' ORDER BY id DESC';
             const [rows] = await pool.query(sql, params);
             res.json({ data: rows.map(r => { 
@@ -138,6 +170,7 @@ const createCrud = (table, route, jsonFields = [], perm = 'view_dashboard') => {
     app.put(`/api/${route}/:id`, authenticate, authorize(perm), async (req, res) => {
         try {
             const data = cleanForDB(req.body);
+            if (Object.keys(data).length === 0) return res.json({ success: true, message: 'NO_CHANGES' });
             jsonFields.forEach(f => { if(data[f] && typeof data[f] === 'object') data[f] = JSON.stringify(data[f]); });
             await pool.query(`UPDATE ${table} SET ? WHERE id = ?`, [data, req.params.id]);
             res.json({ success: true });
@@ -152,7 +185,6 @@ const createCrud = (table, route, jsonFields = [], perm = 'view_dashboard') => {
     });
 };
 
-// Rota OCR Vision (FIX 404)
 app.post('/api/ai/ocr', authenticate, async (req, res) => {
     try {
         const { image, context } = req.body;
@@ -160,7 +192,6 @@ app.post('/api/ai/ocr', authenticate, async (req, res) => {
         const result = await IAProviderManager.execute('analyzeImage', { 
             contents: { parts: [{ inlineData: { data: image.split(',')[1], mimeType: 'image/jpeg' } }, { text: prompt }] }
         });
-        // Tenta extrair JSON da resposta da IA
         const jsonMatch = result.match(/\{[\s\S]*\}/);
         res.json(jsonMatch ? JSON.parse(jsonMatch[0]) : { text: result });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -226,6 +257,16 @@ app.get('/api/auth/me', authenticate, async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT id, name, role, unit, email, cpf_cnpj FROM users WHERE id = ?', [req.user.id]);
         res.json(rows[0]);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/surveys/public/:id', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM surveys WHERE id = ? AND status = "ACTIVE"', [req.params.id]);
+        if (rows.length === 0) return res.status(404).json({ error: 'SURVEY_NOT_FOUND' });
+        const survey = rows[0];
+        if (survey.questions) survey.questions = typeof survey.questions === 'string' ? JSON.parse(survey.questions) : survey.questions;
+        res.json(survey);
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

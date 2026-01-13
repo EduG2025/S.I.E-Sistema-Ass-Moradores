@@ -5,7 +5,7 @@ import { financialService } from '../services/api';
 import { FINANCIAL_CATEGORIES } from '../constants';
 import { 
     Plus, X, CreditCard,
-    ArrowDownLeft, ArrowUpRight, Loader2, Save, Edit2, Wallet, Receipt
+    ArrowDownLeft, ArrowUpRight, Loader2, Save, Edit2, Wallet, Receipt, Shield
 } from 'lucide-react';
 
 const Finance = () => {
@@ -83,53 +83,51 @@ const Finance = () => {
                               <td className="p-4 text-right"><button onClick={() => { setEditingRecord(r); setIsModalOpen(true); }} className="p-3 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"><Edit2 size={16}/></button></td>
                           </tr>
                       ))}
-                      {records.length === 0 && !isLoading && (
-                          <tr><td colSpan={4} className="p-32 text-center text-slate-300 font-black text-xs uppercase tracking-[0.5em] italic">Nenhum título localizado no log financeiro.</td></tr>
-                      )}
                   </tbody>
               </table>
           </div>
       </div>
 
-      {/* EXPANDED MODAL OVERLAY (Direction: Left & Down) */}
       {isModalOpen && editingRecord && (
-          <div className="fixed inset-y-0 right-0 z-[1000] bg-[#fcfcfd] flex flex-col animate-slide-left shadow-[0_0_150px_rgba(0,0,0,0.5)] transition-all duration-500 w-full md:max-w-[70vw] border-l border-slate-200 overflow-hidden">
-              
-              <div className="h-16 px-8 bg-slate-900 text-white flex justify-between items-center shrink-0 shadow-xl relative z-20">
+          <div className="sie-editor-overlay">
+              <div className="h-20 px-8 bg-slate-900 text-white flex justify-between items-center shrink-0 shadow-xl relative z-20">
                   <div className="flex items-center gap-4">
-                      <div className="p-3 bg-indigo-600 rounded-2xl shadow-lg"><Receipt size={20}/></div>
-                      <h3 className="font-black text-lg uppercase tracking-widest">Protocolar Título Financeiro</h3>
+                      <div className="p-3 bg-indigo-600 rounded-xl shadow-lg"><Receipt size={24}/></div>
+                      <div>
+                        <h3 className="font-black text-sm uppercase tracking-widest leading-none">Protocolar Título Financeiro</h3>
+                        <p className="text-indigo-400 text-[8px] font-black uppercase mt-1 tracking-widest">SRE Ledger Compliance</p>
+                      </div>
                   </div>
                   <div className="flex items-center gap-4">
-                      <button onClick={handleSave} disabled={isSaving} className="px-10 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center gap-3 shadow-2xl active:scale-95">
-                          {isSaving ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>} Commitar Lançamento
+                      <button onClick={handleSave} disabled={isSaving} className="px-10 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[11px] uppercase tracking-[0.2em] transition-all flex items-center gap-3 shadow-2xl active:scale-95">
+                          {isSaving ? <Loader2 className="animate-spin" size={16}/> : <Save size={18}/>} Commitar Registro
                       </button>
-                      <button onClick={() => setIsModalOpen(false)} className="p-2 text-slate-400 hover:text-rose-400 transition-all"><X size={32}/></button>
+                      <button onClick={() => setIsModalOpen(false)} className="p-3 hover:bg-rose-500 hover:text-white text-slate-400 rounded-2xl transition-all border border-white/5 ml-2"><X size={28}/></button>
                   </div>
               </div>
               
-              <div className="flex-1 overflow-y-auto p-12 lg:p-20 custom-scrollbar bg-[#fcfcfd]">
-                  <div className="max-w-4xl mx-auto space-y-12">
-                    <div className="bg-white p-12 rounded-[3.5rem] border border-slate-200 shadow-sm space-y-10 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-indigo-600 opacity-20" />
-                        <div className="space-y-3">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] ml-1">Descrição Detalhada do Título</label>
-                            <input required className="w-full font-black h-16 bg-slate-50 border-slate-200 rounded-3xl px-8 text-2xl focus:bg-white focus:border-indigo-500 transition-all shadow-inner placeholder:text-slate-200" placeholder="Ex: Pagamento Fornecedor Alpha..." value={editingRecord.description} onChange={e => setEditingRecord({...editingRecord, description: e.target.value})} />
+              <div className="flex-1 overflow-y-auto p-12 lg:p-20 custom-scrollbar bg-white">
+                  <div className="max-w-5xl mx-auto space-y-16 pb-20">
+                    <div className="bg-slate-50 p-12 rounded-[4rem] border border-slate-200 shadow-inner space-y-12 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-2 bg-indigo-600" />
+                        <div className="space-y-4">
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Descrição Detalhada do Título</label>
+                            <input required className="w-full font-black h-20 bg-white border border-slate-200 rounded-[2rem] px-8 text-3xl focus:border-indigo-500 transition-all shadow-sm placeholder:text-slate-200" placeholder="Ex: Pagamento Fornecedor Alpha..." value={editingRecord.description} onChange={e => setEditingRecord({...editingRecord, description: e.target.value})} />
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div className="space-y-3">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] ml-1">Montante Bruto (R$)</label>
-                                <input type="number" step="0.01" className="w-full font-black h-16 bg-slate-50 border-slate-200 rounded-3xl px-8 text-xl focus:bg-white shadow-inner" value={editingRecord.amount} onChange={e => setEditingRecord({...editingRecord, amount: e.target.value})} />
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                            <div className="space-y-4">
+                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Montante (R$)</label>
+                                <input type="number" step="0.01" className="w-full font-black h-16 bg-white border border-slate-200 rounded-[1.5rem] px-8 text-2xl focus:border-indigo-500 shadow-sm" value={editingRecord.amount} onChange={e => setEditingRecord({...editingRecord, amount: e.target.value})} />
                             </div>
-                            <div className="space-y-3">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] ml-1">Classificação</label>
-                                <select className="w-full font-black h-16 bg-slate-50 border-slate-200 rounded-3xl px-8 text-sm uppercase shadow-inner appearance-none focus:bg-white" value={editingRecord.category} onChange={e => setEditingRecord({...editingRecord, category: e.target.value})}>
+                            <div className="space-y-4">
+                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Classificação</label>
+                                <select className="w-full font-black h-16 bg-white border border-slate-200 rounded-[1.5rem] px-8 text-sm uppercase shadow-sm appearance-none focus:border-indigo-500" value={editingRecord.category} onChange={e => setEditingRecord({...editingRecord, category: e.target.value})}>
                                     {FINANCIAL_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
                             </div>
-                            <div className="space-y-3">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] ml-1">Natureza do Fluxo</label>
-                                <select className="w-full font-black h-16 bg-slate-50 border-slate-200 rounded-3xl px-8 text-sm uppercase shadow-inner appearance-none focus:bg-white" value={editingRecord.type} onChange={e => setEditingRecord({...editingRecord, type: e.target.value as any})}>
+                            <div className="space-y-4">
+                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] ml-2">Natureza</label>
+                                <select className="w-full font-black h-16 bg-white border border-slate-200 rounded-[1.5rem] px-8 text-sm uppercase shadow-sm appearance-none focus:border-indigo-500" value={editingRecord.type} onChange={e => setEditingRecord({...editingRecord, type: e.target.value as any})}>
                                     <option value="INCOME">Receita / Entrada</option>
                                     <option value="EXPENSE">Despesa / Saída</option>
                                 </select>
