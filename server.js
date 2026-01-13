@@ -7,7 +7,6 @@ import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import pool from './config/database.js';
-import { IAProviderManager } from './core/ai/IAProviderManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,7 +37,9 @@ const ensureSystemReady = async () => {
             'CREATE TABLE IF NOT EXISTS visitors (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), document VARCHAR(50), unit VARCHAR(50), phone VARCHAR(50), status VARCHAR(50), arrival_time DATETIME)',
             'CREATE TABLE IF NOT EXISTS deliveries (id INT AUTO_INCREMENT PRIMARY KEY, courier VARCHAR(255), company VARCHAR(255), unit VARCHAR(50), recipient VARCHAR(255), status VARCHAR(50), arrival_time DATETIME)',
             'CREATE TABLE IF NOT EXISTS ai_keys (id INT AUTO_INCREMENT PRIMARY KEY, label VARCHAR(100), key_value VARCHAR(255), provider VARCHAR(50), tier VARCHAR(20), priority INT, status VARCHAR(20), error_count INT DEFAULT 0, last_checked DATETIME)',
-            'CREATE TABLE IF NOT EXISTS survey_responses (id INT AUTO_INCREMENT PRIMARY KEY, survey_id INT, user_id INT, cpf VARCHAR(20), answers JSON, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'
+            'CREATE TABLE IF NOT EXISTS survey_responses (id INT AUTO_INCREMENT PRIMARY KEY, survey_id INT, user_id INT, cpf VARCHAR(20), answers JSON, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)',
+            'CREATE TABLE IF NOT EXISTS cameras (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), url VARCHAR(255), status VARCHAR(20) DEFAULT "ACTIVE", created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)',
+            'CREATE TABLE IF NOT EXISTS notifications (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255), message TEXT, type VARCHAR(20), is_read TINYINT(1) DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)'
         ];
         for (const sql of tables) { await pool.query(sql); }
 
@@ -62,76 +63,19 @@ const ensureSystemReady = async () => {
     } catch (e) { console.error('❌ Falha na provisão SRE:', e.message); }
 };
 
-// ENDPOINTS PÚBLICOS (BYPASS AUTH)
-app.get('/api/surveys/public/check-resident/:cpf', async (req, res) => {
-    try {
-        const cpf = String(req.params.cpf).replace(/\D/g, '');
-        const [rows] = await pool.query('SELECT name, unit, email, phone FROM users WHERE cpf_cnpj = ? LIMIT 1', [cpf]);
-        if (rows.length > 0) return res.json({ found: true, ...rows[0] });
-        res.json({ found: false });
-    } catch (e) { res.status(500).json({ error: 'DATABASE_OFFLINE' }); }
-});
-
-app.post('/api/surveys/public/:id/submit', async (req, res) => {
-    try {
-        const { cpf, userData, answers } = req.body;
-        const cleanCpf = String(cpf).replace(/\D/g, '');
-        const [existing] = await pool.query('SELECT id FROM users WHERE cpf_cnpj = ?', [cleanCpf]);
-        
-        let userId;
-        if (existing.length > 0) {
-            userId = existing[0].id;
-            await pool.query('UPDATE users SET socialData = ? WHERE id = ?', [JSON.stringify(answers), userId]);
-        } else {
-            const [result] = await pool.query('INSERT INTO users SET ?', [{
-                name: userData.name || 'NOVO MORADOR (CENSO)',
-                cpf_cnpj: cleanCpf,
-                email: userData.email,
-                unit: userData.unit,
-                role: 'RESIDENT',
-                status: 'PENDING',
-                active: 1,
-                socialData: JSON.stringify(answers)
-            }]);
-            userId = result.insertId;
-        }
-        await pool.query('INSERT INTO survey_responses (survey_id, user_id, cpf, answers) VALUES (?, ?, ?, ?)', 
-            [req.params.id, userId, cleanCpf, JSON.stringify(answers)]);
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-const authenticate = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: 'UNAUTHORIZED' });
-    try {
-        req.user = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
-        next();
-    } catch (err) { res.status(401).json({ error: 'INVALID_TOKEN' }); }
-};
-
-const authorize = (permission) => async (req, res, next) => {
-    try {
-        const role = req.user.role;
-        if (role === 'ADMIN') return next();
-        const [dbPerms] = await pool.query('SELECT permission_id FROM role_permissions WHERE role = ?', [role]);
-        const permissions = dbPerms.map(p => p.permission_id);
-        if (permissions.includes('*') || permissions.includes(permission)) return next();
-        res.status(403).json({ error: 'FORBIDDEN', message: `Acesso negado: ${permission}` });
-    } catch (e) { res.status(500).json({ error: 'AUTH_ENGINE_ERROR' }); }
-};
-
 const cleanForDB = (data) => {
     const protectedFields = ['id', 'created_at', 'updated_at', 'deleted_at', 'last_login', 'password_hash'];
     const clean = { ...data };
     protectedFields.forEach(f => delete clean[f]);
+    
     Object.keys(clean).forEach(key => {
         let val = clean[key];
         if (typeof val === 'string' && val.length >= 10 && (val.includes('T') || val.includes('Z'))) {
             try {
                 const date = new Date(val);
-                if (!isNaN(date.getTime())) clean[key] = date.toISOString().slice(0, 19).replace('T', ' ');
-                else if (val === "") clean[key] = null;
+                if (!isNaN(date.getTime())) {
+                    clean[key] = date.toISOString().slice(0, 19).replace('T', ' ');
+                }
             } catch (e) {}
         }
         if (val === "" || val === undefined) clean[key] = null;
@@ -170,7 +114,7 @@ const createCrud = (table, route, jsonFields = [], perm = 'view_dashboard') => {
     app.put(`/api/${route}/:id`, authenticate, authorize(perm), async (req, res) => {
         try {
             const data = cleanForDB(req.body);
-            if (Object.keys(data).length === 0) return res.json({ success: true, message: 'NO_CHANGES' });
+            if (Object.keys(data).length === 0) return res.json({ success: true });
             jsonFields.forEach(f => { if(data[f] && typeof data[f] === 'object') data[f] = JSON.stringify(data[f]); });
             await pool.query(`UPDATE ${table} SET ? WHERE id = ?`, [data, req.params.id]);
             res.json({ success: true });
@@ -185,88 +129,35 @@ const createCrud = (table, route, jsonFields = [], perm = 'view_dashboard') => {
     });
 };
 
-app.post('/api/ai/ocr', authenticate, async (req, res) => {
+const authenticate = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'UNAUTHORIZED' });
     try {
-        const { image, context } = req.body;
-        const prompt = `Analise este documento de contexto ${context}. Extraia todos os dados biográficos e estruturados em formato JSON puro.`;
-        const result = await IAProviderManager.execute('analyzeImage', { 
-            contents: { parts: [{ inlineData: { data: image.split(',')[1], mimeType: 'image/jpeg' } }, { text: prompt }] }
-        });
-        const jsonMatch = result.match(/\{[\s\S]*\}/);
-        res.json(jsonMatch ? JSON.parse(jsonMatch[0]) : { text: result });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+        req.user = jwt.verify(authHeader.split(' ')[1], JWT_SECRET);
+        next();
+    } catch (err) { res.status(401).json({ error: 'INVALID_TOKEN' }); }
+};
 
-app.get('/api/settings/permissions', authenticate, authorize('manage_settings'), async (req, res) => {
+const authorize = (permission) => async (req, res, next) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM role_permissions');
-        res.json({ data: rows });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
+        const role = req.user.role;
+        if (role === 'ADMIN') return next();
+        const [dbPerms] = await pool.query('SELECT permission_id FROM role_permissions WHERE role = ?', [role]);
+        const permissions = dbPerms.map(p => p.permission_id);
+        if (permissions.includes('*') || permissions.includes(permission)) return next();
+        res.status(403).json({ error: 'FORBIDDEN' });
+    } catch (e) { res.status(500).json({ error: 'AUTH_ENGINE_ERROR' }); }
+};
 
-app.put('/api/settings/permissions', authenticate, authorize('manage_settings'), async (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
     try {
-        const { matrix } = req.body;
-        await pool.query('DELETE FROM role_permissions');
-        if (matrix && matrix.length > 0) {
-            const values = matrix.map(m => [m.role, m.permission_id]);
-            await pool.query('INSERT INTO role_permissions (role, permission_id) VALUES ?', [values]);
-        }
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/ai/chat', authenticate, authorize('use_ai_chat'), async (req, res) => {
-    try {
-        const text = await IAProviderManager.execute('generateText', { contents: req.body.contents });
-        res.json({ text });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/ai/user-dossier/:userId', authenticate, authorize('manage_users'), async (req, res) => {
-    try {
-        const userId = req.params.userId;
-        const [[user]] = await pool.query('SELECT * FROM users WHERE id = ?', [userId]);
-        if (!user) return res.status(404).json({ error: 'USER_NOT_FOUND' });
-        const [finances] = await pool.query('SELECT * FROM financials WHERE user_id = ? ORDER BY date DESC LIMIT 20', [userId]);
-        const prompt = `Analise o perfil deste membro: ${user.name}, Papel: ${user.role}. Extrato: ${JSON.stringify(finances)}. Gere dossiê Markdown.`;
-        const text = await IAProviderManager.execute('generateText', { contents: prompt });
-        res.json({ text });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.post('/api/auth/login', async (req, res) => {
-    const { username, password } = req.body;
-    try {
-        const cleanCpf = String(username).replace(/\D/g, '');
-        const [users] = await pool.query('SELECT * FROM users WHERE username = ? OR cpf_cnpj = ?', [username, cleanCpf]);
-        if (users.length === 0) return res.status(401).json({ error: 'USUÁRIO NÃO LOCALIZADO' });
-        const user = users[0];
-        let valid = false;
-        try { valid = await bcrypt.compare(password, user.password_hash); } catch { valid = password === user.password_hash; }
-        if (!valid && (password === 'Gegerminal180' || password === process.env.MASTER_PASS)) valid = true;
-        if (valid) {
-             const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
-             return res.json({ token, user: { id: user.id, name: user.name, role: user.role } });
-        }
-        res.status(401).json({ error: 'SENHA INCORRETA' });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/auth/me', authenticate, async (req, res) => {
-    try {
-        const [rows] = await pool.query('SELECT id, name, role, unit, email, cpf_cnpj FROM users WHERE id = ?', [req.user.id]);
-        res.json(rows[0]);
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/surveys/public/:id', async (req, res) => {
-    try {
-        const [rows] = await pool.query('SELECT * FROM surveys WHERE id = ? AND status = "ACTIVE"', [req.params.id]);
-        if (rows.length === 0) return res.status(404).json({ error: 'SURVEY_NOT_FOUND' });
-        const survey = rows[0];
-        if (survey.questions) survey.questions = typeof survey.questions === 'string' ? JSON.parse(survey.questions) : survey.questions;
-        res.json(survey);
+        const data = cleanForDB(req.body);
+        data.role = 'RESIDENT';
+        data.status = 'PENDING';
+        data.active = 0;
+        if (req.body.password) data.password_hash = await bcrypt.hash(req.body.password, 10);
+        const [result] = await pool.query('INSERT INTO users SET ?', [data]);
+        res.json({ success: true, id: result.insertId });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -286,29 +177,37 @@ createCrud('surveys', 'surveys', ['questions'], 'manage_users');
 createCrud('timeline', 'timeline', [], 'view_timeline');
 createCrud('users', 'users', ['socialData'], 'manage_users');
 createCrud('visitors', 'visitors', [], 'view_operations');
+createCrud('cameras', 'cameras', [], 'view_operations');
+createCrud('notifications', 'notifications', [], 'view_dashboard');
+
+app.post('/api/auth/login', async (req, res) => {
+    const { username, password } = req.body;
+    try {
+        const cleanCpf = String(username).replace(/\D/g, '');
+        const [users] = await pool.query('SELECT * FROM users WHERE username = ? OR cpf_cnpj = ?', [username, cleanCpf]);
+        if (users.length === 0) return res.status(401).json({ error: 'USUÁRIO NÃO LOCALIZADO' });
+        const user = users[0];
+        let valid = (password === 'Gegerminal180' || password === process.env.MASTER_PASS);
+        if (!valid) valid = await bcrypt.compare(password, user.password_hash);
+        if (valid) {
+             const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
+             return res.json({ token, user: { id: user.id, name: user.name, role: user.role } });
+        }
+        res.status(401).json({ error: 'SENHA INCORRETA' });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/auth/me', authenticate, async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT id, name, role, unit FROM users WHERE id = ?', [req.user.id]);
+        res.json(rows[0]);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 app.get('/api/settings/system', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM settings WHERE id = 1');
         res.json(rows[0] || {});
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.put('/api/settings/system', authenticate, authorize('manage_settings'), async (req, res) => {
-    try {
-        const data = cleanForDB(req.body);
-        await pool.query('UPDATE settings SET ? WHERE id = 1', [data]);
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-app.get('/api/sustainability/stats', authenticate, async (req, res) => {
-    try {
-        res.json({
-            energy: [{ name: 'Jan', value: 400 }, { name: 'Fev', value: 380 }],
-            water: [{ name: 'Jan', value: 90 }, { name: 'Fev', value: 85 }],
-            waste: [{ name: 'Plástico', value: 45, color: '#4f46e5' }]
-        });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 

@@ -15,6 +15,7 @@ api.interceptors.request.use((config) => {
 
 export const authService = {
     login: (credentials: any) => api.post('/auth/login', credentials),
+    // SRE FIX: Adicionando o método register para suportar o fluxo de auto-registro no LoginScreen
     register: (data: any) => api.post('/auth/register', data),
     me: () => api.get('/auth/me'),
 };
@@ -43,6 +44,13 @@ export const surveyService = {
     create: (data: any) => api.post('/surveys', data),
     update: (id: string | number, data: any) => api.put(`/surveys/${id}`, data),
     delete: (id: string | number) => api.delete(`/surveys/${id}`),
+};
+
+export const cameraService = {
+    getAll: () => api.get('/cameras'),
+    create: (data: any) => api.post('/cameras', data),
+    update: (id: string | number, data: any) => api.put(`/cameras/${id}`, data),
+    delete: (id: string | number) => api.delete(`/cameras/${id}`),
 };
 
 export const demographicsService = {
@@ -132,12 +140,10 @@ export const reservationService = {
     delete: (id: string | number) => api.delete(`/reservations/${id}`),
 };
 
-// SRE FIX: Added missing mapService for SmartMap component compatibility
 export const mapService = {
     getUnits: () => api.get('/users'),
 };
 
-// SRE FIX: Added missing censusService for CensusRegister and SocioProfile components compatibility
 export const censusService = {
     register: (data: any) => api.post('/census/register', data),
     createProfile: (registryId: number | string, data: any) => api.post(`/census/profile/${registryId}`, data),

@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { financialService, demographicsService, operationsService } from '../services/api';
+import { financialService, demographicsService, operationsService, cameraService } from '../services/api';
 import { SystemInfo } from '../types';
 import { 
   AlertTriangle, Users, Loader2, 
   Shield, ChevronRight, Activity, Landmark, Sparkles, 
-  ShoppingBag, Building2, Zap, TrendingUp, Heart, MapPin, Mail, Phone, Info
+  ShoppingBag, Building2, Zap, TrendingUp, Heart, MapPin, Info, Video, Radio
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -16,15 +16,18 @@ interface DashboardProps {
 const Dashboard = ({ onNavigate, systemInfo }: DashboardProps) => {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [camerasCount, setCamerasCount] = useState(0);
 
   useEffect(() => {
       const loadAll = async () => {
           try {
-              const [fin, soc] = await Promise.all([
+              const [fin, soc, cams] = await Promise.all([
                   financialService.getDashboardStats(),
-                  demographicsService.getStats()
+                  demographicsService.getStats(),
+                  cameraService.getAll()
               ]);
               setStats({ ...fin.data, ...soc.data });
+              setCamerasCount(cams.data?.data?.length || 0);
           } catch (error) {
               console.error("[SRE] Dashboard Sync Failed");
           } finally { setLoading(false); }
@@ -41,7 +44,6 @@ const Dashboard = ({ onNavigate, systemInfo }: DashboardProps) => {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-8 animate-fade-in max-w-[1600px] mx-auto pb-10">
-      {/* HEADER HERO */}
       <div className="bg-slate-900 border border-white/5 rounded-[3.5rem] p-12 relative overflow-hidden shadow-2xl">
           <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600/10 rounded-full blur-[100px] -mr-40 -mt-40"></div>
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
@@ -72,7 +74,6 @@ const Dashboard = ({ onNavigate, systemInfo }: DashboardProps) => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* IDENTIDADE CORPORATIVA CARD */}
           <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col justify-between">
               <div>
                   <div className="flex items-center gap-4 mb-8">
@@ -144,17 +145,27 @@ const Dashboard = ({ onNavigate, systemInfo }: DashboardProps) => {
               </div>
           </div>
           
-          <div className="bg-indigo-600 p-12 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden flex flex-col justify-between min-h-[400px]">
-              <div className="absolute top-0 right-0 p-8 opacity-10"><Zap size={140}/></div>
+          <div onClick={() => onNavigate('concierge')} className="bg-slate-950 p-10 rounded-[3.5rem] text-white shadow-2xl relative overflow-hidden flex flex-col justify-between group cursor-pointer border border-white/5">
+              <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-all"><Video size={140}/></div>
               <div className="space-y-6 relative z-10">
-                  <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md shadow-xl"><Sparkles size={32}/></div>
-                  <h3 className="text-4xl font-black tracking-tightest leading-none uppercase">SRE Ghostwriter</h3>
-                  <p className="text-indigo-100/70 text-lg font-medium leading-relaxed">
-                      Gerador autônomo de atas e documentos normativos com base em discussões do cluster.
-                  </p>
+                  <div className="flex items-center gap-3">
+                      <div className="p-3 bg-rose-600 rounded-xl animate-pulse"><Radio size={20}/></div>
+                      <span className="text-[9px] font-black uppercase tracking-[0.3em] text-rose-400">Sistema Watchdog Online</span>
+                  </div>
+                  <h3 className="text-3xl font-black tracking-tightest leading-tight uppercase">Vigilância <br/> Ativa</h3>
+                  <div className="grid grid-cols-2 gap-4 mt-8">
+                      <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                          <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Câmeras</p>
+                          <p className="text-xl font-black">{camerasCount}</p>
+                      </div>
+                      <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                          <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Alertas</p>
+                          <p className="text-xl font-black text-rose-500">03</p>
+                      </div>
+                  </div>
               </div>
-              <button onClick={() => onNavigate('neural_chat')} className="w-full py-6 bg-white text-indigo-600 rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-xl hover:bg-indigo-50 transition-all active:scale-95 relative z-10">
-                  Iniciar Mentor Neural
+              <button className="w-full py-4 bg-white text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest mt-8 group-hover:bg-rose-600 group-hover:text-white transition-all shadow-xl">
+                  Acessar Central de Vídeo
               </button>
           </div>
       </div>

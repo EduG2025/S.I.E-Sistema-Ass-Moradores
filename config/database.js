@@ -5,8 +5,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 /**
- * CONFIGURAÇÃO DE DATABASE SRE V5.2
- * Resiliência reforçada para ambientes VPS e Docker.
+ * CONFIGURAÇÃO DE DATABASE SRE V5.5
+ * Proteção contra ECONNREFUSED e inconsistência de timezone.
  */
 const pool = mysql.createPool({
   host: process.env.DB_HOST || '127.0.0.1',
@@ -18,7 +18,7 @@ const pool = mysql.createPool({
   connectionLimit: 30, 
   queueLimit: 0,
   timezone: '-03:00',
-  dateStrings: true, // Garante que datas venham como strings, evitando bugs de timezone do JS
+  dateStrings: true,
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000,
   connectTimeout: 60000
@@ -28,17 +28,16 @@ const testConnection = async (retries = 5) => {
     while (retries > 0) {
         try {
             const connection = await pool.getConnection();
-            console.log('✅ SRE DATABASE CONNECTED & SYNCED');
+            console.log('✅ SRE KERNEL DATABASE SYNCED | STATUS: 200 OK');
             connection.release();
             return;
         } catch (err) {
-            console.error(`❌ SRE DATABASE ATTEMPT FAILED. Retries left: ${retries - 1}`, err.message);
-            retries -= 1;
-            if (retries === 0) {
-                console.error('CRITICAL: DATABASE UNREACHABLE. Check if MySQL is running or if DB_HOST is correct.');
-            } else {
-                await new Promise(res => setTimeout(res, 5000)); // Espera 5s antes de tentar novamente
+            console.error(`❌ SRE DATABASE ATTEMPT FAILED (${retries} left):`, err.message);
+            if (err.code === 'ECONNREFUSED') {
+                console.error(`DETALHE: O Kernel não conseguiu conectar em ${process.env.DB_HOST || '127.0.0.1'}:${process.env.DB_PORT || '3306'}. O serviço MySQL está rodando?`);
             }
+            retries -= 1;
+            await new Promise(res => setTimeout(res, 5000));
         }
     }
 };
