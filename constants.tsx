@@ -5,6 +5,8 @@ import {
   Landmark, Shield, FileText, Gavel, MessageSquareText, MessageSquare, 
   Calendar, Camera, Leaf, Package, Megaphone, HelpCircle, Box, UserPlus, Zap
 } from 'lucide-react';
+// FIX: Added imports from types to enable explicit typing of constants
+import { SystemInfo, IdCardTemplate } from './types';
 
 export const MENU_ITEMS = [
   { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard, permissionId: 'view_dashboard' },
@@ -43,7 +45,8 @@ export const SYSTEM_PERMISSIONS = [
   { id: 'view_projects', label: 'Ver Projetos/Obras', module: 'PLANEJAMENTO' },
 ];
 
-export const DEFAULT_SYSTEM_INFO = {
+// FIX: Explicitly typed DEFAULT_SYSTEM_INFO as SystemInfo to prevent typing mismatch in components
+export const DEFAULT_SYSTEM_INFO: SystemInfo = {
   name: 'Associação Residencial S.I.E',
   shortName: 'S.I.E PRO',
   cnpj: '00.000.000/0001-00',
@@ -52,12 +55,13 @@ export const DEFAULT_SYSTEM_INFO = {
   registrationMode: 'APPROVAL'
 };
 
-export const DEFAULT_ID_CARD_TEMPLATE = {
+// FIX: Explicitly typed DEFAULT_ID_CARD_TEMPLATE as IdCardTemplate to fix missing export member error
+export const DEFAULT_ID_CARD_TEMPLATE: IdCardTemplate = {
   id: 'tpl_standard',
   name: 'Padrão S.I.E Oficial',
   width: 320,
   height: 200,
-  orientation: 'landscape' as const,
+  orientation: 'landscape',
   frontBackground: '#ffffff',
   backBackground: '#f8fafc',
   elements: []

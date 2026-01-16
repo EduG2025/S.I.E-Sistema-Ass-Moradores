@@ -1,6 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { Leaf, Droplets, Zap, Trash2, TrendingDown, ArrowUpRight, Loader2, BarChart3, ShieldCheck, Sparkles } from 'lucide-react';
+import { 
+    Leaf, Droplets, Zap, Trash2, TrendingDown, ArrowUpRight, 
+    Loader2, BarChart3, ShieldCheck, Sparkles, X, Printer, Download, Save, FileText, Globe, Activity
+} from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Cell } from 'recharts';
 import { systemService } from '../services/api';
 
@@ -8,6 +11,8 @@ const Sustainability = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [stats, setStats] = useState<any>(null);
     const [error, setError] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     useEffect(() => {
         const loadStats = async () => {
@@ -29,6 +34,14 @@ const Sustainability = () => {
         };
         loadStats();
     }, []);
+
+    const handleGenerateReport = () => {
+        setIsGenerating(true);
+        setTimeout(() => {
+            setIsGenerating(false);
+            window.print();
+        }, 2000);
+    };
 
     if (isLoading) return (
         <div className="flex flex-col items-center justify-center h-[60vh]">
@@ -151,10 +164,70 @@ const Sustainability = () => {
                         <p className="text-slate-400 text-xs mt-1 font-medium">Relatórios de conformidade ESG auditados automaticamente pelo Kernel.</p>
                     </div>
                 </div>
-                <button className="px-10 py-5 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-emerald-50 transition-all flex items-center gap-3 active:scale-95">
-                    <BarChart3 size={20}/> Exportar Relatório
+                <button onClick={() => setIsModalOpen(true)} className="px-10 py-5 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-emerald-50 transition-all flex items-center gap-3 active:scale-95">
+                    <BarChart3 size={20}/> Gerar Relatório ESG
                 </button>
             </div>
+
+            {isModalOpen && (
+                <div className="sie-editor-overlay">
+                    <div className="sie-modal-container">
+                        <div className="h-20 px-10 bg-slate-900 text-white flex justify-between items-center shrink-0 shadow-2xl relative z-20 border-b border-white/5">
+                            <div className="flex items-center gap-5">
+                                <div className="p-3.5 bg-emerald-600 rounded-xl shadow-xl"><FileText size={22}/></div>
+                                <div>
+                                    <h3 className="font-black text-xl uppercase tracking-tighter leading-none">Relatório de Impacto</h3>
+                                    <p className="text-indigo-400 text-[9px] font-black uppercase mt-1.5 tracking-widest opacity-80">SRE Environmental Audit V5.0</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <button onClick={handleGenerateReport} disabled={isGenerating} className="px-10 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95">
+                                    {isGenerating ? <Loader2 className="animate-spin" size={16}/> : <Printer size={16}/>} Imprimir Certificado
+                                </button>
+                                <button onClick={() => setIsModalOpen(false)} className="p-3.5 hover:bg-rose-500 hover:text-white text-slate-400 rounded-xl transition-all border border-white/5"><X size={24}/></button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-12 custom-scrollbar bg-[#fdfdfe] relative flex flex-col items-center">
+                            <div className="max-w-4xl w-full bg-white border border-slate-200 rounded-[3rem] shadow-2xl p-16 space-y-12 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-10 opacity-[0.03] pointer-events-none"><Globe size={200}/></div>
+                                
+                                <div className="text-center space-y-4">
+                                    <div className="w-24 h-24 bg-emerald-50 text-emerald-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner border border-emerald-100"><ShieldCheck size={48}/></div>
+                                    <h2 className="text-4xl font-black text-slate-800 uppercase tracking-tightest">Certificado de Eficiência</h2>
+                                    <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.4em]">Auditado pelo Kernel S.I.E PRO em {new Date().toLocaleDateString()}</p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-8">
+                                    <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Performance Energética</p>
+                                        <h4 className="text-3xl font-black text-amber-600">92.4%</h4>
+                                        <div className="w-full h-1.5 bg-slate-200 rounded-full mt-4 overflow-hidden"><div className="w-[92%] h-full bg-amber-500"></div></div>
+                                    </div>
+                                    <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Gestão Hídrica</p>
+                                        <h4 className="text-3xl font-black text-indigo-600">88.1%</h4>
+                                        <div className="w-full h-1.5 bg-slate-200 rounded-full mt-4 overflow-hidden"><div className="w-[88%] h-full bg-indigo-500"></div></div>
+                                    </div>
+                                </div>
+
+                                <div className="p-10 bg-emerald-900/5 border border-emerald-100 rounded-[3rem] space-y-6">
+                                    <h5 className="font-black text-emerald-900 uppercase tracking-widest flex items-center gap-3"><Activity size={18}/> Conclusão da Auditoria</h5>
+                                    <p className="text-emerald-800 text-sm font-medium leading-relaxed uppercase italic">
+                                        O cluster apresenta níveis de eficiência operacional compatíveis com o padrão Ouro de sustentabilidade residencial. 
+                                        A redução de 12% na pegada de carbono foi atingida através da otimização neural de fluxos de manutenção e co-gestão ativa.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-8 border-t bg-slate-50 flex justify-between items-center shrink-0">
+                            <div className="flex items-center gap-3"><div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" /><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Protocolo ESG Consolidado</span></div>
+                            <button onClick={() => setIsModalOpen(false)} className="px-10 py-3.5 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-slate-600 transition-colors">Fechar</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

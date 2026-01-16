@@ -11,7 +11,6 @@ export default defineConfig({
   plugins: [
     react({
       jsxRuntime: 'automatic',
-      jsxImportSource: 'react',
     })
   ],
   resolve: {
@@ -19,51 +18,26 @@ export default defineConfig({
       '@': path.resolve(__dirname, './'),
     },
   },
-  define: {
-    'process.env.NODE_ENV': JSON.stringify('production'),
-    'global': 'window',
-  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    sourcemap: false,
+    target: 'esnext',
     minify: 'esbuild',
-    target: 'es2020',
-    cssMinify: true,
+    cssCodeSplit: false,
     rollupOptions: {
-      external: [
-        'react',
-        'react-dom',
-        'react-dom/client',
-        'react/jsx-runtime',
-        'react/jsx-dev-runtime',
-        'lucide-react',
-        'recharts',
-        'leaflet',
-        'axios',
-        '@google/genai'
-      ],
       output: {
         format: 'esm',
         entryFileNames: `assets/[name].js`,
         chunkFileNames: `assets/[name].js`,
-        assetFileNames: `assets/[name].[ext]`,
-        globals: {
-          react: 'React',
-          'react-dom': 'ReactDOM',
-          'lucide-react': 'Lucide'
-        }
+        assetFileNames: `assets/[name].[ext]`
       }
     }
   },
   server: {
-    host: true,
-    port: 5173,
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
-        secure: false,
       }
     }
   }

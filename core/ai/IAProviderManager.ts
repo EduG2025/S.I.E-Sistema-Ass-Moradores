@@ -60,14 +60,14 @@ export const IAProviderManager = {
   },
 
   async execute(task: 'generateText' | 'analyzeImage', payload: any): Promise<string> {
-    const activeKey = await this.getActiveKey();
-    const apiKey = activeKey?.key_value || process.env.API_KEY;
-
-    if (!apiKey) throw new Error("SRE ALERT: Cluster de IA indisponível.");
+    // SRE FIX: API key must be obtained exclusively from process.env.API_KEY per Gemini guidelines
+    if (!process.env.API_KEY) throw new Error("SRE ALERT: Cluster de IA indisponível.");
 
     try {
-      const ai = new GoogleGenAI({ apiKey: apiKey });
-      const modelName = payload.model || (activeKey?.tier === 'PAID' ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview');
+      // SRE FIX: Direct initialization with process.env.API_KEY
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      // SRE FIX: Default to gemini-3-flash-preview as per text task guidelines
+      const modelName = payload.model || 'gemini-3-flash-preview';
       const normalizedContents = this.normalizeContents(payload.contents);
 
       const response = await ai.models.generateContent({
@@ -79,13 +79,9 @@ export const IAProviderManager = {
         }
       });
 
-      if (activeKey) {
-        await pool.query('UPDATE ai_keys SET last_checked = NOW(), error_count = 0 WHERE id = ?', [activeKey.id]);
-      }
-
+      // SRE FIX: Use .text property instead of method
       return response.text || "";
     } catch (error: any) {
-      if (activeKey) await this.markKeyError(activeKey.id);
       throw error;
     }
   }

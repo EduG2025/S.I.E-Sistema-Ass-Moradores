@@ -70,13 +70,13 @@ const Timeline = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 space-y-6 animate-fade-in overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 space-y-6 animate-fade-in overflow-hidden h-full relative">
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-slate-900 p-8 rounded-[2rem] text-white shadow-xl shrink-0">
             <div>
                 <h2 className="text-3xl font-black tracking-tightest leading-none">Cronograma Ativo</h2>
                 <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mt-2">SRE Timeline Core V92.5</p>
             </div>
-            <button onClick={handleOpenCreate} className="px-10 py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-indigo-500 transition-all active:scale-95 shrink-0">
+            <button onClick={handleOpenCreate} className="px-10 py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-indigo-50 transition-all active:scale-95 shrink-0">
                 <Plus size={20}/> Injetar Marco
             </button>
         </div>
@@ -139,31 +139,36 @@ const Timeline = () => {
         </div>
 
         {isModalOpen && (
-            <div className="fixed inset-0 bg-slate-950/95 z-[2000] flex items-center justify-center p-6 backdrop-blur-xl animate-fade-in">
-                <div className="bg-white rounded-[3.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-white/10 animate-scale-in flex flex-col max-h-[90vh]">
+            <div className="sie-editor-overlay">
+                <div className="sie-modal-container">
                     <form onSubmit={handleSave} className="flex flex-col h-full">
-                        <div className="p-8 lg:p-12 bg-slate-900 text-white flex justify-between items-center shrink-0">
-                            <div className="flex items-center gap-6">
-                                <div className="p-4 bg-indigo-600 rounded-2xl shadow-xl"><Plus size={24} /></div>
+                        <div className="h-20 px-10 bg-slate-900 text-white flex justify-between items-center shrink-0 shadow-2xl relative z-20 border-b border-white/5">
+                            <div className="flex items-center gap-5">
+                                <div className="p-3.5 bg-indigo-600 rounded-xl shadow-xl"><Plus size={22} className="text-white" /></div>
                                 <div>
-                                    <h3 className="font-black text-2xl lg:text-3xl tracking-tightest uppercase leading-none">Gerenciar Marco</h3>
-                                    <p className="text-[10px] text-indigo-400 font-black uppercase tracking-widest mt-2 flex items-center gap-2">Kernel Scheduler Core</p>
+                                    <h3 className="font-black text-xl tracking-tighter uppercase leading-none">Gerenciar Marco</h3>
+                                    <p className="text-indigo-400 text-[9px] font-black uppercase mt-1.5 tracking-widest opacity-80">Kernel Scheduler Core</p>
                                 </div>
                             </div>
-                            <button type="button" onClick={() => setIsModalOpen(false)} className="p-4 hover:bg-white/10 rounded-2xl transition-all text-white"><X size={28}/></button>
-                        </div>
-                        <div className="p-8 lg:p-12 space-y-10 overflow-y-auto custom-scrollbar flex-1 bg-[#fcfcfd]">
-                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Título do Evento</label><input required className="w-full font-black h-16 text-xl bg-white border-slate-200 rounded-2xl px-6 shadow-inner" value={editingEvent.title} onChange={e => setEditingEvent({...editingEvent, title: e.target.value})} /></div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data & Hora Agendada</label><input type="datetime-local" className="w-full font-bold h-16 bg-white border-slate-200 rounded-2xl px-6 shadow-inner" value={editingEvent.date} onChange={e => setEditingEvent({...editingEvent, date: e.target.value})} /></div>
-                                <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoria de Fluxo</label><select className="w-full font-bold h-16 bg-white border-slate-200 rounded-2xl px-6 shadow-inner appearance-none" value={editingEvent.type} onChange={e => setEditingEvent({...editingEvent, type: e.target.value as any})}><option value="MEETING">Reunião de Conselho</option><option value="MAINTENANCE">Manutenção Preventiva</option><option value="EVENT">Evento Comunitário</option><option value="DEADLINE">Prazo de Resolução</option></select></div>
+                            <div className="flex items-center gap-4">
+                                <button type="submit" disabled={isSaving} className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest shadow-xl transition-all flex items-center gap-3">
+                                    {isSaving ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>} Sincronizar Marco
+                                </button>
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="p-3.5 hover:bg-rose-500 hover:text-white text-slate-400 rounded-xl transition-all border border-white/5"><X size={24}/></button>
                             </div>
-                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Localização Física / Virtual</label><input className="w-full font-bold h-16 bg-white border-slate-200 rounded-2xl px-6 shadow-inner" value={editingEvent.location} onChange={e => setEditingEvent({...editingEvent, location: e.target.value})} placeholder="Ex: Sede Social ou Meet" /></div>
-                            <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição do Protocolo</label><textarea rows={4} className="w-full font-medium bg-white border-slate-200 rounded-2xl p-6 shadow-inner" value={editingEvent.description} onChange={e => setEditingEvent({...editingEvent, description: e.target.value})} /></div>
                         </div>
-                        <div className="p-10 bg-slate-50 border-t border-slate-100 flex justify-end gap-6 shrink-0">
-                            <button type="button" onClick={() => setIsModalOpen(false)} className="px-10 py-5 text-slate-400 font-black text-xs uppercase tracking-widest">Abortar</button>
-                            <button type="submit" disabled={isSaving} className="px-16 py-5 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-2xl hover:bg-emerald-600 transition-all flex items-center gap-4">{isSaving ? <Loader2 className="animate-spin" size={20}/> : <Save size={20}/>} Salvar Alterações</button>
+                        <div className="flex-1 overflow-y-auto p-10 custom-scrollbar bg-[#fdfdfe] relative">
+                            <div className="max-w-3xl mx-auto space-y-8 pb-10">
+                                <div className="bg-slate-50 p-10 rounded-[3rem] border border-slate-200 shadow-inner space-y-10">
+                                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Título do Evento</label><input required className="w-full font-black h-16 text-xl bg-white border-slate-200 rounded-2xl px-8 shadow-inner focus:border-indigo-500" value={editingEvent.title} onChange={e => setEditingEvent({...editingEvent, title: e.target.value})} /></div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data & Hora Agendada</label><input type="datetime-local" className="w-full font-bold h-14 bg-white border-slate-200 rounded-2xl px-6 shadow-inner" value={editingEvent.date} onChange={e => setEditingEvent({...editingEvent, date: e.target.value})} /></div>
+                                        <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoria de Fluxo</label><select className="w-full font-black h-14 bg-white border-slate-200 rounded-2xl px-6 shadow-inner appearance-none" value={editingEvent.type} onChange={e => setEditingEvent({...editingEvent, type: e.target.value as any})}><option value="MEETING">Reunião de Conselho</option><option value="MAINTENANCE">Manutenção Preventiva</option><option value="EVENT">Evento Comunitário</option><option value="DEADLINE">Prazo de Resolução</option></select></div>
+                                    </div>
+                                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Localização Física / Virtual</label><input className="w-full font-black h-14 bg-white border-slate-200 rounded-2xl px-6 shadow-inner" value={editingEvent.location} onChange={e => setEditingEvent({...editingEvent, location: e.target.value})} placeholder="Ex: Sede Social ou Meet" /></div>
+                                    <div className="space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição do Protocolo</label><textarea rows={4} className="w-full font-medium bg-white border-slate-200 rounded-2xl p-6 shadow-inner" value={editingEvent.description} onChange={e => setEditingEvent({...editingEvent, description: e.target.value})} /></div>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>

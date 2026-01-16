@@ -1,6 +1,8 @@
 
 import React from 'react';
 
+// --- ENUMS NUCLEARES ---
+
 export enum UserRole {
   ADMIN = 'ADMIN',
   PRESIDENT = 'PRESIDENT',
@@ -17,8 +19,29 @@ export type FinancialStatus = 'PAID' | 'PENDING' | 'OVERDUE' | 'CANCELLED' | 'PA
 export type ProjectStatus = 'PLANNING' | 'EM_EXECUÇÃO' | 'CONCLUÍDO' | 'CANCELADO';
 export type IncidentPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type IncidentStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
+export type DocumentType = 'OFICIO' | 'ATA' | 'EDITAL' | 'CONTRATO' | 'RELATÓRIO';
+export type AIKeyStatus = 'ACTIVE' | 'ERROR' | 'INVALID';
+export type AITier = 'FREE' | 'PAID';
+
+// --- INTERFACES DE CONFIGURAÇÃO ---
+
+export interface ResidentUISetting {
+  id: string;
+  label: string;
+  enabled: boolean;
+  icon: string;
+  detail: string;
+}
+
+export interface WhatsAppConfig {
+  api_key: string;
+  sender: string;
+  footer: string;
+  webhook_url?: string;
+}
 
 export interface SystemInfo {
+  id?: number;
   name: string;
   shortName?: string; 
   cnpj?: string;
@@ -28,7 +51,21 @@ export interface SystemInfo {
   website?: string;
   primaryColor?: string;
   logoUrl?: string;
-  registrationMode?: string;
+  registrationMode?: 'OPEN' | 'APPROVAL' | 'INVITE_ONLY';
+  resident_ui_settings?: ResidentUISetting[];
+  whatsapp_config?: WhatsAppConfig;
+}
+
+// --- INTERFACES DE IDENTIDADE ---
+
+export interface SocialData {
+  risk: number;
+  tags: string[];
+  income_range?: string;
+  household_size?: number;
+  vulnerabilities?: string[];
+  last_census_date?: string;
+  ai_notes?: string;
 }
 
 export interface User {
@@ -44,33 +81,64 @@ export interface User {
   phone?: string;
   avatar_url?: string;
   permissions?: string[];
-  socialData?: any;
+  socialData?: SocialData;
+  coordinates?: { lat: number; lng: number };
   rg?: string;
   rg_issuing_body?: string;
+  parent_id?: string | number;
+  address?: string;
+  profession?: string;
+  last_login?: string;
+}
+
+// --- INTERFACES OPERACIONAIS & GOVERNANÇA ---
+
+export interface CameraDevice {
+  id: string | number;
+  name: string;
+  url: string;
+  location: string;
+  status: 'ACTIVE' | 'OFFLINE' | 'MAINTENANCE';
+  created_at: string;
 }
 
 export interface OfficialDocument {
   id: string | number;
   title: string;
   content: string;
-  type: 'OFICIO' | 'ATA' | 'EDITAL' | 'CONTRATO' | 'RELATÓRIO';
+  type: DocumentType;
   status: 'DRAFT' | 'SIGNED' | 'ARCHIVED';
   updated_at: string;
+  created_by?: number;
+  hash?: string;
 }
 
 export interface Incident {
   id: string | number;
   title: string;
+  description?: string;
   location: string;
   priority: IncidentPriority;
   status: IncidentStatus;
   created_at: string;
+  updated_at?: string;
 }
+
+export interface Notice {
+  id: string | number;
+  title: string;
+  content: string;
+  urgency: 'LOW' | 'MEDIUM' | 'HIGH';
+  date: string;
+  created_at?: string;
+}
+
+// --- INTERFACES DE PESQUISA (CENSO) ---
 
 export interface SurveyQuestion {
   id: string | number;
   text: string;
-  type: string;
+  type: 'text' | 'number' | 'boolean' | 'select' | 'date';
   options?: string[];
   mapping_tag?: string;
   required: boolean | number;
@@ -80,10 +148,13 @@ export interface Survey {
   id: string | number;
   title: string;
   description: string;
-  type: string;
+  type: 'CENSUS' | 'SOCIAL_AID' | 'SATISFACTION';
   questions: SurveyQuestion[];
-  status: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  created_at?: string;
 }
+
+// --- INTERFACES FINANCEIRAS & AUDITORIA ---
 
 export interface FinancialRecord {
   id: string | number;
@@ -94,44 +165,61 @@ export interface FinancialRecord {
   category: string;
   status: FinancialStatus;
   date: string;
+  is_recurring?: number | boolean;
+  billing_cycle?: string;
+  next_due_date?: string;
 }
 
-export interface UnitData {
-  id: string | number;
-  residentName: string;
-  unit: string;
-  coordinates: { lat: number; lng: number };
-  tags?: string[];
+export interface AuditLogEntry {
+  id: number;
+  user_id: number;
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'EXPORT';
+  table_name: string;
+  record_id: number;
+  details: string;
+  created_at: string;
 }
+
+// --- INTERFACES DE INFRAESTRUTURA IA ---
 
 export interface AIKey {
   id: string | number;
   label: string;
   key_value: string;
-  provider: string; 
-  tier: 'FREE' | 'PAID';
+  provider: 'GOOGLE' | 'OPENAI'; 
+  tier: AITier;
   priority: number;
-  status: 'ACTIVE' | 'ERROR' | 'INVALID';
+  status: AIKeyStatus;
+  error_count: number;
+  last_checked?: string;
+}
+
+export interface IdCardElement {
+  id: string;
+  type: 'text' | 'image' | 'barcode' | 'qrcode';
+  x: number;
+  y: number;
+  width?: number;
+  height?: number;
+  content?: string;
+  field?: string;
+  fontSize?: number;
+  fontWeight?: string;
+  color?: string;
 }
 
 export interface IdCardTemplate {
-  id: string | number;
+  id: string;
   name: string;
   width: number;
   height: number;
   orientation: 'landscape' | 'portrait';
-  frontBackground: string;
-  backBackground: string;
-  elements: any[];
+  frontBackground?: string;
+  backBackground?: string;
+  elements: IdCardElement[];
 }
 
-export interface Notice {
-  id: string | number;
-  title: string;
-  content: string;
-  urgency: 'LOW' | 'MEDIUM' | 'HIGH';
-  date: string;
-}
+// --- INTERFACES COMUNITÁRIAS ---
 
 export interface AgendaEvent {
   id: string | number;
@@ -172,7 +260,16 @@ export interface Asset {
   name: string;
   category: string;
   value: number | string;
-  status: string;
+  status: 'PERFEITO' | 'BOM' | 'MANUTENÇÃO' | 'DEPRECIADO';
   date_acquired?: string;
   responsible_id?: string | number;
+}
+
+export interface UnitData {
+  id: string | number;
+  residentName: string;
+  unit: string;
+  coordinates: { lat: number; lng: number };
+  tags?: string[];
+  risk_level?: 'LOW' | 'MEDIUM' | 'HIGH';
 }
