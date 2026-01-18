@@ -1,33 +1,40 @@
-
 import { 
   LayoutDashboard, Wallet, Users, Bell, ShieldAlert, CalendarClock, 
   Settings, ClipboardList, BarChart3, Map as MapIcon, Briefcase, ShoppingBag,
   Landmark, Shield, FileText, Gavel, MessageSquareText, MessageSquare, 
-  Calendar, Camera, Leaf, Package, Megaphone, HelpCircle, Box, UserPlus, Zap
+  Calendar, Camera, Leaf, Package, Megaphone, HelpCircle, Box, UserPlus, Zap, Monitor
 } from 'lucide-react';
-// FIX: Added imports from types to enable explicit typing of constants
 import { SystemInfo, IdCardTemplate } from './types';
 
 export const MENU_ITEMS = [
-  { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard, permissionId: 'view_dashboard' },
-  { id: 'neural_chat', label: 'IA Especialista', icon: MessageSquareText, permissionId: 'use_ai_chat' },
-  { id: 'users', label: 'Famílias & Membros', icon: Users, permissionId: 'manage_users' },
-  { id: 'concierge', label: 'Portaria & Acesso', icon: Shield, permissionId: 'view_operations' },
-  { id: 'demographics', label: 'Observatório Social', icon: BarChart3, permissionId: 'view_demographics' },
-  { id: 'finance', label: 'Financeiro', icon: Wallet, permissionId: 'view_finances' },
-  { id: 'operations', label: 'Ocorrências (Watchdog)', icon: ShieldAlert, permissionId: 'view_operations' },
-  { id: 'documents', label: 'Hub de Documentos', icon: FileText, permissionId: 'view_documents' },
-  { id: 'assemblies', label: 'Assembleia Digital', icon: Gavel, permissionId: 'manage_assemblies' },
-  { id: 'communication', label: 'Mural de Avisos', icon: Megaphone, permissionId: 'view_dashboard' },
-  { id: 'timeline', label: 'Agenda & Marcos', icon: CalendarClock, permissionId: 'view_timeline' },
-  { id: 'projects', label: 'Obras & Projetos', icon: Landmark, permissionId: 'view_projects' },
-  { id: 'marketplace', label: 'Marketplace Local', icon: ShoppingBag, permissionId: 'use_marketplace' },
-  { id: 'reservations', label: 'Reservas de Áreas', icon: Calendar, permissionId: 'use_reservations' },
-  { id: 'sustainability', label: 'Sustentabilidade ESG', icon: Leaf, permissionId: 'view_dashboard' },
-  { id: 'suggestions', label: 'Ouvidoria Digital', icon: HelpCircle, permissionId: 'send_suggestions' },
-  { id: 'assets', label: 'Patrimônio', icon: Box, permissionId: 'manage_users' },
-  { id: 'surveys', label: 'Censo & Pesquisas', icon: ClipboardList, permissionId: 'manage_users' },
-  { id: 'settings', label: 'Configurações', icon: Settings, permissionId: 'manage_settings' },
+  // CORE & INTELIGÊNCIA
+  { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard, permissionId: 'view_dashboard', category: 'ESTRATÉGICO' },
+  { id: 'neural_chat', label: 'IA Especialista', icon: MessageSquareText, permissionId: 'use_ai_chat', category: 'ESTRATÉGICO' },
+  
+  // GESTÃO DE MEMBROS & ACESSO
+  { id: 'users', label: 'Famílias & Membros', icon: Users, permissionId: 'manage_users', category: 'GOVERNANÇA' },
+  { id: 'concierge', label: 'Portaria & Acesso', icon: Shield, permissionId: 'view_operations', category: 'GOVERNANÇA' },
+  { id: 'demographics', label: 'Observatório Social', icon: BarChart3, permissionId: 'view_demographics', category: 'GOVERNANÇA' },
+  { id: 'documents', label: 'Hub de Documentos', icon: FileText, permissionId: 'view_documents', category: 'GOVERNANÇA' },
+  { id: 'assemblies', label: 'Assembleia Digital', icon: Gavel, permissionId: 'manage_assemblies', category: 'GOVERNANÇA' },
+  { id: 'surveys', label: 'Censo & Pesquisas', icon: ClipboardList, permissionId: 'manage_users', category: 'GOVERNANÇA' },
+
+  // OPERACIONAL & INFRA
+  { id: 'finance', label: 'Financeiro', icon: Wallet, permissionId: 'view_finances', category: 'OPERACIONAL' },
+  { id: 'operations', label: 'Ocorrências', icon: ShieldAlert, permissionId: 'view_operations', category: 'OPERACIONAL' },
+  { id: 'timeline', label: 'Agenda & Marcos', icon: CalendarClock, permissionId: 'view_timeline', category: 'OPERACIONAL' },
+  { id: 'projects', label: 'Obras & Projetos', icon: Landmark, permissionId: 'view_projects', category: 'OPERACIONAL' },
+  { id: 'assets', label: 'Patrimônio', icon: Box, permissionId: 'manage_users', category: 'OPERACIONAL' },
+  { id: 'sustainability', label: 'Sustentabilidade', icon: Leaf, permissionId: 'view_dashboard', category: 'OPERACIONAL' },
+
+  // COMUNIDADE & ENGAJAMENTO
+  { id: 'communication', label: 'Mural de Avisos', icon: Megaphone, permissionId: 'view_dashboard', category: 'COMUNIDADE' },
+  { id: 'marketplace', label: 'Marketplace Local', icon: ShoppingBag, permissionId: 'use_marketplace', category: 'COMUNIDADE' },
+  { id: 'reservations', label: 'Reservas de Áreas', icon: Calendar, permissionId: 'use_reservations', category: 'COMUNIDADE' },
+  { id: 'suggestions', label: 'Ouvidoria Digital', icon: HelpCircle, permissionId: 'send_suggestions', category: 'COMUNIDADE' },
+  
+  // CONFIGURAÇÕES
+  { id: 'settings', label: 'Configurações', icon: Settings, permissionId: 'manage_settings', category: 'SISTEMA' },
 ];
 
 export const AVAILABLE_ROLES = ['ADMIN', 'PRESIDENT', 'VICE_PRESIDENT', 'SINDIC', 'RESIDENT', 'CONCIERGE', 'MERCHANT', 'COUNCIL'];
@@ -45,17 +52,15 @@ export const SYSTEM_PERMISSIONS = [
   { id: 'view_projects', label: 'Ver Projetos/Obras', module: 'PLANEJAMENTO' },
 ];
 
-// FIX: Explicitly typed DEFAULT_SYSTEM_INFO as SystemInfo to prevent typing mismatch in components
 export const DEFAULT_SYSTEM_INFO: SystemInfo = {
-  name: 'Associação Residencial S.I.E',
+  name: 'S.I.E — Sistema Inteligente Ativo',
   shortName: 'S.I.E PRO',
   cnpj: '00.000.000/0001-00',
-  address: 'Sede Administrativa Central',
+  address: 'Sede Administrativa Central - Cluster 01',
   primaryColor: '#4f46e5',
   registrationMode: 'APPROVAL'
 };
 
-// FIX: Explicitly typed DEFAULT_ID_CARD_TEMPLATE as IdCardTemplate to fix missing export member error
 export const DEFAULT_ID_CARD_TEMPLATE: IdCardTemplate = {
   id: 'tpl_standard',
   name: 'Padrão S.I.E Oficial',

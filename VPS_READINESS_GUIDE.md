@@ -1,4 +1,3 @@
-
 # 🚀 GUIA DE DEPLOY S.I.E PRO - PROTOCOLO SRE V45.0
 
 Este documento descreve as etapas para instalar o Kernel S.I.E na VPS Linux (Ubuntu Server) configurada.
@@ -32,21 +31,21 @@ npm install
 npm run build
 ```
 
-## 5. INICIALIZAÇÃO DO SERVIÇO (PM2)
+## 5. INICIALIZAÇÃO DO KERNEL (PM2)
 ```bash
 pm2 start server.js --name "sie-kernel"
 pm2 save
 pm2 startup
 ```
-## - 5.1 Atualizar do Github (SRE RECOVERY)
+## - 5.1 Atualizar do Ghithub
 ```bash
+
 git pull origin main
-# Caso ocorra erro de build/Rollup, execute a limpeza:
-rm -rf node_modules package-lock.json
 npm install
 npm run build
 pm2 restart all
-pm2 logs
+pm2 log
+
 ```
 
 ## 6. CONFIGURAÇÃO NGINX & SSL (VHOST)

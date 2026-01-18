@@ -1,33 +1,43 @@
-
 import React, { useState, useEffect } from 'react';
-import { Notice } from '../types';
-import { communicationService, api } from '../services/api';
+import { Notice, User, SystemInfo } from '../types';
+import { communicationService, userService, api } from '../services/api';
 import { 
     MessageSquare, Clock, Plus, Trash2, Edit2, X, Save, Loader2, 
     Megaphone, MessageCircle, Send, Users, Shield, AlertTriangle,
-    Info, ChevronRight, Share2, CheckCircle2
+    Info, ChevronRight, Share2, CheckCircle2, UserCheck, Smartphone, Search, Zap
 } from 'lucide-react';
 
-const Communication = () => {
+interface CommunicationProps {
+  systemInfo?: SystemInfo;
+}
+
+const Communication = ({ systemInfo }: CommunicationProps) => {
   const [notices, setNotices] = useState<Notice[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isWABroadcastOpen, setIsWABroadcastOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingNotice, setEditingNotice] = useState<Partial<Notice> | null>(null);
 
-  // WhatsApp Broadcast State
+  // WhatsApp Broadcast V2.5 State
+  const [waType, setWaType] = useState<'ROLE' | 'USER' | 'DIRECT'>('ROLE');
   const [waMessage, setWaMessage] = useState('');
-  const [waTarget, setWaTarget] = useState<'ALL' | 'SINDIC'>('ALL');
+  const [waTargetRole, setWaTargetRole] = useState('ALL');
+  const [waTargetUserId, setWaTargetUserId] = useState('');
+  const [waDirectNumber, setWaDirectNumber] = useState('55');
 
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
       try {
           setIsLoading(true);
-          const res = await communicationService.getNotices();
-          const data = res.data?.data || (Array.isArray(res.data) ? res.data : []);
-          setNotices(data);
+          const [noticesRes, usersRes] = await Promise.all([
+              communicationService.getNotices(),
+              userService.getAll(1, 500) // Pega a base para o seletor
+          ]);
+          setNotices(noticesRes.data?.data || (Array.isArray(noticesRes.data) ? noticesRes.data : []));
+          setUsers(usersRes.data?.data || []);
       } catch (e) {
           setNotices([]);
       } finally { setIsLoading(false); }
@@ -35,12 +45,26 @@ const Communication = () => {
 
   const handleSendWABroadcast = async () => {
       if (!waMessage.trim()) return alert("O corpo da mensagem não pode estar vazio.");
-      if (!confirm(`Confirmar disparo de WhatsApp para segmentação: ${waTarget === 'ALL' ? 'TODOS' : 'SÍNDICOS'}?`)) return;
+      
+      const confirmMsg = waType === 'ROLE' ? `Disparar para ${waTargetRole}?` : 
+                         waType === 'USER' ? `Enviar para o membro selecionado?` : 
+                         `Enviar para o número ${waDirectNumber}?`;
+
+      if (!confirm(`🚀 Kernel SRE: ${confirmMsg}`)) return;
       
       setIsSaving(true);
       try {
-          await api.post('/communication/whatsapp-broadcast', { message: waMessage, targetRole: waTarget });
-          alert("🚀 Kernel SRE: Ciclo de broadcast iniciado com sucesso.");
+          const payload = {
+              message: waMessage,
+              targetType: waType,
+              targetRole: waTargetRole,
+              userId: waTargetUserId,
+              directNumber: waDirectNumber.replace(/\D/g, ''),
+              // SRE PROTOCOL V2.7: Hierarquia de Identidade Solicitada
+              footer: systemInfo?.shortName || systemInfo?.whatsapp_config?.footer || 'shortName'
+          };
+          await api.post('/communication/whatsapp-broadcast', payload);
+          alert("✅ Protocolo de envio processado pelo Gateway.");
           setIsWABroadcastOpen(false);
           setWaMessage('');
       } catch (e) {
@@ -51,14 +75,10 @@ const Communication = () => {
   const handleSaveNotice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingNotice?.title || !editingNotice?.content) return;
-    
     setIsSaving(true);
     try {
-        if (editingNotice.id) {
-            await communicationService.updateNotice(editingNotice.id, editingNotice);
-        } else {
-            await communicationService.sendNotice(editingNotice);
-        }
+        if (editingNotice.id) await communicationService.updateNotice(editingNotice.id, editingNotice);
+        else await communicationService.sendNotice(editingNotice);
         setIsModalOpen(false);
         setEditingNotice(null);
         loadData();
@@ -77,7 +97,7 @@ const Communication = () => {
                 </div>
             </div>
             <div className="flex gap-4 relative z-10">
-                <button onClick={() => setIsWABroadcastOpen(true)} className="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all flex items-center gap-3 active:scale-95">
+                <button onClick={() => { loadData(); setIsWABroadcastOpen(true); }} className="px-8 py-4 bg-indigo-600 hover:bg-indigo-50 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-2xl transition-all flex items-center gap-3 active:scale-95">
                     <MessageCircle size={18}/> Disparar WhatsApp
                 </button>
                 <button 
@@ -116,74 +136,107 @@ const Communication = () => {
                             </div>
                         </div>
                     ))}
-                    {notices.length === 0 && (
-                        <div className="col-span-full py-40 text-center bg-white rounded-[4rem] border-2 border-dashed border-slate-100">
-                             <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-8 shadow-inner">
-                                <Megaphone size={40} className="text-slate-100"/>
-                             </div>
-                             <p className="font-black uppercase text-[12px] text-slate-400 tracking-[0.5em]">Log de Comunicações Vazio.</p>
-                             <p className="text-[10px] text-slate-300 font-bold uppercase mt-4">Inicie um novo broadcast para os moradores.</p>
-                        </div>
-                    )}
                 </div>
             )}
         </div>
 
-        {/* --- MODAL: BROADCAST WHATSAPP --- */}
+        {/* --- MODAL: BROADCAST WHATSAPP V2.5 --- */}
         {isWABroadcastOpen && (
             <div className="sie-editor-overlay">
-                <div className="sie-modal-container !h-auto !max-w-2xl self-center">
+                <div className="sie-modal-container !h-auto !max-w-3xl self-center">
                     <div className="h-20 px-10 bg-slate-900 text-white flex justify-between items-center shrink-0 border-b border-white/5">
                         <div className="flex items-center gap-5">
                             <div className="p-3.5 bg-indigo-600 rounded-xl shadow-xl shadow-indigo-600/20"><MessageCircle size={22}/></div>
                             <div>
-                                <h3 className="font-black text-xl uppercase tracking-tighter leading-none">WhatsApp Broadcast</h3>
-                                <p className="text-indigo-400 text-[9px] font-black uppercase mt-1.5 tracking-widest opacity-80">Interface de Disparo JennyAI</p>
+                                <h3 className="font-black text-xl uppercase tracking-tighter leading-none">WhatsApp Messenger V2.5</h3>
+                                <p className="text-indigo-400 text-[9px] font-black uppercase mt-1.5 tracking-widest opacity-80">Segmentação Cirúrgica SRE</p>
                             </div>
                         </div>
                         <button onClick={() => setIsWABroadcastOpen(false)} className="p-3.5 hover:bg-rose-500 hover:text-white text-slate-400 rounded-xl transition-all border border-white/5"><X size={24} /></button>
                     </div>
 
                     <div className="p-10 space-y-8 bg-[#fdfdfe]">
-                        <div className="space-y-4">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-2">Segmentação de Destino</label>
-                            <div className="grid grid-cols-2 gap-4">
-                                <button onClick={() => setWaTarget('ALL')} className={`py-4 rounded-2xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-3 border-2 ${waTarget === 'ALL' ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl scale-[1.02]' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-white'}`}>
-                                    <Users size={16}/> Todos Membros
-                                </button>
-                                <button onClick={() => setWaTarget('SINDIC')} className={`py-4 rounded-2xl text-[10px] font-black uppercase transition-all flex items-center justify-center gap-3 border-2 ${waTarget === 'SINDIC' ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl scale-[1.02]' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-white'}`}>
-                                    <Shield size={16}/> Apenas Síndicos
-                                </button>
-                            </div>
+                        <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1 border border-slate-200 shadow-inner">
+                            <button onClick={() => setWaType('ROLE')} className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all flex items-center justify-center gap-2 ${waType === 'ROLE' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-white/50'}`}>
+                                <Users size={14}/> Por Cargo
+                            </button>
+                            <button onClick={() => setWaType('USER')} className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all flex items-center justify-center gap-2 ${waType === 'USER' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-white/50'}`}>
+                                <UserCheck size={14}/> Indivíduo
+                            </button>
+                            <button onClick={() => setWaType('DIRECT')} className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase transition-all flex items-center justify-center gap-2 ${waType === 'DIRECT' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-white/50'}`}>
+                                <Smartphone size={14}/> Número Direto
+                            </button>
+                        </div>
+
+                        <div className="space-y-4 animate-fade-in">
+                            {waType === 'ROLE' && (
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    {['ALL', 'ADMIN', 'RESIDENT', 'SINDIC'].map(r => (
+                                        <button key={r} onClick={() => setWaTargetRole(r)} className={`py-4 rounded-xl text-[9px] font-black uppercase border transition-all ${waTargetRole === r ? 'bg-indigo-50 border-indigo-600 text-indigo-600 shadow-sm' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>{r}</button>
+                                    ))}
+                                </div>
+                            )}
+
+                            {waType === 'USER' && (
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Search size={12}/> Selecionar Membro do Cluster</label>
+                                    <select value={waTargetUserId} onChange={e => setWaTargetUserId(e.target.value)} className="w-full font-black h-14 bg-slate-50 border border-slate-200 rounded-xl px-6 focus:bg-white focus:border-indigo-500 transition-all shadow-inner outline-none uppercase text-xs">
+                                        <option value="">-- ESCOLHA UM MORADOR NO BANCO --</option>
+                                        {users.map(u => (
+                                            <option key={u.id} value={u.id}>{u.name} (Unid. {u.unit || 'N/A'}) - {u.phone || 'SEM TEL'}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {waType === 'DIRECT' && (
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2"><Smartphone size={12}/> Inserir WhatsApp Manual</label>
+                                    <input 
+                                        className="w-full font-black h-14 bg-slate-50 border border-slate-200 rounded-xl px-6 text-xl focus:bg-white focus:border-indigo-500 transition-all shadow-inner outline-none" 
+                                        placeholder="55119XXXXXXXX" 
+                                        value={waDirectNumber}
+                                        onChange={e => setWaDirectNumber(e.target.value)}
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-3">
                             <div className="flex justify-between items-end px-2">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Script da Mensagem</label>
+                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Corpo da Mensagem</label>
                                 <span className="text-[9px] font-bold text-indigo-400 uppercase bg-indigo-50 px-2 py-0.5 rounded">Variável: {`{nome}`}</span>
                             </div>
                             <textarea 
-                              rows={6} 
+                              rows={5} 
                               className="w-full font-medium bg-slate-50 border border-slate-200 rounded-[2rem] p-8 text-lg focus:bg-white focus:border-indigo-500 transition-all shadow-inner uppercase leading-relaxed outline-none" 
-                              placeholder="Olá {nome}, informamos que o protocolo S.I.E..." 
+                              placeholder="Olá {nome}, informamos que..." 
                               value={waMessage} 
                               onChange={e => setWaMessage(e.target.value)} 
                             />
                         </div>
 
-                        <div className="p-6 bg-amber-50 border border-amber-100 rounded-[2rem] flex items-start gap-5 shadow-sm">
-                            <div className="p-2.5 bg-white rounded-xl text-amber-500 shadow-sm border border-amber-100"><AlertTriangle size={20}/></div>
+                        {/* RÓTULO DE ASSINATURA SRE - INTEGRADO COM SIGLA DO DB */}
+                        <div className="p-6 bg-indigo-50 border border-indigo-100 rounded-[2rem] flex items-start gap-5 shadow-sm">
+                            <div className="p-2.5 bg-white rounded-xl text-indigo-600 shadow-sm border border-indigo-200"><Zap size={20} className="animate-pulse"/></div>
                             <div>
-                                <p className="text-[11px] font-black text-amber-900 uppercase leading-none">Aviso de Integridade SRE</p>
-                                <p className="text-[10px] text-amber-700 font-bold uppercase leading-relaxed mt-2 italic opacity-80">O Kernel processará o disparo em lotes de cadência variável para evitar flags de SPAM e preservar a reputação do Sender ID.</p>
+                                <p className="text-[11px] font-black text-indigo-950 uppercase leading-none">whatsapp Rodapé de Assinatura</p>
+                                <p className="text-[10px] text-indigo-600 font-bold uppercase leading-relaxed mt-2 flex items-center gap-2">
+                                    Assinado como: <span className="bg-indigo-600 text-white px-2 py-0.5 rounded font-black tracking-widest">{systemInfo?.shortName || systemInfo?.whatsapp_config?.footer || 'shortName'}</span>
+                                </p>
+                                <p className="text-[8px] text-indigo-400 font-black uppercase mt-1 tracking-widest opacity-80">( REGISTRADO EM SETTINGS NO BANCO DE DADOS )</p>
                             </div>
                         </div>
                     </div>
 
                     <div className="p-8 border-t bg-slate-50 flex justify-end gap-6 rounded-b-[2.5rem]">
                         <button onClick={() => setIsWABroadcastOpen(false)} className="px-8 py-4 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-slate-600">Abortar</button>
-                        <button onClick={handleSendWABroadcast} disabled={isSaving || !waMessage.trim()} className="px-14 py-4 bg-slate-950 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl flex items-center gap-4 hover:bg-indigo-600 transition-all active:scale-95 disabled:opacity-30">
-                            {isSaving ? <Loader2 className="animate-spin" size={18}/> : <Send size={18}/>} Iniciar Broadcast
+                        <button 
+                            onClick={handleSendWABroadcast} 
+                            disabled={isSaving || !waMessage.trim() || (waType === 'USER' && !waTargetUserId) || (waType === 'DIRECT' && waDirectNumber.length < 12)} 
+                            className="px-14 py-4 bg-slate-950 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl flex items-center gap-4 hover:bg-indigo-600 transition-all active:scale-95 disabled:opacity-30"
+                        >
+                            {isSaving ? <Loader2 className="animate-spin" size={18}/> : <Send size={18}/>} Commitar Envio
                         </button>
                     </div>
                 </div>

@@ -1,8 +1,14 @@
 
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Garante carregamento do env mesmo se chamado via PM2 em outro diretório
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 /**
  * CONFIGURAÇÃO DE DATABASE SRE V6.0
@@ -11,7 +17,7 @@ dotenv.config();
 const pool = mysql.createPool({
   host: process.env.DB_HOST || '127.0.0.1',
   user: process.env.DB_USER || 'siecacaria',
-  password: process.env.DB_PASSWORD || 'Gegerminal180',
+  password: process.env.DB_PASSWORD || process.env.DB_PASS || 'Gegerminal180',
   database: process.env.DB_NAME || 'siecacaria',
   port: parseInt(process.env.DB_PORT || '3306'),
   waitForConnections: true,
@@ -22,12 +28,11 @@ const pool = mysql.createPool({
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000,
   connectTimeout: 60000,
-  // SRE: Garante que o pool tente reconectar em vez de quebrar o processo
   maxIdle: 10,
   idleTimeout: 60000
 });
 
-const testConnection = async (retries = 10) => {
+export const testDatabaseConnection = async (retries = 10) => {
     while (retries > 0) {
         try {
             const connection = await pool.getConnection();
@@ -38,16 +43,15 @@ const testConnection = async (retries = 10) => {
             console.error(`❌ SRE DATABASE ATTEMPT FAILED (${retries} left):`, err.message);
             
             if (err.code === 'ECONNREFUSED') {
-                console.error(`DETALHE SRE: O MySQL não está respondendo em ${process.env.DB_HOST}. Verifique se o serviço está rodando (sudo systemctl status mysql).`);
+                console.error(`DETALHE SRE: O MySQL não está respondendo em ${process.env.DB_HOST}. Verifique se o serviço está rodando.`);
             }
             
             retries -= 1;
-            await new Promise(res => setTimeout(res, 5000));
+            if (retries > 0) await new Promise(res => setTimeout(res, 3000));
         }
     }
-    console.error("🛑 SRE CRITICAL: O Kernel entrará em modo degradado (DB OFFLINE).");
+    console.error("🛑 SRE CRITICAL: O Kernel entrará em modo degradado ou encerrará.");
+    process.exit(1);
 };
-
-testConnection();
 
 export default pool;

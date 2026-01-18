@@ -29,7 +29,8 @@ export default defineConfig({
         format: 'esm',
         entryFileNames: `assets/[name].js`,
         chunkFileNames: `assets/[name].js`,
-        assetFileNames: `assets/[name].[ext]`
+        assetFileNames: `assets/[name].[ext]`,
+        manualChunks: undefined // Força bundle único para evitar erro de exportação 'D'
       }
     }
   },

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Survey, SurveyQuestion } from '../types';
 import { surveyService, api } from '../services/api';
@@ -54,7 +53,13 @@ const Surveys = () => {
     };
 
     const handleOpenCreate = () => {
-        setEditingSurvey({ title: '', description: 'Coleta de dados demográficos S.I.E', type: 'CENSUS', questions: [], status: 'ACTIVE' });
+        setEditingSurvey({ 
+            title: '', 
+            description: 'Coleta de dados demográficos S.I.E', 
+            type: 'CENSUS', 
+            questions: [], 
+            status: 'ACTIVE' 
+        });
         setIsModalOpen(true);
     };
 
@@ -75,7 +80,7 @@ const Surveys = () => {
             }));
             setEditingSurvey({ ...editingSurvey, questions: [...(editingSurvey.questions || []), ...suggested] });
         } catch (e) {
-            alert("Motor IA indisponível ou limite de cota excedido. Tente novamente em instantes.");
+            alert("Motor IA indisponível. Tente novamente em instantes.");
         } finally {
             setIsGeneratingIA(false);
         }
@@ -84,21 +89,46 @@ const Surveys = () => {
     const handleSave = async (e: any) => {
         if (e && e.preventDefault) e.preventDefault();
         if (!editingSurvey?.title) return alert("Defina um título.");
+        
         setIsSaving(true);
         try {
             const payload = { ...editingSurvey };
-            delete payload.created_at; delete payload.updated_at;
-            payload.questions = (payload.questions || []).map((q: any) => {
+            
+            // SRE SERIALIZATION: Garante que o array de perguntas seja limpo para o DB
+            const sanitizedQuestions = (payload.questions || []).map((q: any) => {
                 const { id, ...cleanQ } = q;
-                const finalQ = String(q.id).startsWith('ia_') || String(q.id).startsWith('new_') ? cleanQ : { ...q };
-                return { ...finalQ, required: q.required ? 1 : 0 };
+                // Mantém o ID apenas se não for temporário
+                const isTemp = String(q.id).startsWith('ia_') || String(q.id).startsWith('new_');
+                return {
+                    id: isTemp ? `q_${Math.random().toString(36).substr(2, 9)}` : q.id,
+                    text: q.text,
+                    type: q.type,
+                    options: q.options || [],
+                    mapping_tag: q.mapping_tag || 'SOCIAL',
+                    required: q.required ? 1 : 0
+                };
             });
-            if (payload.id && !String(payload.id).startsWith('temp_')) { await surveyService.update(payload.id, payload); } 
-            else { delete payload.id; await surveyService.create(payload); }
+
+            const dataToCommit = {
+                ...payload,
+                questions: sanitizedQuestions
+            };
+
+            if (dataToCommit.id && !String(dataToCommit.id).startsWith('temp_')) { 
+                await surveyService.update(dataToCommit.id, dataToCommit); 
+            } else { 
+                delete dataToCommit.id; 
+                await surveyService.create(dataToCommit); 
+            }
+            
             setIsModalOpen(false);
             loadSurveys();
-        } catch (err: any) { alert("Erro de rede ao comitar protocolo."); } 
-        finally { setIsSaving(false); }
+            alert("✅ Protocolo Social Sincronizado.");
+        } catch (err: any) { 
+            alert("Erro de rede ao comitar protocolo."); 
+        } finally { 
+            setIsSaving(false); 
+        }
     };
 
     const moveQuestion = (index: number, direction: 'UP' | 'DOWN') => {
@@ -132,7 +162,8 @@ const Surveys = () => {
         const rows = analyticsData.map(r => {
             const rowData = [new Date(r.created_at).toLocaleDateString(), r.cpf, r.user_name || 'Desconhecido'];
             selectedSurvey.questions.forEach(q => {
-                rowData.push(r.answers.social[q.id] || '');
+                const ans = r.answers?.social?.[q.id] || r.answers?.[q.id] || '';
+                rowData.push(ans);
             });
             return rowData.join(';');
         });
@@ -202,9 +233,9 @@ const Surveys = () => {
                             </div>
                             <div className="flex items-center gap-4">
                                 <button onClick={handleSuggestIA} disabled={isGeneratingIA} className="px-6 py-3 bg-white/5 hover:bg-white/10 text-indigo-300 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-3 border border-white/5">
-                                    {isGeneratingIA ? <Loader2 className="animate-spin" size={14}/> : <Sparkles size={14}/>} Motor IA Predict
+                                    {isGeneratingIA ? <Loader2 className="animate-spin" size={14}/> : <Sparkles size={14}/>} IA Predict
                                 </button>
-                                <button onClick={handleSave} disabled={isSaving} className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-2xl active:scale-95">
+                                <button onClick={handleSave} disabled={isSaving} className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95">
                                     {isSaving ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>} Commitar Protocolo
                                 </button>
                                 <button onClick={() => setIsModalOpen(false)} className="p-3.5 hover:bg-rose-500 hover:text-white text-slate-400 rounded-xl transition-all border border-white/5"><X size={24}/></button>
@@ -218,7 +249,7 @@ const Surveys = () => {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
                                         <div className="space-y-3">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Título do Protocolo</label>
-                                            <input className="w-full font-black h-16 bg-white border border-slate-200 rounded-[1.5rem] px-8 text-2xl focus:border-indigo-500 transition-all shadow-sm" placeholder="Ex: Censo Socioeconômico 2025..." value={editingSurvey.title} onChange={e => setEditingSurvey({ ...editingSurvey, title: e.target.value })} />
+                                            <input className="w-full font-black h-16 bg-white border border-slate-200 rounded-[1.5rem] px-8 text-2xl focus:border-indigo-500 transition-all shadow-sm uppercase" placeholder="Ex: Censo Socioeconômico 2025..." value={editingSurvey.title} onChange={e => setEditingSurvey({ ...editingSurvey, title: e.target.value })} />
                                         </div>
                                         <div className="space-y-3">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Motor de Análise</label>
@@ -237,7 +268,7 @@ const Surveys = () => {
 
                                 <section className="space-y-8">
                                     <div className="flex justify-between items-center px-4">
-                                        <h4 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Engenharia de Atributos</h4>
+                                        <h4 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Atributos de Pesquisa</h4>
                                         <button onClick={addQuestion} className="px-8 py-3.5 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center gap-3 shadow-xl active:scale-95"><Plus size={18} /> Novo Atributo</button>
                                     </div>
                                     <div className="space-y-6">
@@ -251,8 +282,8 @@ const Surveys = () => {
                                                 <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-end">
                                                     <div className="md:col-span-1 text-5xl font-black text-slate-100 group-hover:text-indigo-50 transition-colors">{qIdx + 1}</div>
                                                     <div className="md:col-span-5 space-y-2">
-                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Definição da Pergunta</label>
-                                                        <input className="w-full font-black h-12 bg-slate-50 border-transparent rounded-xl px-5 text-sm group-hover:bg-white group-hover:border-slate-200 transition-all shadow-inner" placeholder="Ex: Renda mensal familiar?" value={q.text} onChange={e => updateQuestion(qIdx, 'text', e.target.value)} />
+                                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Pergunta</label>
+                                                        <input className="w-full font-black h-12 bg-slate-50 border-transparent rounded-xl px-5 text-sm group-hover:bg-white group-hover:border-slate-200 transition-all shadow-inner uppercase" placeholder="Ex: Renda mensal familiar?" value={q.text} onChange={e => updateQuestion(qIdx, 'text', e.target.value)} />
                                                     </div>
                                                     <div className="md:col-span-2 space-y-2">
                                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tag SRE</label>
@@ -261,8 +292,8 @@ const Surveys = () => {
                                                     <div className="md:col-span-2 space-y-2">
                                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Formato</label>
                                                         <select className="w-full font-black h-12 bg-slate-50 border-transparent rounded-xl px-5 text-[10px] uppercase tracking-widest shadow-inner appearance-none text-center" value={q.type} onChange={e => updateQuestion(qIdx, 'type', e.target.value)}>
-                                                            <option value="text">Texto Plano</option>
-                                                            <option value="number">Numérico</option>
+                                                            <option value="text">Texto</option>
+                                                            <option value="number">Número</option>
                                                             <option value="boolean">Sim/Não</option>
                                                             <option value="select">Seleção</option>
                                                         </select>
@@ -273,28 +304,22 @@ const Surveys = () => {
                                                 </div>
                                                 {q.type === 'select' && (
                                                     <div className="mt-8 pt-8 border-t border-slate-50">
-                                                        <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-1">Opções do Seletor (Separar por Vírgula)</label>
-                                                        <input className="w-full font-bold h-12 bg-slate-50 border-slate-100 rounded-xl px-5 mt-2 shadow-inner focus:bg-white focus:border-indigo-500" placeholder="Ex: Baixa, Média, Alta" value={Array.isArray(q.options) ? q.options.join(', ') : ''} onChange={e => updateQuestion(qIdx, 'options', e.target.value.split(',').map((s: string) => s.trim()))} />
+                                                        <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest ml-1">Opções (Separadas por vírgula)</label>
+                                                        <input className="w-full font-bold h-12 bg-slate-50 border-slate-100 rounded-xl px-5 mt-2 shadow-inner focus:bg-white focus:border-indigo-500 uppercase" placeholder="Ex: OPCAO 1, OPCAO 2, OPCAO 3" value={Array.isArray(q.options) ? q.options.join(', ') : ''} onChange={e => updateQuestion(qIdx, 'options', e.target.value.split(',').map((s: string) => s.trim().toUpperCase()))} />
                                                     </div>
                                                 )}
                                             </div>
                                         ))}
-                                        {editingSurvey.questions?.length === 0 && (
-                                            <div className="py-20 text-center bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
-                                                <Settings2 size={48} className="mx-auto text-slate-200 mb-4 opacity-20"/>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nenhum atributo mapeado neste protocolo.</p>
-                                            </div>
-                                        )}
                                     </div>
                                 </section>
                             </div>
                         </div>
 
                         <div className="p-8 border-t bg-slate-50 flex justify-between items-center shrink-0">
-                            <div className="flex items-center gap-3"><div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" /><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Protocolo Social Sincronizado</span></div>
+                            <div className="flex items-center gap-3"><div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" /><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estrutura Social Calibrada</span></div>
                             <div className="flex gap-4">
                                 <button onClick={() => setIsModalOpen(false)} className="px-8 py-3.5 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-slate-600 transition-colors">Fechar</button>
-                                <button onClick={handleSave} disabled={isSaving} className="px-10 py-3.5 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-indigo-600 transition-all">Salvar</button>
+                                <button onClick={handleSave} disabled={isSaving} className="px-10 py-3.5 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-indigo-600 transition-all">Salvar Estrutura</button>
                             </div>
                         </div>
                     </div>
@@ -323,21 +348,21 @@ const Surveys = () => {
                         <div className="flex-1 overflow-y-auto p-12 custom-scrollbar bg-[#fcfcfd]">
                             <div className="max-w-7xl mx-auto space-y-12">
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                    <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center gap-6">
+                                    <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm flex items-center gap-6">
                                         <div className="p-5 bg-indigo-50 text-indigo-600 rounded-[1.5rem] shadow-inner"><Users size={32}/></div>
                                         <div>
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Amostragem</p>
                                             <h4 className="text-4xl font-black text-slate-800 tracking-tight">{analyticsData.length}</h4>
                                         </div>
                                     </div>
-                                    <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center gap-6">
+                                    <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm flex items-center gap-6">
                                         <div className="p-5 bg-emerald-50 text-emerald-600 rounded-[1.5rem] shadow-inner"><Activity size={32}/></div>
                                         <div>
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Engajamento</p>
                                             <h4 className="text-4xl font-black text-slate-800 tracking-tight">{(analyticsData.length > 0 ? (analyticsData.length / 452 * 100).toFixed(1) : 0)}%</h4>
                                         </div>
                                     </div>
-                                    <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center gap-6">
+                                    <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm flex items-center gap-6">
                                         <div className="p-5 bg-amber-50 text-amber-600 rounded-[1.5rem] shadow-inner"><Target size={32}/></div>
                                         <div>
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Confiança</p>
@@ -371,9 +396,10 @@ const Surveys = () => {
                                                                 <div><p className="text-sm font-black text-slate-800 uppercase tracking-tight">{r.user_name || 'Membro Externo'}</p><p className="text-[9px] font-bold text-slate-400 uppercase mt-1">ID: {r.cpf}</p></div>
                                                             </div>
                                                         </td>
-                                                        {selectedSurvey.questions.slice(0, 3).map(q => (
-                                                            <td key={q.id} className="p-8 text-sm font-medium text-slate-500 uppercase">{r.answers.social[q.id] || '---'}</td>
-                                                        ))}
+                                                        {selectedSurvey.questions.slice(0, 3).map(q => {
+                                                            const ans = r.answers?.social?.[q.id] || r.answers?.[q.id] || '---';
+                                                            return <td key={q.id} className="p-8 text-sm font-medium text-slate-500 uppercase">{String(ans)}</td>
+                                                        })}
                                                         <td className="p-8 text-right text-[10px] font-black text-slate-400 uppercase">{new Date(r.created_at).toLocaleString('pt-BR')}</td>
                                                     </tr>
                                                 ))}

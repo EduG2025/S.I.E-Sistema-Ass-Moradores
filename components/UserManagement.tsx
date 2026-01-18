@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AVAILABLE_ROLES, FINANCIAL_CATEGORIES } from '../constants';
 import { User, FinancialRecord } from '../types';
@@ -10,8 +9,7 @@ import {
     Upload, User as UserIcon, Phone, Fingerprint, Trash2, Sparkles, FileText,
     Activity, History, UserPlus, CreditCard, Printer, CheckCircle2, AlertCircle, Filter,
     ChevronRight, ChevronLeft, MapPin, Target, Landmark, RefreshCw, DollarSign, TrendingUp, Star, Zap,
-    // FIX: Added missing 'Key' icon to lucide-react imports
-    Briefcase, ClipboardList, ShoppingBag, Clock, Map as MapIcon, Send, Key
+    Briefcase, ClipboardList, ShoppingBag, Clock, Map as MapIcon, Send, Key, Lock
 } from 'lucide-react';
 import SocialQuestionnaire from './SocialQuestionnaire';
 import OCRScanner from './OCRScanner';
@@ -28,6 +26,7 @@ const UserManagement = () => {
     const [showOCR, setShowOCR] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isCameraActive, setIsCameraActive] = useState(false);
+    const [tempPassword, setTempPassword] = useState('');
 
     // Invitation State
     const [inviteToken, setInviteToken] = useState<string | null>(null);
@@ -67,7 +66,7 @@ const UserManagement = () => {
                 total: data.length,
                 pending: data.filter((u: any) => u.status === 'PENDING').length,
                 residents: data.filter((u: any) => u.role === 'RESIDENT').length,
-                risk: data.filter((u: any) => (u.socialData?.risk || 0) > 70).length
+                risk: data.filter((u: any) => (u.socialData?.risk ?? 0) > 70).length
             });
         } finally { setIsLoading(false); }
     }, []);
@@ -158,7 +157,11 @@ const UserManagement = () => {
         if (!editingUser) return;
         setIsSaving(true);
         try {
-            const payload = { ...editingUser };
+            const payload: any = { ...editingUser };
+            if (tempPassword.trim()) {
+                payload.password = tempPassword;
+            }
+            
             if (typeof editingUser.id === 'string' && editingUser.id.startsWith('temp_')) {
                 const { id, ...clean } = payload;
                 await userService.create(clean);
@@ -166,6 +169,7 @@ const UserManagement = () => {
                 await userService.update(editingUser.id, payload);
             }
             setEditingUser(null);
+            setTempPassword('');
             loadUsers(pagination.page, search);
             alert("✅ Registro sincronizado com sucesso.");
         } catch (e) {
@@ -285,7 +289,9 @@ const UserManagement = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {isLoading ? <tr><td colSpan={6} className="p-20 text-center"><Loader2 className="animate-spin mx-auto text-indigo-600" size={40} /></td></tr> : filteredUsers.map(user => (
+                            {isLoading ? (
+                                <tr><td colSpan={6} className="p-20 text-center"><Loader2 className="animate-spin mx-auto text-indigo-600" size={40} /></td></tr>
+                            ) : filteredUsers.map(user => (
                                 <tr key={user.id} className="hover:bg-slate-50 transition-colors group">
                                     <td className="p-6">
                                         <div className="flex items-center gap-4">
@@ -318,9 +324,12 @@ const UserManagement = () => {
                                     <td className="p-6 text-center">
                                         <div className="flex flex-col items-center gap-2">
                                             <div className="w-12 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                                <div className={`h-full transition-all duration-1000 ${user.socialData?.risk > 70 ? 'bg-rose-500' : user.socialData?.risk > 30 ? 'bg-amber-400' : 'bg-emerald-500'}`} style={{ width: `${Math.max(20, user.socialData?.risk || 10)}%` }} />
+                                                <div 
+                                                    className={`h-full transition-all duration-1000 ${(user.socialData?.risk ?? 0) > 70 ? 'bg-rose-500' : (user.socialData?.risk ?? 0) > 30 ? 'bg-amber-400' : 'bg-emerald-500'}`} 
+                                                    style={{ width: `${Math.max(20, user.socialData?.risk ?? 10)}%` }} 
+                                                />
                                             </div>
-                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{user.socialData?.risk > 70 ? 'Alto Risco' : 'Normal'}</span>
+                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{(user.socialData?.risk ?? 0) > 70 ? 'Alto Risco' : 'Normal'}</span>
                                         </div>
                                     </td>
                                     <td className="p-6 text-center">
@@ -331,7 +340,7 @@ const UserManagement = () => {
                                             {user.status === 'PENDING' && (
                                                 <button onClick={() => handleActivate(user.id)} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg hover:bg-emerald-500 transition-all flex items-center gap-2"><CheckCircle2 size={14} /> Ativar</button>
                                             )}
-                                            <button onClick={() => { setEditingUser(user); setActiveTab('PERSONAL'); setDossierResult(null); }} className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-lg rounded-2xl transition-all border border-transparent hover:border-indigo-100"><Edit2 size={18} /></button>
+                                            <button onClick={() => { setEditingUser(user); setActiveTab('PERSONAL'); setDossierResult(null); setTempPassword(''); }} className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-lg rounded-2xl transition-all border border-transparent hover:border-indigo-100"><Edit2 size={18} /></button>
                                         </div>
                                     </td>
                                 </tr>
@@ -351,7 +360,7 @@ const UserManagement = () => {
                                 <div className="p-3.5 bg-indigo-600 rounded-[1.25rem] shadow-xl"><Shield size={22} className="text-white" /></div>
                                 <div>
                                     <h3 className="font-black text-xl uppercase tracking-tighter leading-none">Editor de Governança</h3>
-                                    <p className="text-indigo-400 text-[9px] font-black uppercase mt-1.5 tracking-[0.3em]">Protocolo SRE V25.9 • Cluster Alpha</p>
+                                    <p className="text-indigo-400 text-[9px] font-black uppercase mt-1.5 tracking-widest opacity-80">Protocolo SRE V195.0 • Cluster Alpha</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">
@@ -430,7 +439,7 @@ const UserManagement = () => {
                                                     {isCameraActive && (
                                                         <div className="absolute -bottom-4 -right-4 flex gap-2">
                                                             <button onClick={capturePhoto} className="p-3 bg-emerald-600 text-white rounded-2xl shadow-xl hover:bg-emerald-700 transition-all hover:scale-110"><Camera size={18} /></button>
-                                                            <button onClick={stopCamera} className="p-3 bg-rose-600 text-white rounded-2xl shadow-xl hover:bg-rose-700 transition-all hover:scale-110"><X size={18} /></button>
+                                                            <button onClick={stopCamera} className="p-3 bg-rose-600 text-white rounded-2xl shadow-xl hover:bg-rose-700 transition-all"><X size={18} /></button>
                                                         </div>
                                                     )}
                                                 </div>
@@ -443,6 +452,7 @@ const UserManagement = () => {
                                                     <input className="w-full font-black h-16 bg-slate-50 border-slate-200 rounded-[1.5rem] px-6 text-2xl shadow-inner focus:bg-white focus:border-indigo-500 transition-all" value={editingUser.name} onChange={e => setEditingUser({ ...editingUser, name: e.target.value })} />
                                                 </div>
                                                 <div className="md:col-span-6 space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1 tracking-[0.2em] flex items-center gap-2"><Fingerprint size={12} /> CPF Protocolado</label><input className="w-full font-mono font-black h-14 bg-slate-50 border-slate-200 rounded-xl px-6 text-xl shadow-inner" value={editingUser.cpf_cnpj} onChange={e => setEditingUser({ ...editingUser, cpf_cnpj: formatCPF(e.target.value) })} maxLength={18} /></div>
+                                                <div className="md:col-span-6 space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1 tracking-[0.2em] flex items-center gap-2"><Lock size={12} /> Chave de Acesso Inicial</label><input type="password" placeholder="Opcional - Definir nova senha" className="w-full font-black h-14 bg-slate-50 border-slate-200 rounded-xl px-6 text-lg shadow-inner" value={tempPassword} onChange={e => setTempPassword(e.target.value)} /></div>
                                                 <div className="md:col-span-6 space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1 tracking-[0.2em] flex items-center gap-2"><Phone size={12} /> WhatsApp</label><input className="w-full font-black h-14 bg-slate-50 border-slate-200 rounded-xl px-6 text-lg shadow-inner" value={editingUser.phone} onChange={e => setEditingUser({ ...editingUser, phone: e.target.value })} /></div>
                                                 <div className="md:col-span-6 space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1 tracking-[0.2em] flex items-center gap-2"><Shield size={12} /> Cargo</label><select className="w-full font-black h-14 bg-slate-50 border-slate-200 rounded-xl px-6 text-sm uppercase shadow-inner" value={editingUser.role} onChange={e => setEditingUser({ ...editingUser, role: e.target.value as any })}>{AVAILABLE_ROLES.map(role => <option key={role} value={role}>{role}</option>)}</select></div>
                                                 <div className="md:col-span-6 space-y-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1 tracking-[0.2em] flex items-center gap-2"><CreditCard size={12} /> Unidade</label><input className="w-full font-black h-14 bg-slate-50 border-slate-200 rounded-xl px-6 text-lg shadow-inner uppercase" value={editingUser.unit} onChange={e => setEditingUser({ ...editingUser, unit: e.target.value })} /></div>
@@ -520,7 +530,7 @@ const UserManagement = () => {
                                             </div>
                                             <div className="flex gap-4">
                                                 <button onClick={() => { setNewFinRecord({ ...newFinRecord, category: 'DOAÇÃO', description: `Doação - ${editingUser.name}` }); setIsFinanceModalOpen(true); }} className="px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 flex items-center gap-2 transition-all"><Heart size={14} /> Registrar Doação</button>
-                                                <button onClick={() => { setNewFinRecord({ ...newFinRecord, category: 'CONDOMÍNIO', description: `Mensalidade - ${editingUser.name}`, is_recurring: 1, billing_cycle: 'MONTHLY' }); setIsFinanceModalOpen(true); }} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg"><RefreshCw size={14} /> Nova Recorrência</button>
+                                                <button onClick={() => { setNewFinRecord({ ...newFinRecord, category: 'CONDOMÍNIO', description: `Mensalidade - ${editingUser.name}`, is_recurring: 1, billing_cycle: 'MONTHLY' }); setIsFinanceModalOpen(true); }} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-50 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg"><RefreshCw size={14} /> Nova Recorrência</button>
                                             </div>
                                         </div>
 

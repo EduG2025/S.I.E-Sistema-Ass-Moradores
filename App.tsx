@@ -1,8 +1,8 @@
-import React, { useState, Suspense, lazy, useEffect } from 'react';
+import React, { useState, Suspense, lazy, useEffect, useMemo } from 'react';
 import { MENU_ITEMS, DEFAULT_SYSTEM_INFO } from './constants';
 import { SystemInfo, User } from './types';
 import {
-    LogOut, Menu, Loader2, Shield, Bell, PanelLeftClose, PanelLeft, Monitor, X
+    LogOut, Menu, Loader2, Shield, Bell, PanelLeftClose, PanelLeft, Monitor, X, Zap, ChevronRight
 } from 'lucide-react';
 import { systemService, authService } from './services/api';
 
@@ -99,6 +99,22 @@ const App = () => {
         setCurrentUser(null);
     };
 
+    const filteredMenuByCategory = useMemo(() => {
+        if (!currentUser) return {};
+        const perms = ROLE_PERMISSIONS[currentUser.role] || [];
+        const isAllowed = (item: any) => perms.includes('*') || perms.includes(item.permissionId);
+        
+        const categories: Record<string, any[]> = {};
+        MENU_ITEMS.forEach(item => {
+            if (isAllowed(item)) {
+                const cat = item.category || 'OUTROS';
+                if (!categories[cat]) categories[cat] = [];
+                categories[cat].push(item);
+            }
+        });
+        return categories;
+    }, [currentUser]);
+
     if (isLoading) {
         return (
             <div className="h-screen w-screen flex items-center justify-center bg-[#020617]">
@@ -143,7 +159,7 @@ const App = () => {
             case 'assemblies': return <AssemblyManager currentUser={currentUser} />;
             case 'neural_chat': return <ChatAssistant />;
             case 'finance': return <Finance />;
-            case 'communication': return <Communication />;
+            case 'communication': return <Communication systemInfo={systemInfo} />;
             case 'timeline': return <Timeline />;
             case 'marketplace': return <MarketPlace />;
             case 'reservations': return <Reservations />;
@@ -157,88 +173,119 @@ const App = () => {
         }
     };
 
-    const filteredMenu = MENU_ITEMS.map(item => {
-        if (item.id === 'concierge') return { ...item, subItems: [{ id: 'watchdog', label: 'Central de Vídeo', icon: Monitor }] };
-        return item;
-    }).filter(item => {
-        if (!currentUser) return false;
-        if (currentUser.role === 'ADMIN') return true;
-        const perms = ROLE_PERMISSIONS[currentUser.role] || [];
-        return perms.includes('*') || perms.includes(item.permissionId);
-    });
+    const primaryColor = systemInfo.primaryColor || '#4f46e5';
 
     return (
-        <div className="flex h-screen bg-[#f8fafc] font-sans text-slate-900 overflow-hidden">
+        <div className="flex h-screen bg-[#f8fafc] font-sans text-slate-900">
             {sidebarOpen && <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
-            <aside className={`fixed inset-y-0 left-0 z-[101] bg-slate-950 text-slate-400 transition-all duration-300 lg:static lg:block ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${sidebarCollapsed ? 'lg:w-24' : 'lg:w-72'}`}>
-                <div className="flex flex-col h-full">
-                    <div className="p-8 flex items-center justify-between shrink-0">
-                        {!sidebarCollapsed && (
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-indigo-600 rounded-lg text-white"><Shield size={20}/></div>
-                                <span className="font-black text-xl text-white tracking-tighter uppercase">S.I.E PRO</span>
+            
+            <aside className={`fixed inset-y-0 left-0 z-[101] bg-slate-950 text-slate-400 transition-all duration-500 lg:static lg:block flex flex-col border-r border-white/5 h-screen ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${sidebarCollapsed ? 'lg:w-28' : 'lg:w-[320px]'}`}>
+                {/* BRAND HEADER */}
+                <div className="p-8 pb-4 flex-none overflow-hidden">
+                    <div className="flex items-center justify-between gap-4 mb-8">
+                        <div className={`flex items-center gap-4 transition-all duration-500 ${sidebarCollapsed ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}>
+                             <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center p-2.5 shadow-2xl shadow-indigo-600/20 border border-white/10 shrink-0">
+                                {systemInfo.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain" alt="Logo" /> : <Shield size={32} className="text-indigo-600" />}
+                             </div>
+                             <div className="min-w-0">
+                                <h1 className="text-xl font-black text-white tracking-tightest leading-none truncate uppercase">{systemInfo.shortName}</h1>
+                                <p className="text-[8px] font-black uppercase text-slate-500 mt-2 tracking-[0.4em] truncate">Kernel Alpha V2</p>
+                             </div>
+                        </div>
+                        {sidebarCollapsed && (
+                            <div className="mx-auto w-14 h-14 rounded-2xl bg-white flex items-center justify-center p-2.5 shadow-2xl border border-white/10">
+                                {systemInfo.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain" alt="Logo" /> : <Shield size={28} className="text-indigo-600" />}
                             </div>
                         )}
-                        {sidebarCollapsed && <div className="mx-auto p-2 bg-indigo-600 rounded-lg text-white"><Shield size={20}/></div>}
-                        <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden lg:block text-slate-500 hover:text-white">
-                            {sidebarCollapsed ? <PanelLeft size={20}/> : <PanelLeftClose size={20}/>}
+                        <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden lg:flex p-2 text-slate-500 hover:text-white transition-colors bg-white/5 rounded-xl border border-white/5 active:scale-95">
+                            {sidebarCollapsed ? <PanelLeft size={18}/> : <PanelLeftClose size={18}/>}
                         </button>
                     </div>
-                    <nav className="flex-1 overflow-y-auto custom-scrollbar px-4 space-y-1 py-4">
-                        {filteredMenu.map(item => (
-                            <div key={item.id}>
-                                <button onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }} className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all ${activeTab === item.id ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-600/20' : 'hover:bg-white/5 hover:text-white'}`}>
-                                    <item.icon size={22} className="shrink-0" />
-                                    {!sidebarCollapsed && <span className="text-xs font-black uppercase tracking-widest">{item.label}</span>}
-                                </button>
-                                {item.id === 'concierge' && !sidebarCollapsed && (activeTab === 'concierge' || activeTab === 'watchdog') && (
-                                    <div className="ml-10 mt-2 space-y-1 border-l border-white/10 pl-4 animate-fade-in">
-                                        <button onClick={() => setActiveTab('watchdog')} className={`w-full text-left py-2 text-[10px] font-black uppercase tracking-widest ${activeTab === 'watchdog' ? 'text-indigo-400' : 'text-slate-500 hover:text-white'}`}>Central de Vídeo</button>
-                                    </div>
-                                )}
+                    <div className="h-px bg-gradient-to-r from-white/5 via-white/10 to-transparent w-full"></div>
+                </div>
+
+                {/* NAVIGATION AREA - SRE V5 CLEAN SCROLL */}
+                <nav className="flex-1 overflow-y-auto custom-scrollbar overscroll-contain px-6 space-y-8 py-6 min-h-0 pb-20 scrolling-touch">
+                    {Object.entries(filteredMenuByCategory).map(([category, items]) => (
+                        <div key={category} className="space-y-3">
+                            {!sidebarCollapsed && (
+                                <h5 className="px-4 text-[9px] font-black text-slate-600 uppercase tracking-[0.5em] leading-none animate-fade-in">{category}</h5>
+                            )}
+                            <div className="space-y-1">
+                                {items.map(item => {
+                                    const isActive = activeTab === item.id;
+                                    return (
+                                        <button 
+                                            key={item.id} 
+                                            onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }} 
+                                            className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all relative group ${isActive ? 'bg-white/10 text-white shadow-xl' : 'hover:bg-white/5 hover:text-white'}`}
+                                            title={sidebarCollapsed ? item.label : ''}
+                                        >
+                                            {isActive && (
+                                                <div className="absolute left-0 w-1.5 h-6 rounded-r-full" style={{ backgroundColor: primaryColor, boxShadow: `0 0 15px ${primaryColor}` }}></div>
+                                            )}
+                                            <item.icon size={22} className={`shrink-0 transition-transform duration-300 group-hover:scale-110 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-white'}`} style={isActive ? { color: primaryColor } : {}} />
+                                            {!sidebarCollapsed && <span className={`text-[11px] font-bold uppercase tracking-widest ${isActive ? 'text-white' : 'text-slate-500'}`}>{item.label}</span>}
+                                            {isActive && !sidebarCollapsed && <ChevronRight size={14} className="ml-auto text-white/20" />}
+                                        </button>
+                                    );
+                                })}
                             </div>
-                        ))}
-                    </nav>
-                    <div className="p-6 border-t border-white/5 space-y-4">
-                        <div className={`flex items-center gap-4 ${sidebarCollapsed ? 'justify-center' : ''}`}>
-                            <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-black text-xs shrink-0 shadow-lg border-2 border-white/10">
+                        </div>
+                    ))}
+                    {/* SPACER BUFFER PARA GARANTIR VISIBILIDADE ACIMA DO FOOTER */}
+                    <div className="h-20 shrink-0"></div>
+                </nav>
+
+                {/* USER FOOTER */}
+                <div className="p-6 border-t border-white/5 bg-black/20 flex-none relative z-10">
+                    <div className={`flex flex-col gap-4 ${sidebarCollapsed ? 'items-center' : ''}`}>
+                        <div className={`flex items-center gap-4 transition-all ${sidebarCollapsed ? 'flex-col' : ''}`}>
+                            <div className="w-12 h-12 rounded-[1.25rem] bg-indigo-600 flex items-center justify-center text-white font-black text-sm shrink-0 shadow-2xl border-2 border-white/10 relative group cursor-pointer" style={{ backgroundColor: primaryColor }}>
                                 {currentUser?.name?.charAt(0) || 'U'}
+                                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-[3px] border-slate-950 shadow-inner"></div>
                             </div>
                             {!sidebarCollapsed && (
                                 <div className="min-w-0">
-                                    <p className="text-xs font-black text-white truncate uppercase">{currentUser?.name}</p>
+                                    <p className="text-[11px] font-black text-white truncate uppercase tracking-tight">{currentUser?.name}</p>
                                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">{currentUser?.role}</p>
                                 </div>
                             )}
                         </div>
-                        <button onClick={handleLogout} className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl text-rose-500 hover:bg-rose-500/10 transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}>
-                            <LogOut size={20} className="shrink-0" />
-                            {!sidebarCollapsed && <span className="text-[10px] font-black uppercase tracking-widest">Logout</span>}
+                        <button onClick={handleLogout} className={`flex items-center gap-4 px-4 py-4 rounded-2xl text-rose-500 hover:bg-rose-500/10 transition-all group ${sidebarCollapsed ? 'justify-center' : ''}`}>
+                            <LogOut size={20} className="shrink-0 transition-transform group-hover:-translate-x-1" />
+                            {!sidebarCollapsed && <span className="text-[10px] font-black uppercase tracking-widest">Desconectar</span>}
                         </button>
                     </div>
                 </div>
             </aside>
+
+            {/* MAIN VIEWPORT */}
             <main className="flex-1 flex flex-col min-w-0 bg-white relative">
-                <header className="h-20 border-b border-slate-100 flex items-center justify-between px-8 bg-white/80 backdrop-blur-md sticky top-0 z-50">
+                <header className="h-20 border-b border-slate-100 flex items-center justify-between px-10 bg-white/80 backdrop-blur-md sticky top-0 z-50">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 text-slate-500"><Menu size={24}/></button>
-                        <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest hidden md:block">
-                            {MENU_ITEMS.find(i => i.id === activeTab)?.label || 'Kernel Engine'}
-                        </h2>
+                        <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all active:scale-95"><Menu size={20}/></button>
+                        <div className="flex items-center gap-3">
+                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: primaryColor }}></div>
+                             <h2 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] hidden md:block">
+                                {MENU_ITEMS.find(i => i.id === activeTab)?.label || 'Terminal Core'}
+                             </h2>
+                        </div>
                     </div>
                     <div className="flex items-center gap-6">
-                        <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 bg-slate-50 border border-slate-100 rounded-full shadow-inner">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Master Synced</span>
+                        <div className="hidden sm:flex items-center gap-3 px-5 py-2 bg-slate-50 border border-slate-100 rounded-2xl shadow-inner">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">SRE Cluster Alpha Synced</span>
                         </div>
-                        <button className="p-2 text-slate-400 hover:text-indigo-600 transition-colors relative">
-                            <Bell size={20}/>
-                            <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-rose-600 rounded-full border-2 border-white shadow-sm"></span>
+                        <button className="p-3 bg-slate-50 border border-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-lg rounded-xl transition-all relative">
+                            <Bell size={18}/>
+                            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-600 rounded-full border-2 border-white"></span>
                         </button>
                     </div>
                 </header>
-                <div className="flex-1 overflow-y-auto p-8 lg:p-12 custom-scrollbar bg-[#f8fafc]">
-                    <Suspense fallback={<div className="flex items-center justify-center p-20 h-full"><Loader2 className="animate-spin text-indigo-600" size={48}/></div>}>
+
+                <div className="flex-1 overflow-y-auto p-10 lg:p-14 custom-scrollbar bg-[#fcfcfd]">
+                    <Suspense fallback={<div className="flex items-center justify-center p-20 h-full"><div className="text-center space-y-6"><Loader2 className="animate-spin text-indigo-600 mx-auto" size={48}/><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">Injetando Módulo SRE...</p></div></div>}>
                         {renderContent()}
                     </Suspense>
                 </div>
@@ -246,7 +293,5 @@ const App = () => {
         </div>
     );
 };
-
-// FIX: Removed conflicting local declaration of PanelLeftClose as it is already imported from lucide-react.
 
 export default App;
