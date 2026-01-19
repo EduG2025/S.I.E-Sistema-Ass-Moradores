@@ -2,9 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { Landmark, Search, Plus, Box, Download, Loader2, DollarSign, ShieldCheck, Trash2, Edit2, X, Save, User as UserIcon, Printer, Tag } from 'lucide-react';
 import { assetService, userService } from '../services/api';
-import { Asset, User } from '../types';
+import { Asset, User, SystemInfo } from '../types';
 
-const Assets = () => {
+interface AssetsProps {
+    systemInfo: SystemInfo;
+}
+
+const Assets = ({ systemInfo }: AssetsProps) => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [items, setItems] = useState<Asset[]>([]);
@@ -88,7 +92,9 @@ const Assets = () => {
     }
   };
 
-  if (loading) return <div className="p-20 text-center"><Loader2 className="animate-spin text-amber-500 mx-auto" size={56}/></div>;
+  const primaryColor = systemInfo.primaryColor || '#f59e0b';
+
+  if (loading) return <div className="p-20 text-center"><Loader2 className="animate-spin text-amber-500 mx-auto" size={56} style={{ color: primaryColor }}/></div>;
 
   const filteredItems = Array.isArray(items) ? items.filter(i => (i.name || '').toLowerCase().includes(searchTerm.toLowerCase())) : [];
 
@@ -97,7 +103,7 @@ const Assets = () => {
       <div className="flex flex-col md:flex-row justify-between items-center bg-slate-900 p-10 rounded-[3rem] text-white shadow-xl shrink-0 overflow-hidden relative">
         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-600/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
         <div className="flex items-center gap-6 relative z-10">
-            <div className="p-5 bg-amber-600 rounded-[2rem] shadow-xl"><Box size={28}/></div>
+            <div className="p-5 bg-amber-600 rounded-[2rem] shadow-xl" style={{ backgroundColor: primaryColor }}><Box size={28}/></div>
             <div>
               <h2 className="text-3xl font-black tracking-tight uppercase leading-none">Patrimônio S.I.E</h2>
               <p className="text-amber-400 text-[10px] font-black uppercase tracking-[0.3em] mt-2 opacity-80">SRE Asset Management Suite V5.0</p>
@@ -175,14 +181,14 @@ const Assets = () => {
             <form onSubmit={handleSave} className="flex flex-col h-full overflow-hidden">
               <div className="h-20 px-10 bg-slate-900 text-white flex justify-between items-center shrink-0 shadow-2xl relative z-20 border-b border-white/5">
                 <div className="flex items-center gap-5">
-                    <div className="p-3.5 bg-amber-600 rounded-xl shadow-xl"><Box size={22} className="text-white" /></div>
+                    <div className="p-3.5 bg-amber-600 rounded-xl shadow-xl" style={{ backgroundColor: primaryColor }}><Box size={22} className="text-white" /></div>
                     <div>
                         <h3 className="font-black text-xl text-white tracking-tighter uppercase leading-none">Registro Patrimonial</h3>
                         <p className="text-amber-400 text-[9px] font-black uppercase mt-1.5 tracking-widest opacity-80">SRE Inventory Engine V5.0</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
-                    <button type="submit" disabled={isSaving} className="px-10 py-3.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95">
+                    <button type="submit" disabled={isSaving} className="px-10 py-3.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95" style={{ backgroundColor: primaryColor }}>
                         {isSaving ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>} Sincronizar Registro
                     </button>
                     <button type="button" onClick={() => setIsModalOpen(false)} className="p-3.5 hover:bg-rose-500 hover:text-white text-slate-400 rounded-xl transition-all border border-white/5"><X size={24}/></button>
@@ -217,7 +223,7 @@ const Assets = () => {
                         </div>
                     </div>
                     
-                    <div className="p-8 bg-amber-900/5 border border-amber-100 rounded-[3rem] flex items-center gap-6 shadow-sm">
+                    <div className="p-8 bg-amber-900/5 border border-amber-100 rounded-[2.5rem] flex items-center gap-6 shadow-sm">
                         <div className="p-5 bg-white text-amber-600 rounded-2xl shadow-sm"><ShieldCheck size={32}/></div>
                         <div>
                             <h4 className="text-base font-black text-amber-950 uppercase tracking-tight">Protocolo de Auditoria</h4>

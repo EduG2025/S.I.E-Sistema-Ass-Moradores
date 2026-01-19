@@ -1,3 +1,4 @@
+
 import { 
   LayoutDashboard, Wallet, Users, Bell, ShieldAlert, CalendarClock, 
   Settings, ClipboardList, BarChart3, Map as MapIcon, Briefcase, ShoppingBag,
@@ -17,9 +18,10 @@ export const MENU_ITEMS = [
   { id: 'demographics', label: 'Observatório Social', icon: BarChart3, permissionId: 'view_demographics', category: 'GOVERNANÇA' },
   { id: 'documents', label: 'Hub de Documentos', icon: FileText, permissionId: 'view_documents', category: 'GOVERNANÇA' },
   { id: 'assemblies', label: 'Assembleia Digital', icon: Gavel, permissionId: 'manage_assemblies', category: 'GOVERNANÇA' },
-  { id: 'surveys', label: 'Censo & Pesquisas', icon: ClipboardList, permissionId: 'manage_users', category: 'GOVERNANÇA' },
+  { id: 'surveys', label: 'Censo & Pesquisas', icon: ClipboardList, permissionId: 'manage_surveys', category: 'GOVERNANÇA' },
 
   // OPERACIONAL & INFRA
+  { id: 'watchdog', label: 'Câmeras & Vigilância', icon: Camera, permissionId: 'view_operations', category: 'OPERACIONAL' },
   { id: 'finance', label: 'Financeiro', icon: Wallet, permissionId: 'view_finances', category: 'OPERACIONAL' },
   { id: 'operations', label: 'Ocorrências', icon: ShieldAlert, permissionId: 'view_operations', category: 'OPERACIONAL' },
   { id: 'timeline', label: 'Agenda & Marcos', icon: CalendarClock, permissionId: 'view_timeline', category: 'OPERACIONAL' },
@@ -28,7 +30,7 @@ export const MENU_ITEMS = [
   { id: 'sustainability', label: 'Sustentabilidade', icon: Leaf, permissionId: 'view_dashboard', category: 'OPERACIONAL' },
 
   // COMUNIDADE & ENGAJAMENTO
-  { id: 'communication', label: 'Mural de Avisos', icon: Megaphone, permissionId: 'view_dashboard', category: 'COMUNIDADE' },
+  { id: 'communication', label: 'Mural de Avisos', icon: Megaphone, permissionId: 'manage_communication', category: 'COMUNIDADE' },
   { id: 'marketplace', label: 'Marketplace Local', icon: ShoppingBag, permissionId: 'use_marketplace', category: 'COMUNIDADE' },
   { id: 'reservations', label: 'Reservas de Áreas', icon: Calendar, permissionId: 'use_reservations', category: 'COMUNIDADE' },
   { id: 'suggestions', label: 'Ouvidoria Digital', icon: HelpCircle, permissionId: 'send_suggestions', category: 'COMUNIDADE' },
@@ -43,13 +45,19 @@ export const SYSTEM_PERMISSIONS = [
   { id: 'view_dashboard', label: 'Ver Dashboard', module: 'GERAL' },
   { id: 'manage_users', label: 'Gerir Membros', module: 'ADMIN' },
   { id: 'view_finances', label: 'Ver Financeiro', module: 'FINANCEIRO' },
-  { id: 'view_operations', label: 'Ver Ocorrências', module: 'OPERACIONAL' },
+  { id: 'view_operations', label: 'Ver Ocorrências/Vision', module: 'OPERACIONAL' },
+  { id: 'view_timeline', label: 'Ver Agenda/Timeline', module: 'OPERACIONAL' },
   { id: 'manage_settings', label: 'Configurações de Kernel', module: 'ADMIN' },
   { id: 'manage_ai_keys', label: 'Gerir Chaves de IA', module: 'SRE' },
   { id: 'use_ai_chat', label: 'Acesso ao Advisor IA', module: 'SRE' },
   { id: 'view_documents', label: 'Gerir Documentos', module: 'GOVERNANÇA' },
   { id: 'manage_assemblies', label: 'Gerir Assembleias', module: 'GOVERNANÇA' },
+  { id: 'manage_surveys', label: 'Gerir Censos/Pesquisas', module: 'GOVERNANÇA' },
+  { id: 'manage_communication', label: 'Gerir Mural/Broadcast', module: 'COMUNIDADE' },
   { id: 'view_projects', label: 'Ver Projetos/Obras', module: 'PLANEJAMENTO' },
+  { id: 'use_marketplace', label: 'Usar Marketplace', module: 'COMUNIDADE' },
+  { id: 'use_reservations', label: 'Usar Reservas', module: 'COMUNIDADE' },
+  { id: 'send_suggestions', label: 'Enviar Ouvidoria', module: 'COMUNIDADE' },
 ];
 
 export const DEFAULT_SYSTEM_INFO: SystemInfo = {

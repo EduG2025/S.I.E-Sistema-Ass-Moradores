@@ -1,6 +1,6 @@
 {
-  "name": "S.I.E PRO - Sistema Inteligente Ativo",
-  "description": "Plataforma de Governança para Associações e Condomínios com IA Ativa e Monitoramento Digital.",
+  "name": "S.I.E PRO - CACARIA - ROTAS E CONTROLES",
+  "description": "Plataforma de Governança para Associações e Condomínios com IA Ativa e Monitoramento Digital.\nFragmentação do server.js para rotas e controles",
   "requestFramePermissions": [
     "camera",
     "microphone",

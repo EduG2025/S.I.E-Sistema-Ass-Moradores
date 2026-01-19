@@ -171,7 +171,7 @@ const DemographicAnalysis = ({ systemInfo }: DemographicAnalysisProps) => {
                     </div>
                 </div>
             ) : (
-                <div className="flex-1 bg-white rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden p-2 relative">
+                <div className="flex-1 bg-white rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden p-2 relative min-h-[750px]">
                     <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="animate-spin text-indigo-600" /></div>}>
                         <SmartMap systemInfo={systemInfo} />
                     </Suspense>

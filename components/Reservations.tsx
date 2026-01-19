@@ -1,9 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { reservationService } from '../services/api';
+import { SystemInfo } from '../types';
 import { Calendar, Plus, X, Loader2, Clock, MapPin, User, CheckCircle, AlertTriangle, Trash2, Save, Info } from 'lucide-react';
 
-const Reservations = () => {
+interface ReservationsProps {
+    systemInfo: SystemInfo;
+}
+
+const Reservations = ({ systemInfo }: ReservationsProps) => {
     const [reservations, setReservations] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,30 +53,32 @@ const Reservations = () => {
         }
     };
 
+    const primaryColor = systemInfo.primaryColor || '#4f46e5';
+
     return (
         <div className="flex-1 flex flex-col min-h-0 space-y-6 animate-fade-in h-full relative">
             <div className="flex flex-col md:flex-row justify-between items-center bg-slate-900 p-8 rounded-[3rem] text-white shadow-xl shrink-0 overflow-hidden relative">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
                 <div className="flex items-center gap-5 relative z-10">
-                    <div className="p-4 bg-indigo-600 rounded-2xl shadow-xl"><Calendar size={24}/></div>
+                    <div className="p-4 bg-indigo-600 rounded-2xl shadow-xl" style={{ backgroundColor: primaryColor }}><Calendar size={24}/></div>
                     <div>
                         <h2 className="text-2xl font-black uppercase tracking-tighter leading-none">Reservas de Áreas</h2>
                         <p className="text-indigo-400 text-[10px] font-black uppercase tracking-[0.3em] mt-2 opacity-80">Kernel Resource Scheduler V25.9</p>
                     </div>
                 </div>
-                <button onClick={() => setIsModalOpen(true)} className="px-10 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest shadow-2xl transition-all active:scale-95 flex items-center gap-3 relative z-10">
+                <button onClick={() => setIsModalOpen(true)} className="px-10 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest shadow-2xl transition-all active:scale-95 flex items-center gap-3 relative z-10" style={{ backgroundColor: primaryColor }}>
                     <Plus size={20}/> Novo Agendamento
                 </button>
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar pb-10">
-                {isLoading ? <div className="p-20 text-center"><Loader2 className="animate-spin text-indigo-600 mx-auto" size={40}/></div> : (
+                {isLoading ? <div className="p-20 text-center"><Loader2 className="animate-spin text-indigo-600 mx-auto" size={40} style={{ color: primaryColor }}/></div> : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                         {reservations.map(r => (
                             <div key={r.id} className="bg-white p-8 rounded-[3rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all group relative overflow-hidden">
                                 <button onClick={() => handleDelete(r.id)} className="absolute top-8 right-8 p-3 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all opacity-0 group-hover:opacity-100 transform translate-x-4 group-hover:translate-x-0"><Trash2 size={18}/></button>
                                 <div className="flex items-center gap-5 mb-8">
-                                    <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-[1.25rem] flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform"><Calendar size={28}/></div>
+                                    <div className="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-[1.25rem] flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform" style={{ color: primaryColor, backgroundColor: primaryColor + '15' }}><Calendar size={28}/></div>
                                     <div>
                                         <h3 className="font-black text-slate-800 uppercase tracking-tight text-base leading-none">{r.area_name}</h3>
                                         <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-2">{new Date(r.date).toLocaleDateString('pt-BR')}</p>
@@ -109,14 +116,14 @@ const Reservations = () => {
                         <form onSubmit={handleSave} className="flex flex-col h-full overflow-hidden">
                             <div className="h-20 px-10 bg-slate-900 text-white flex justify-between items-center shrink-0 shadow-2xl relative z-20 border-b border-white/5">
                                 <div className="flex items-center gap-5">
-                                    <div className="p-3.5 bg-indigo-600 rounded-xl shadow-xl"><Calendar size={22}/></div>
+                                    <div className="p-3.5 bg-indigo-600 rounded-xl shadow-xl" style={{ backgroundColor: primaryColor }}><Calendar size={22}/></div>
                                     <div>
                                         <h3 className="font-black text-xl uppercase tracking-tighter leading-none">Reservar Espaço Comum</h3>
                                         <p className="text-indigo-400 text-[9px] font-black uppercase mt-1.5 tracking-widest opacity-80">SRE Asset Allocation V5.0</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4">
-                                    <button type="submit" disabled={isSaving} className="px-10 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95">
+                                    <button type="submit" disabled={isSaving} className="px-10 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95" style={{ backgroundColor: primaryColor }}>
                                         {isSaving ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>} Commitar Agendamento
                                     </button>
                                     <button type="button" onClick={() => setIsModalOpen(false)} className="p-3.5 hover:bg-rose-500 hover:text-white text-slate-400 rounded-xl transition-all border border-white/5"><X size={24}/></button>

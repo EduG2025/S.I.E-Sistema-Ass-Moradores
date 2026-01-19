@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { FinancialRecord } from '../types';
+import { FinancialRecord, SystemInfo } from '../types';
 import { financialService, api } from '../services/api';
 import { FINANCIAL_CATEGORIES } from '../constants';
 import { 
@@ -11,7 +11,11 @@ import {
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line } from 'recharts';
 
-const Finance = () => {
+interface FinanceProps {
+  systemInfo: SystemInfo;
+}
+
+const Finance = ({ systemInfo }: FinanceProps) => {
   const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'RECEIVABLES' | 'PAYABLES' | 'REPORTS' | 'AUDIT'>('DASHBOARD');
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -81,7 +85,7 @@ const Finance = () => {
         const encodedUri = encodeURI(content);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `sie_finance_${Date.now()}.csv`);
+        link.setAttribute("download", `finance_${systemInfo.shortName}_${Date.now()}.csv`);
         document.body.appendChild(link);
         link.click();
       } else {
@@ -94,22 +98,22 @@ const Finance = () => {
       value: records.filter(r => r.category === cat).reduce((acc, r) => acc + Number(r.amount), 0)
   })).filter(c => c.value > 0);
 
-  const COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+  const COLORS = [systemInfo.primaryColor || '#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-4 animate-fade-in relative h-full">
       <div className="flex flex-row justify-between items-center bg-slate-900 p-6 rounded-[2.5rem] text-white shadow-xl shrink-0 overflow-hidden relative">
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
         <div className="flex items-center gap-4 relative z-10">
-          <div className="p-3 bg-indigo-600 rounded-2xl shadow-2xl"><Wallet size={24}/></div>
+          <div className="p-3 bg-indigo-600 rounded-2xl shadow-2xl" style={{ backgroundColor: systemInfo.primaryColor }}><Wallet size={24}/></div>
           <div>
-            <h2 className="text-xl font-black uppercase leading-none tracking-tight">Tesouraria SRE Master</h2>
+            <h2 className="text-xl font-black uppercase leading-none tracking-tight">Tesouraria {systemInfo.shortName}</h2>
             <p className="text-indigo-400 text-[9px] font-black uppercase tracking-[0.3em] mt-2 opacity-80">Gestão de Fluxo de Caixa e Governança</p>
           </div>
         </div>
         <div className="flex gap-3 relative z-10">
             <button onClick={() => handleExport('CSV')} className="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all flex items-center gap-2 shadow-lg"><FileSpreadsheet size={16}/> Planilha</button>
-            <button onClick={() => { setEditingRecord({ description: '', amount: '', type: 'INCOME', category: 'CONDOMÍNIO', date: new Date().toISOString().slice(0, 10), status: 'PENDING', is_recurring: 0 }); setIsModalOpen(true); }} className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-2xl flex items-center gap-3 transition-all"><Plus size={18}/> Novo Lançamento</button>
+            <button onClick={() => { setEditingRecord({ description: '', amount: '', type: 'INCOME', category: 'CONDOMÍNIO', date: new Date().toISOString().slice(0, 10), status: 'PENDING', is_recurring: 0 }); setIsModalOpen(true); }} className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-2xl flex items-center gap-3 transition-all" style={{ backgroundColor: systemInfo.primaryColor }}><Plus size={18}/> Novo Lançamento</button>
         </div>
       </div>
 
@@ -122,7 +126,7 @@ const Finance = () => {
                   {id: 'REPORTS', label: 'Business Intelligence', icon: BarChart3},
                   {id: 'AUDIT', label: 'Trilha de Auditoria', icon: History}
               ].map(tab => (
-                 <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex-1 min-w-[180px] py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${activeTab === tab.id ? 'bg-white text-indigo-600 shadow-lg border border-indigo-100' : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'}`}>
+                 <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex-1 min-w-[180px] py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${activeTab === tab.id ? 'bg-white text-indigo-600 shadow-lg border border-indigo-100' : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'}`} style={activeTab === tab.id ? { color: systemInfo.primaryColor } : {}}>
                      <tab.icon size={14}/> {tab.label}
                  </button>
              ))}
@@ -171,7 +175,7 @@ const Finance = () => {
                                           <XAxis dataKey="date" hide />
                                           <YAxis hide />
                                           <Tooltip />
-                                          <Line type="monotone" dataKey="amount" stroke="#4f46e5" strokeWidth={4} dot={{r:6}} activeDot={{r:10}} />
+                                          <Line type="monotone" dataKey="amount" stroke={systemInfo.primaryColor || "#4f46e5"} strokeWidth={4} dot={{r:6}} activeDot={{r:10}} />
                                       </LineChart>
                                   </ResponsiveContainer>
                               </div>
@@ -183,7 +187,7 @@ const Finance = () => {
                       <div className="bg-slate-900 p-10 rounded-[3rem] text-white flex justify-between items-center relative overflow-hidden">
                            <div className="absolute top-0 right-0 p-8 opacity-10"><History size={160}/></div>
                            <div className="relative z-10">
-                               <h4 className="text-3xl font-black uppercase tracking-tightest">Compliance SRE</h4>
+                               <h4 className="text-3xl font-black uppercase tracking-tightest">Compliance {systemInfo.shortName}</h4>
                                <p className="text-indigo-300 text-[11px] font-bold uppercase mt-2 tracking-[0.4em]">Trilha de auditoria para integridade de dados financeiros</p>
                            </div>
                            <div className="flex gap-4 relative z-10">
@@ -277,14 +281,14 @@ const Finance = () => {
               <div className="sie-modal-container">
                   <div className="h-20 px-10 bg-slate-900 text-white flex justify-between items-center shrink-0 shadow-2xl relative z-20 border-b border-white/5">
                       <div className="flex items-center gap-5">
-                          <div className="p-3.5 bg-indigo-600 rounded-xl shadow-xl"><DollarSign size={22}/></div>
+                          <div className="p-3.5 bg-indigo-600 rounded-xl shadow-xl" style={{ backgroundColor: systemInfo.primaryColor }}><DollarSign size={22}/></div>
                           <div>
                             <h3 className="font-black text-xl uppercase tracking-tighter leading-none">Protocolo Financeiro</h3>
-                            <p className="text-indigo-400 text-[9px] font-black uppercase mt-1.5 tracking-widest opacity-80">SRE Ledger Suite V25.9</p>
+                            <p className="text-indigo-400 text-[9px] font-black uppercase mt-1.5 tracking-widest opacity-80">Ledger Individual - {systemInfo.shortName}</p>
                           </div>
                       </div>
                       <div className="flex items-center gap-4">
-                          <button onClick={handleSave} disabled={isSaving} className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-2xl active:scale-95">
+                          <button onClick={handleSave} disabled={isSaving} className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-2xl active:scale-95" style={{ backgroundColor: systemInfo.primaryColor }}>
                               {isSaving ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>} Sincronizar Registro
                           </button>
                           <button onClick={() => setIsModalOpen(false)} className="p-3.5 hover:bg-rose-500 hover:text-white text-slate-400 rounded-xl transition-all border border-white/5"><X size={24}/></button>
@@ -310,7 +314,7 @@ const Finance = () => {
                                     </select>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Natureza SRE</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Natureza Ledger</label>
                                     <select className="w-full font-black h-14 bg-white border border-slate-200 rounded-xl px-6 text-sm uppercase appearance-none" value={editingRecord.type} onChange={e => setEditingRecord({...editingRecord, type: e.target.value as any})}>
                                         <option value="INCOME">Receita / Entrada</option>
                                         <option value="EXPENSE">Despesa / Saída</option>
@@ -319,7 +323,7 @@ const Finance = () => {
                             </div>
                             <div className="p-8 bg-indigo-900/5 border border-indigo-100 rounded-[2.5rem] flex flex-col md:flex-row gap-8 items-center shadow-sm">
                                 <div className="flex items-center gap-5 flex-1">
-                                    <div className="p-4 bg-white rounded-2xl shadow-sm text-indigo-600"><RefreshCw size={24}/></div>
+                                    <div className="p-4 bg-white rounded-2xl shadow-sm text-indigo-600" style={{ color: systemInfo.primaryColor }}><RefreshCw size={24}/></div>
                                     <div>
                                         <p className="text-sm font-black text-indigo-950 uppercase tracking-tight">Recorrência Periódica</p>
                                         <p className="text-[9px] text-indigo-400 font-bold uppercase mt-1 tracking-widest">Automação de títulos e cobrança ativa.</p>
@@ -343,7 +347,7 @@ const Finance = () => {
                   </div>
                   
                   <div className="p-8 border-t bg-slate-50 flex justify-between items-center shrink-0">
-                       <div className="flex items-center gap-3"><div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" /><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sincronização Ativa</span></div>
+                       <div className="flex items-center gap-3"><div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" /><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Protocolo Consolidado</span></div>
                        <div className="flex gap-4">
                           <button onClick={() => setIsModalOpen(false)} className="px-8 py-3.5 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-slate-600 transition-colors">Fechar</button>
                           <button onClick={handleSave} disabled={isSaving} className="px-10 py-3.5 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-xl hover:bg-indigo-600 transition-all">Salvar</button>

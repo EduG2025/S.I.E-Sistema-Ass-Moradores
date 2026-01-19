@@ -1,45 +1,36 @@
+
 import React, { useState, Suspense, lazy, useEffect, useMemo } from 'react';
 import { MENU_ITEMS, DEFAULT_SYSTEM_INFO } from './constants';
 import { SystemInfo, User } from './types';
 import {
-    LogOut, Menu, Loader2, Shield, Bell, PanelLeftClose, PanelLeft, Monitor, X, Zap, ChevronRight
+    LogOut, Menu, Loader2, Shield, Bell, PanelLeftClose, PanelLeft, X, Zap, ChevronRight, Settings as SettingsIcon
 } from 'lucide-react';
-import { systemService, authService } from './services/api';
+import { systemService, authService, api } from './services/api';
 
-// LAZY LOADING
-const Dashboard = lazy(() => import('./components/Dashboard')) as any;
-const ResidentDashboard = lazy(() => import('./components/ResidentDashboard')) as any;
-const Settings = lazy(() => import('./components/Settings')) as any;
-const UserManagement = lazy(() => import('./components/UserManagement')) as any;
-const Operations = lazy(() => import('./components/Operations')) as any;
-const DemographicAnalysis = lazy(() => import('./components/DemographicAnalysis')) as any;
-const ProjectManagement = lazy(() => import('./components/ProjectManagement')) as any;
-const LoginScreen = lazy(() => import('./components/LoginScreen')) as any;
-const DocumentHub = lazy(() => import('./components/DocumentHub')) as any;
-const AssemblyManager = lazy(() => import('./components/AssemblyManager')) as any;
-const ChatAssistant = lazy(() => import('./components/ChatAssistant')) as any;
-const Finance = lazy(() => import('./components/Finance')) as any;
-const PublicSenso = lazy(() => import('./components/PublicSenso')) as any;
-const Communication = lazy(() => import('./components/Communication')) as any;
-const Timeline = lazy(() => import('./components/Timeline')) as any;
-const MarketPlace = lazy(() => import('./components/MarketPlace')) as any;
-const Reservations = lazy(() => import('./components/Reservations')) as any;
-const Sustainability = lazy(() => import('./components/Sustainability')) as any;
-const SuggestionBox = lazy(() => import('./components/SuggestionBox')) as any;
-const Assets = lazy(() => import('./components/Assets')) as any;
-const Surveys = lazy(() => import('./components/Surveys')) as any;
-const Concierge = lazy(() => import('./components/Concierge')) as any;
-const DigitalWatch = lazy(() => import('./components/DigitalWatch')) as any;
-
-const ROLE_PERMISSIONS: Record<string, string[]> = {
-    'ADMIN': ['*'],
-    'PRESIDENT': ['view_dashboard', 'manage_users', 'view_finances', 'view_operations', 'manage_documents', 'manage_assemblies', 'view_projects', 'use_ai_chat', 'view_demographics', 'view_timeline', 'use_marketplace', 'use_reservations', 'send_suggestions', 'manage_settings'],
-    'SINDIC': ['view_dashboard', 'view_finances', 'view_operations', 'manage_documents', 'manage_assemblies', 'view_projects', 'view_demographics', 'view_timeline', 'use_marketplace', 'use_reservations', 'send_suggestions'],
-    'COUNCIL': ['view_dashboard', 'view_finances', 'view_operations', 'manage_documents', 'view_projects', 'view_demographics', 'view_timeline'],
-    'CONCIERGE': ['view_dashboard', 'view_operations', 'view_timeline'],
-    'RESIDENT': ['view_dashboard', 'view_timeline', 'use_marketplace', 'use_reservations', 'send_suggestions', 'view_documents', 'use_ai_chat'],
-    'MERCHANT': ['view_dashboard', 'use_marketplace']
-};
+// SRE TYPE-SAFE LAZY LOADING
+const Dashboard = lazy<React.ComponentType<{ onNavigate: (tab: string) => void; systemInfo: SystemInfo }>>(() => import('./components/Dashboard'));
+const ResidentDashboard = lazy<React.ComponentType<{ onNavigate: (tab: string) => void; systemInfo: SystemInfo }>>(() => import('./components/ResidentDashboard'));
+const Settings = lazy<React.ComponentType<{ systemInfo: SystemInfo; onUpdateSystemInfo: (info: SystemInfo) => void }>>(() => import('./components/Settings'));
+const UserManagement = lazy<React.ComponentType<{ systemInfo: SystemInfo }>>(() => import('./components/UserManagement'));
+const Operations = lazy<React.ComponentType<{ systemInfo: SystemInfo }>>(() => import('./components/Operations'));
+const DemographicAnalysis = lazy<React.ComponentType<{ systemInfo: SystemInfo }>>(() => import('./components/DemographicAnalysis'));
+const ProjectManagement = lazy<React.ComponentType<{ systemInfo: SystemInfo }>>(() => import('./components/ProjectManagement'));
+const LoginScreen = lazy<React.ComponentType<{ onLoginSuccess: (user: User, token: string) => void; systemInfo: SystemInfo }>>(() => import('./components/LoginScreen'));
+const DocumentHub = lazy<React.ComponentType<{ systemInfo: SystemInfo; currentUser: User | null }>>(() => import('./components/DocumentHub'));
+const AssemblyManager = lazy<React.ComponentType<{ currentUser: User | null; systemInfo: SystemInfo }>>(() => import('./components/AssemblyManager'));
+const ChatAssistant = lazy<React.ComponentType<{ systemInfo: SystemInfo }>>(() => import('./components/ChatAssistant'));
+const Finance = lazy<React.ComponentType<{ systemInfo: SystemInfo }>>(() => import('./components/Finance'));
+const PublicSenso = lazy(() => import('./components/PublicSenso'));
+const Communication = lazy<React.ComponentType<{ systemInfo: SystemInfo }>>(() => import('./components/Communication'));
+const Timeline = lazy<React.ComponentType<{ systemInfo: SystemInfo }>>(() => import('./components/Timeline'));
+const MarketPlace = lazy<React.ComponentType<{ systemInfo: SystemInfo }>>(() => import('./components/MarketPlace'));
+const Reservations = lazy<React.ComponentType<{ systemInfo: SystemInfo }>>(() => import('./components/Reservations'));
+const Sustainability = lazy<React.ComponentType<{ systemInfo: SystemInfo }>>(() => import('./components/Sustainability'));
+const SuggestionBox = lazy<React.ComponentType<{ systemInfo: SystemInfo }>>(() => import('./components/SuggestionBox'));
+const Assets = lazy<React.ComponentType<{ systemInfo: SystemInfo }>>(() => import('./components/Assets'));
+const Surveys = lazy<React.ComponentType<{ systemInfo: SystemInfo }>>(() => import('./components/Surveys'));
+const Concierge = lazy<React.ComponentType<{ systemInfo: SystemInfo }>>(() => import('./components/Concierge'));
+const DigitalWatch = lazy<React.ComponentType<{ systemInfo: SystemInfo }>>(() => import('./components/DigitalWatch'));
 
 const App = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -49,14 +40,22 @@ const App = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [dynamicPermissions, setDynamicPermissions] = useState<string[]>([]);
     
     const isPublicCensus = window.location.pathname.startsWith('/census/');
-    const isActivation = window.location.pathname.startsWith('/activate/');
+
+    // SRE TITLE SYNC
+    useEffect(() => {
+        if (systemInfo?.name) {
+            document.title = `${systemInfo.shortName} | ${systemInfo.name}`;
+        }
+    }, [systemInfo]);
 
     useEffect(() => {
         const handleUnauthorized = () => {
             setIsAuthenticated(false);
             setCurrentUser(null);
+            localStorage.removeItem('sie_auth_token');
         };
         window.addEventListener('sie_unauthorized', handleUnauthorized);
         return () => window.removeEventListener('sie_unauthorized', handleUnauthorized);
@@ -65,7 +64,7 @@ const App = () => {
     useEffect(() => {
         const initKernel = async () => {
             const token = localStorage.getItem('sie_auth_token');
-            if (isPublicCensus || isActivation) {
+            if (isPublicCensus) {
                 try {
                     const infoRes = await systemService.getInfo();
                     setSystemInfo(infoRes.data || DEFAULT_SYSTEM_INFO);
@@ -74,21 +73,27 @@ const App = () => {
             }
             if (!token) { setIsLoading(false); return; }
             try {
-                const userRes = await authService.me();
+                const [userRes, infoRes, permsRes] = await Promise.all([
+                    authService.me(),
+                    systemService.getInfo(),
+                    api.get('/settings/permissions/my')
+                ]);
                 setCurrentUser(userRes.data);
-                setIsAuthenticated(true);
-                const infoRes = await systemService.getInfo();
                 setSystemInfo(infoRes.data || DEFAULT_SYSTEM_INFO);
+                setDynamicPermissions(permsRes.data.data || []);
+                setIsAuthenticated(true);
             } catch (error) {
                 localStorage.removeItem('sie_auth_token');
                 setIsAuthenticated(false);
             } finally { setIsLoading(false); }
         };
         initKernel();
-    }, [isPublicCensus, isActivation]);
+    }, [isPublicCensus]);
 
-    const handleLoginSuccess = (user: User, token: string) => {
+    const handleLoginSuccess = async (user: User, token: string) => {
         localStorage.setItem('sie_auth_token', token);
+        const permsRes = await api.get('/settings/permissions/my');
+        setDynamicPermissions(permsRes.data.data || []);
         setCurrentUser(user);
         setIsAuthenticated(true);
     };
@@ -97,12 +102,16 @@ const App = () => {
         localStorage.removeItem('sie_auth_token');
         setIsAuthenticated(false);
         setCurrentUser(null);
+        setDynamicPermissions([]);
+        setActiveTab('dashboard');
     };
 
     const filteredMenuByCategory = useMemo(() => {
         if (!currentUser) return {};
-        const perms = ROLE_PERMISSIONS[currentUser.role] || [];
-        const isAllowed = (item: any) => perms.includes('*') || perms.includes(item.permissionId);
+        const isAllowed = (item: any) => 
+            currentUser.role === 'ADMIN' || 
+            dynamicPermissions.includes('*') || 
+            dynamicPermissions.includes(item.permissionId);
         
         const categories: Record<string, any[]> = {};
         MENU_ITEMS.forEach(item => {
@@ -113,62 +122,51 @@ const App = () => {
             }
         });
         return categories;
-    }, [currentUser]);
+    }, [currentUser, dynamicPermissions]);
 
     if (isLoading) {
         return (
             <div className="h-screen w-screen flex items-center justify-center bg-[#020617]">
                 <div className="text-center space-y-4">
                     <Loader2 className="animate-spin text-indigo-500 mx-auto" size={48} />
-                    <p className="text-indigo-300 font-black uppercase text-[10px] tracking-widest animate-pulse">SRE KERNEL BOOTING...</p>
+                    <p className="text-indigo-300 font-black uppercase text-[10px] tracking-widest animate-pulse">BOOTING IDENTITY...</p>
                 </div>
             </div>
         );
     }
 
-    if (isPublicCensus) {
-        return (
-            <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-[#020617]"><Loader2 className="animate-spin text-indigo-500" size={48} /></div>}>
-                <PublicSenso />
-            </Suspense>
-        );
-    }
+    if (isPublicCensus) return <PublicSenso />;
 
     if (!isAuthenticated) {
-        return (
-            <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-[#020617]"><Loader2 className="animate-spin text-indigo-500" size={48} /></div>}>
-                <LoginScreen onLoginSuccess={handleLoginSuccess} systemInfo={systemInfo} />
-            </Suspense>
-        );
+        return <LoginScreen onLoginSuccess={handleLoginSuccess} systemInfo={systemInfo} />;
     }
 
     const renderContent = () => {
         if (activeTab === 'dashboard') {
-            if (currentUser?.role === 'RESIDENT') {
-                return <ResidentDashboard onNavigate={setActiveTab} systemInfo={systemInfo} />;
-            }
-            return <Dashboard onNavigate={setActiveTab} systemInfo={systemInfo} />;
+            return currentUser?.role === 'RESIDENT' 
+                ? <ResidentDashboard onNavigate={setActiveTab} systemInfo={systemInfo} />
+                : <Dashboard onNavigate={setActiveTab} systemInfo={systemInfo} />;
         }
         switch (activeTab) {
             case 'settings': return <Settings systemInfo={systemInfo} onUpdateSystemInfo={setSystemInfo} />;
-            case 'users': return <UserManagement />;
-            case 'operations': return <Operations />;
+            case 'users': return <UserManagement systemInfo={systemInfo} />;
+            case 'operations': return <Operations systemInfo={systemInfo} />;
             case 'demographics': return <DemographicAnalysis systemInfo={systemInfo} />;
-            case 'projects': return <ProjectManagement />;
-            case 'documents': return <DocumentHub systemInfo={systemInfo} />;
-            case 'assemblies': return <AssemblyManager currentUser={currentUser} />;
-            case 'neural_chat': return <ChatAssistant />;
-            case 'finance': return <Finance />;
+            case 'projects': return <ProjectManagement systemInfo={systemInfo} />;
+            case 'documents': return <DocumentHub systemInfo={systemInfo} currentUser={currentUser} />;
+            case 'assemblies': return <AssemblyManager currentUser={currentUser} systemInfo={systemInfo} />;
+            case 'neural_chat': return <ChatAssistant systemInfo={systemInfo} />;
+            case 'finance': return <Finance systemInfo={systemInfo} />;
             case 'communication': return <Communication systemInfo={systemInfo} />;
-            case 'timeline': return <Timeline />;
-            case 'marketplace': return <MarketPlace />;
-            case 'reservations': return <Reservations />;
-            case 'sustainability': return <Sustainability />;
-            case 'suggestions': return <SuggestionBox />;
-            case 'assets': return <Assets />;
-            case 'surveys': return <Surveys />;
-            case 'concierge': return <Concierge />;
-            case 'watchdog': return <DigitalWatch />;
+            case 'timeline': return <Timeline systemInfo={systemInfo} />;
+            case 'marketplace': return <MarketPlace systemInfo={systemInfo} />;
+            case 'reservations': return <Reservations systemInfo={systemInfo} />;
+            case 'sustainability': return <Sustainability systemInfo={systemInfo} />;
+            case 'suggestions': return <SuggestionBox systemInfo={systemInfo} />;
+            case 'assets': return <Assets systemInfo={systemInfo} />;
+            case 'surveys': return <Surveys systemInfo={systemInfo} />;
+            case 'concierge': return <Concierge systemInfo={systemInfo} />;
+            case 'watchdog': return <DigitalWatch systemInfo={systemInfo} />;
             default: return <Dashboard onNavigate={setActiveTab} systemInfo={systemInfo} />;
         }
     };
@@ -176,116 +174,120 @@ const App = () => {
     const primaryColor = systemInfo.primaryColor || '#4f46e5';
 
     return (
-        <div className="flex h-screen bg-[#f8fafc] font-sans text-slate-900">
-            {sidebarOpen && <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] lg:hidden" onClick={() => setSidebarOpen(false)}></div>}
+        <div className="flex h-screen w-full bg-[#f8fafc] overflow-hidden">
+            {sidebarOpen && (
+                <div 
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] lg:hidden animate-fade-in" 
+                    onClick={() => setSidebarOpen(false)}
+                ></div>
+            )}
             
-            <aside className={`fixed inset-y-0 left-0 z-[101] bg-slate-950 text-slate-400 transition-all duration-500 lg:static lg:block flex flex-col border-r border-white/5 h-screen ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} ${sidebarCollapsed ? 'lg:w-28' : 'lg:w-[320px]'}`}>
-                {/* BRAND HEADER */}
-                <div className="p-8 pb-4 flex-none overflow-hidden">
-                    <div className="flex items-center justify-between gap-4 mb-8">
-                        <div className={`flex items-center gap-4 transition-all duration-500 ${sidebarCollapsed ? 'opacity-0 scale-50' : 'opacity-100 scale-100'}`}>
-                             <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center p-2.5 shadow-2xl shadow-indigo-600/20 border border-white/10 shrink-0">
-                                {systemInfo.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain" alt="Logo" /> : <Shield size={32} className="text-indigo-600" />}
+            <aside 
+                className={`fixed inset-y-0 left-0 z-[101] sidebar-glass text-slate-400 flex flex-col transition-all duration-300 lg:static lg:translate-x-0 h-screen 
+                ${sidebarOpen ? 'translate-x-0 w-[280px]' : '-translate-x-full lg:translate-x-0'} 
+                ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-[300px]'}`}
+            >
+                <div className="p-6 flex-none">
+                    <div className="flex items-center justify-between gap-4">
+                        {!sidebarCollapsed && (
+                             <div className="flex items-center gap-3 animate-fade-in min-w-0">
+                                <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center p-1.5 shadow-xl shrink-0">
+                                    {systemInfo.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain" alt="Logo" /> : <Shield size={24} className="text-indigo-600" style={{ color: primaryColor }} />}
+                                </div>
+                                <div className="min-w-0">
+                                    <h1 className="text-sm font-black text-white tracking-tight leading-none truncate uppercase">{systemInfo.shortName}</h1>
+                                    <p className="text-[7px] font-black uppercase text-indigo-400 mt-1 tracking-[0.4em]" style={{ color: primaryColor }}>Identidade Ativa</p>
+                                </div>
                              </div>
-                             <div className="min-w-0">
-                                <h1 className="text-xl font-black text-white tracking-tightest leading-none truncate uppercase">{systemInfo.shortName}</h1>
-                                <p className="text-[8px] font-black uppercase text-slate-500 mt-2 tracking-[0.4em] truncate">Kernel Alpha V2</p>
-                             </div>
-                        </div>
-                        {sidebarCollapsed && (
-                            <div className="mx-auto w-14 h-14 rounded-2xl bg-white flex items-center justify-center p-2.5 shadow-2xl border border-white/10">
-                                {systemInfo.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain" alt="Logo" /> : <Shield size={28} className="text-indigo-600" />}
-                            </div>
                         )}
-                        <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden lg:flex p-2 text-slate-500 hover:text-white transition-colors bg-white/5 rounded-xl border border-white/5 active:scale-95">
-                            {sidebarCollapsed ? <PanelLeft size={18}/> : <PanelLeftClose size={18}/>}
+                        <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden lg:flex p-2 text-slate-500 hover:text-white transition-colors bg-white/5 rounded-lg">
+                            {sidebarCollapsed ? <PanelLeft size={16}/> : <PanelLeftClose size={16}/>}
                         </button>
                     </div>
-                    <div className="h-px bg-gradient-to-r from-white/5 via-white/10 to-transparent w-full"></div>
                 </div>
 
-                {/* NAVIGATION AREA - SRE V5 CLEAN SCROLL */}
-                <nav className="flex-1 overflow-y-auto custom-scrollbar overscroll-contain px-6 space-y-8 py-6 min-h-0 pb-20 scrolling-touch">
+                <nav className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar px-3 py-4 space-y-8">
                     {Object.entries(filteredMenuByCategory).map(([category, items]) => (
-                        <div key={category} className="space-y-3">
+                        <div key={category} className="space-y-1">
                             {!sidebarCollapsed && (
-                                <h5 className="px-4 text-[9px] font-black text-slate-600 uppercase tracking-[0.5em] leading-none animate-fade-in">{category}</h5>
+                                <h5 className="px-4 mb-3 text-[8px] font-black text-slate-600 uppercase tracking-[0.5em] leading-none">
+                                    {category}
+                                </h5>
                             )}
-                            <div className="space-y-1">
+                            <div className="space-y-0.5">
                                 {items.map(item => {
                                     const isActive = activeTab === item.id;
                                     return (
                                         <button 
                                             key={item.id} 
                                             onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }} 
-                                            className={`w-full flex items-center gap-4 px-4 py-4 rounded-2xl transition-all relative group ${isActive ? 'bg-white/10 text-white shadow-xl' : 'hover:bg-white/5 hover:text-white'}`}
+                                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all relative group nav-item-hover ${isActive ? 'nav-item-active' : ''}`}
+                                            style={isActive ? { 
+                                              backgroundColor: `${primaryColor}15`, 
+                                              borderLeft: `4px solid ${primaryColor}`,
+                                              color: 'white'
+                                            } : {}}
                                             title={sidebarCollapsed ? item.label : ''}
                                         >
-                                            {isActive && (
-                                                <div className="absolute left-0 w-1.5 h-6 rounded-r-full" style={{ backgroundColor: primaryColor, boxShadow: `0 0 15px ${primaryColor}` }}></div>
+                                            <item.icon 
+                                                size={18} 
+                                                className={`shrink-0 transition-transform ${isActive ? '' : 'text-slate-500 group-hover:text-slate-200'}`} 
+                                                style={isActive ? { color: primaryColor } : {}} 
+                                            />
+                                            {!sidebarCollapsed && (
+                                                <span className={`text-[10px] font-bold uppercase tracking-widest truncate ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-200'}`}>
+                                                    {item.label}
+                                                </span>
                                             )}
-                                            <item.icon size={22} className={`shrink-0 transition-transform duration-300 group-hover:scale-110 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-white'}`} style={isActive ? { color: primaryColor } : {}} />
-                                            {!sidebarCollapsed && <span className={`text-[11px] font-bold uppercase tracking-widest ${isActive ? 'text-white' : 'text-slate-500'}`}>{item.label}</span>}
-                                            {isActive && !sidebarCollapsed && <ChevronRight size={14} className="ml-auto text-white/20" />}
                                         </button>
                                     );
                                 })}
                             </div>
                         </div>
                     ))}
-                    {/* SPACER BUFFER PARA GARANTIR VISIBILIDADE ACIMA DO FOOTER */}
-                    <div className="h-20 shrink-0"></div>
                 </nav>
 
-                {/* USER FOOTER */}
-                <div className="p-6 border-t border-white/5 bg-black/20 flex-none relative z-10">
-                    <div className={`flex flex-col gap-4 ${sidebarCollapsed ? 'items-center' : ''}`}>
-                        <div className={`flex items-center gap-4 transition-all ${sidebarCollapsed ? 'flex-col' : ''}`}>
-                            <div className="w-12 h-12 rounded-[1.25rem] bg-indigo-600 flex items-center justify-center text-white font-black text-sm shrink-0 shadow-2xl border-2 border-white/10 relative group cursor-pointer" style={{ backgroundColor: primaryColor }}>
+                <div className="p-4 flex-none border-t border-white/5 bg-black/20">
+                    <div className={`flex flex-col gap-3 ${sidebarCollapsed ? 'items-center' : ''}`}>
+                        <div className={`flex items-center gap-3 ${sidebarCollapsed ? 'flex-col' : ''}`}>
+                            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-[10px] shrink-0 shadow-xl border border-white/10" style={{ backgroundColor: primaryColor }}>
                                 {currentUser?.name?.charAt(0) || 'U'}
-                                <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-[3px] border-slate-950 shadow-inner"></div>
                             </div>
                             {!sidebarCollapsed && (
                                 <div className="min-w-0">
-                                    <p className="text-[11px] font-black text-white truncate uppercase tracking-tight">{currentUser?.name}</p>
-                                    <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">{currentUser?.role}</p>
+                                    <p className="text-[10px] font-black text-white truncate uppercase">{currentUser?.name.split(' ')[0]}</p>
+                                    <p className="text-[7px] font-bold text-slate-500 uppercase tracking-widest">{currentUser?.role}</p>
                                 </div>
                             )}
                         </div>
-                        <button onClick={handleLogout} className={`flex items-center gap-4 px-4 py-4 rounded-2xl text-rose-500 hover:bg-rose-500/10 transition-all group ${sidebarCollapsed ? 'justify-center' : ''}`}>
-                            <LogOut size={20} className="shrink-0 transition-transform group-hover:-translate-x-1" />
-                            {!sidebarCollapsed && <span className="text-[10px] font-black uppercase tracking-widest">Desconectar</span>}
+                        <button onClick={handleLogout} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}>
+                            <LogOut size={16} className="shrink-0" />
+                            {!sidebarCollapsed && <span className="text-[9px] font-black uppercase">Sair</span>}
                         </button>
                     </div>
                 </div>
             </aside>
 
-            {/* MAIN VIEWPORT */}
             <main className="flex-1 flex flex-col min-w-0 bg-white relative">
-                <header className="h-20 border-b border-slate-100 flex items-center justify-between px-10 bg-white/80 backdrop-blur-md sticky top-0 z-50">
+                <header className="h-16 border-b border-slate-100 flex items-center justify-between px-6 bg-white/80 backdrop-blur-md sticky top-0 z-40">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all active:scale-95"><Menu size={20}/></button>
-                        <div className="flex items-center gap-3">
-                             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: primaryColor }}></div>
-                             <h2 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.3em] hidden md:block">
-                                {MENU_ITEMS.find(i => i.id === activeTab)?.label || 'Terminal Core'}
-                             </h2>
-                        </div>
+                        <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 bg-slate-100 text-slate-600 rounded-lg">
+                            <Menu size={18}/>
+                        </button>
+                        <h2 className="text-[10px] font-black text-slate-900 uppercase tracking-[0.2em]">
+                           {MENU_ITEMS.find(i => i.id === activeTab)?.label || 'Console de Gestão'}
+                        </h2>
                     </div>
-                    <div className="flex items-center gap-6">
-                        <div className="hidden sm:flex items-center gap-3 px-5 py-2 bg-slate-50 border border-slate-100 rounded-2xl shadow-inner">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">SRE Cluster Alpha Synced</span>
-                        </div>
-                        <button className="p-3 bg-slate-50 border border-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-white hover:shadow-lg rounded-xl transition-all relative">
+                    <div className="flex items-center gap-4">
+                        <button className="p-2 text-slate-400 hover:text-indigo-600 relative">
                             <Bell size={18}/>
-                            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-600 rounded-full border-2 border-white"></span>
+                            <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-rose-600 rounded-full border border-white"></span>
                         </button>
                     </div>
                 </header>
 
-                <div className="flex-1 overflow-y-auto p-10 lg:p-14 custom-scrollbar bg-[#fcfcfd]">
-                    <Suspense fallback={<div className="flex items-center justify-center p-20 h-full"><div className="text-center space-y-6"><Loader2 className="animate-spin text-indigo-600 mx-auto" size={48}/><p className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">Injetando Módulo SRE...</p></div></div>}>
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 bg-[#fcfcfd]">
+                    <Suspense fallback={<div className="flex items-center justify-center p-20 h-full"><Loader2 className="animate-spin text-indigo-600" /></div>}>
                         {renderContent()}
                     </Suspense>
                 </div>

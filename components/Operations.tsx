@@ -1,12 +1,16 @@
 
 import React, { useState, useEffect } from 'react';
-import { Incident } from '../types';
+import { Incident, SystemInfo } from '../types';
 import { operationsService } from '../services/api';
 import { 
     Plus, Loader2, ShieldAlert, X, Save, Edit2, Shield, Activity, MapPin, AlertCircle
 } from 'lucide-react';
 
-const Operations = () => {
+interface OperationsProps {
+    systemInfo: SystemInfo;
+}
+
+const Operations = ({ systemInfo }: OperationsProps) => {
     const [isLoading, setIsLoading] = useState(true);
     const [incidents, setIncidents] = useState([] as Incident[]);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,13 +44,13 @@ const Operations = () => {
              <div className="flex flex-row justify-between items-center bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-xl shrink-0 overflow-hidden relative">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-rose-600/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
                 <div className="flex items-center gap-5 relative z-10">
-                    <div className="p-4 bg-rose-600 rounded-2xl shadow-xl"><ShieldAlert size={24}/></div>
+                    <div className="p-4 bg-rose-600 rounded-2xl shadow-xl" style={{ backgroundColor: systemInfo.primaryColor || '#ef4444' }}><ShieldAlert size={24}/></div>
                     <div>
                         <h2 className="text-2xl font-black uppercase leading-none tracking-tighter">Ocorrências Watchdog</h2>
                         <p className="text-rose-400 text-[10px] font-black uppercase tracking-[0.3em] mt-2 opacity-80">Protocolo de Resiliência Operacional</p>
                     </div>
                 </div>
-                <button onClick={() => { setEditingIncident({ title: '', location: '', priority: 'LOW', status: 'OPEN' }); setIsModalOpen(true); }} className="px-10 py-4 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest shadow-2xl transition-all active:scale-95 flex items-center gap-3">
+                <button onClick={() => { setEditingIncident({ title: '', location: '', priority: 'LOW', status: 'OPEN' }); setIsModalOpen(true); }} className="px-10 py-4 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest shadow-2xl transition-all active:scale-95 flex items-center gap-3" style={{ backgroundColor: systemInfo.primaryColor || '#ef4444' }}>
                     <Plus size={18}/> Abrir Chamado SRE
                 </button>
             </div>
@@ -71,7 +75,7 @@ const Operations = () => {
                                             </div>
                                         </td>
                                         <td className="p-8 text-center"><span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase border shadow-sm ${i.priority === 'HIGH' || i.priority === 'CRITICAL' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>{i.priority}</span></td>
-                                        <td className="p-8 text-center"><span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-4 py-1.5 rounded-xl border border-indigo-100 uppercase tracking-widest">{i.status}</span></td>
+                                        <td className="p-8 text-center"><span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-4 py-1.5 rounded-xl border border-indigo-100 uppercase tracking-widest" style={{ color: systemInfo.primaryColor, borderColor: systemInfo.primaryColor + '40' }}>{i.status}</span></td>
                                         <td className="p-8 text-right"><button onClick={() => { setEditingIncident(i); setIsModalOpen(true); }} className="p-4 text-slate-300 hover:text-indigo-600 hover:bg-white hover:shadow-xl rounded-2xl transition-all border border-transparent hover:border-indigo-100"><Edit2 size={18}/></button></td>
                                     </tr>
                                 ))}

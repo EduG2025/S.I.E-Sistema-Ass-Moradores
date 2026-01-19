@@ -1,3 +1,4 @@
+
 # 🚀 PROTOCOLO DE DEPLOY S.I.E PRO V22.0 (SRE)
 
 ## 1. PREPARAÇÃO DO SISTEMA
@@ -10,7 +11,17 @@ curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 ```
 
-## 2. CONFIGURAÇÃO DO REVERSE PROXY (NGINX VHOST)
+## 2. RESOLUÇÃO DE ERRO EACCES (PERMISSÃO DE BUILD)
+Caso receba "permission denied, unlink" ao rodar build, execute este comando de integridade:
+```bash
+# SRE INTEGRITY FIX
+sudo chown -R $USER:$USER /home/jennyai-admcacaria/htdocs/admcacaria.jennyai.space
+sudo chmod -R 755 /home/jennyai-admcacaria/htdocs/admcacaria.jennyai.space
+# Limpeza forçada antes do build
+rm -rf dist/
+```
+
+## 3. CONFIGURAÇÃO DO REVERSE PROXY (NGINX VHOST)
 Crie o arquivo `/etc/nginx/sites-available/admcacaria.jennyai.space`:
 
 ```nginx
@@ -45,13 +56,13 @@ server {
 }
 ```
 
-## 3. ONE-LINER DE MIGRAÇÃO E BUILD (IDEMPOTENTE)
+## 4. ONE-LINER DE MIGRAÇÃO E BUILD (IDEMPOTENTE)
 ```bash
 cd /home/jennyai-admcacaria/htdocs/admcacaria.jennyai.space
 npm install && npm run build && pm2 restart sie-kernel || pm2 start server.js --name "sie-kernel"
 ```
 
-## 4. MONITORAMENTO
+## 5. MONITORAMENTO
 ```bash
 pm2 monit
 pm2 logs sie-kernel

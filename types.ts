@@ -56,6 +56,18 @@ export interface SystemInfo {
   whatsapp_config?: WhatsAppConfig;
 }
 
+// SRE: Definindo IdCardTemplate para resolver falha de importação em constants.tsx
+export interface IdCardTemplate {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  orientation: 'landscape' | 'portrait';
+  frontBackground: string;
+  backBackground: string;
+  elements: any[];
+}
+
 // --- INTERFACES DE IDENTIDADE ---
 
 export interface SocialData {
@@ -66,6 +78,9 @@ export interface SocialData {
   vulnerabilities?: string[];
   last_census_date?: string;
   ai_notes?: string;
+  nis_number?: string;
+  benefits?: string[];
+  education_level?: string;
 }
 
 export interface User {
@@ -87,61 +102,30 @@ export interface User {
   rg_issuing_body?: string;
   parent_id?: string | number;
   address?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
   profession?: string;
   last_login?: string;
 }
 
-// --- INTERFACES OPERACIONAIS & GOVERNANÇA ---
+// --- INTERFACES DE PESQUISA DINÂMICA (SRE V9) ---
 
-export interface CameraDevice {
-  id: string | number;
-  name: string;
-  url: string;
-  location: string;
-  status: 'ACTIVE' | 'OFFLINE' | 'MAINTENANCE';
-  created_at: string;
+export interface QuestionLogic {
+  show_if_question?: string | number;
+  show_if_value?: any;
 }
-
-export interface OfficialDocument {
-  id: string | number;
-  title: string;
-  content: string;
-  type: DocumentType;
-  status: 'DRAFT' | 'SIGNED' | 'ARCHIVED';
-  updated_at: string;
-  created_by?: number;
-  hash?: string;
-}
-
-export interface Incident {
-  id: string | number;
-  title: string;
-  description?: string;
-  location: string;
-  priority: IncidentPriority;
-  status: IncidentStatus;
-  created_at: string;
-  updated_at?: string;
-}
-
-export interface Notice {
-  id: string | number;
-  title: string;
-  content: string;
-  urgency: 'LOW' | 'MEDIUM' | 'HIGH';
-  date: string;
-  created_at?: string;
-}
-
-// --- INTERFACES DE PESQUISA (CENSO) ---
 
 export interface SurveyQuestion {
   id: string | number;
   text: string;
-  type: 'text' | 'number' | 'boolean' | 'select' | 'date';
+  type: 'text' | 'number' | 'boolean' | 'select' | 'date' | 'repeater';
   options?: string[];
-  mapping_tag?: string;
+  mapping_tag?: 'IDENTITY' | 'EDUCATION' | 'DIGITAL' | 'GOV_AID' | 'FAMILY' | 'HEALTH' | 'FINANCE' | 'WORK' | 'TALENT' | 'SOCIAL' | string;
   required: boolean | number;
+  logic?: QuestionLogic;
+  repeater_fields?: Omit<SurveyQuestion, 'repeater_fields' | 'logic'>[];
 }
 
 export interface Survey {
@@ -154,81 +138,120 @@ export interface Survey {
   created_at?: string;
 }
 
-// --- INTERFACES FINANCEIRAS & AUDITORIA ---
+// --- OUTROS ---
 
-export interface FinancialRecord {
+export interface Visitor {
+    id: string | number;
+    name: string;
+    document: string;
+    unit: string;
+    phone: string;
+    status: 'IN_CLUSTER' | 'COMPLETED';
+    arrival_time: string;
+    exit_time?: string;
+}
+
+export interface Delivery {
+    id: string | number;
+    courier: string;
+    company: string;
+    unit: string;
+    recipient: string;
+    status: 'PENDING' | 'PICKED_UP';
+    arrival_time: string;
+    pickup_time?: string;
+}
+
+export interface Asset {
   id: string | number;
-  user_id?: string | number;
-  description: string;
-  amount: number | string;
-  type: 'INCOME' | 'EXPENSE';
+  name: string;
   category: string;
-  status: FinancialStatus;
-  date: string;
-  is_recurring?: number | boolean;
-  billing_cycle?: string;
-  next_due_date?: string;
+  value: number | string;
+  status: 'PERFEITO' | 'BOM' | 'MANUTENÇÃO' | 'DEPRECIADO';
+  date_acquired?: string;
+  responsible_id?: string | number;
 }
 
-export interface AuditLogEntry {
-  id: number;
+export interface UnitData {
+  id: string | number;
+  residentName: string;
+  cpf: string;
+  unit: string;
+  address: string;
+  coordinates: { lat: number; lng: number };
+  tags: string[];
+  socialData?: any;
+  status?: string;
+  role?: string;
+}
+
+export interface ScheduledBroadcast {
+  id: string | number;
   user_id: number;
-  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN' | 'EXPORT';
-  table_name: string;
-  record_id: number;
-  details: string;
-  created_at: string;
+  target_type: 'ROLE' | 'USER' | 'DIRECT' | string;
+  target_value: string;
+  message_body: string;
+  scheduled_at: string;
+  status: 'PENDING' | 'SENT' | 'FAILED';
+  created_at?: string;
 }
-
-// --- INTERFACES DE INFRAESTRUTURA IA ---
 
 export interface AIKey {
   id: string | number;
   label: string;
   key_value: string;
-  provider: 'GOOGLE' | 'OPENAI'; 
-  tier: AITier;
+  provider: string;
+  status: AIKeyStatus | string;
   priority: number;
-  status: AIKeyStatus;
   error_count: number;
   last_checked?: string;
+  created_at?: string;
 }
 
-export interface IdCardElement {
-  id: string;
-  type: 'text' | 'image' | 'barcode' | 'qrcode';
-  x: number;
-  y: number;
-  width?: number;
-  height?: number;
-  content?: string;
-  field?: string;
-  fontSize?: number;
-  fontWeight?: string;
-  color?: string;
+export interface Incident {
+  id: string | number;
+  title: string;
+  location: string;
+  priority: IncidentPriority | string;
+  status: IncidentStatus | string;
+  description: string;
+  created_at?: string;
 }
 
-export interface IdCardTemplate {
-  id: string;
-  name: string;
-  width: number;
-  height: number;
-  orientation: 'landscape' | 'portrait';
-  frontBackground?: string;
-  backBackground?: string;
-  elements: IdCardElement[];
+export interface Notice {
+  id: string | number;
+  title: string;
+  content: string;
+  urgency: 'LOW' | 'MEDIUM' | 'HIGH' | string;
+  date: string;
+  created_at?: string;
 }
 
-// --- INTERFACES COMUNITÁRIAS ---
+export interface FinancialRecord {
+  id: string | number;
+  user_id?: string | number;
+  userName?: string;
+  description: string;
+  amount: number | string;
+  type: 'INCOME' | 'EXPENSE';
+  category: string;
+  status: FinancialStatus | string;
+  is_recurring?: boolean | number;
+  billing_cycle?: string;
+  next_due_date?: string;
+  date: string;
+  created_at?: string;
+}
 
 export interface AgendaEvent {
   id: string | number;
   title: string;
   description: string;
   date: string;
-  type: 'MEETING' | 'MAINTENANCE' | 'EVENT' | 'DEADLINE';
-  status: 'UPCOMING' | 'FINISHED' | 'CANCELLED' | 'SCHEDULED';
+  type: 'MEETING' | 'MAINTENANCE' | 'DEADLINE' | 'EVENT' | string;
+  status: 'UPCOMING' | 'COMPLETED' | 'CANCELLED' | string;
   location?: string;
+  created_at?: string;
 }
 
 export interface CommunityProject {
@@ -245,31 +268,31 @@ export interface CommunityProject {
 
 export interface MarketItem {
   id: string | number;
+  merchant_id?: string | number;
   title: string;
   description: string;
-  category: 'GOODS' | 'FOOD' | 'SERVICE';
+  category: 'FOOD' | 'SERVICE' | 'GOODS' | string;
   price: number | string;
   whatsapp: string;
-  merchant_id?: string | number;
-  merchantName?: string;
-  unit?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export interface Asset {
+export interface CameraDevice {
   id: string | number;
   name: string;
-  category: string;
-  value: number | string;
-  status: 'PERFEITO' | 'BOM' | 'MANUTENÇÃO' | 'DEPRECIADO';
-  date_acquired?: string;
-  responsible_id?: string | number;
+  url: string;
+  location: string;
+  status: 'ACTIVE' | 'INACTIVE' | string;
+  created_at?: string;
 }
 
-export interface UnitData {
+export interface OfficialDocument {
   id: string | number;
-  residentName: string;
-  unit: string;
-  coordinates: { lat: number; lng: number };
-  tags?: string[];
-  risk_level?: 'LOW' | 'MEDIUM' | 'HIGH';
+  title: string;
+  content: string;
+  type: DocumentType | string;
+  status: 'DRAFT' | 'FINAL' | 'ARCHIVED' | string;
+  created_at?: string;
+  updated_at: string;
 }

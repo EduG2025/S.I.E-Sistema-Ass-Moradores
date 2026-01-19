@@ -6,8 +6,13 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Cell } from 'recharts';
 import { systemService } from '../services/api';
+import { SystemInfo } from '../types';
 
-const Sustainability = () => {
+interface SustainabilityProps {
+    systemInfo: SystemInfo;
+}
+
+const Sustainability = ({ systemInfo }: SustainabilityProps) => {
     const [isLoading, setIsLoading] = useState(true);
     const [stats, setStats] = useState<any>(null);
     const [error, setError] = useState(false);
@@ -43,9 +48,11 @@ const Sustainability = () => {
         }, 2000);
     };
 
+    const primaryColor = systemInfo.primaryColor || '#10b981';
+
     if (isLoading) return (
         <div className="flex flex-col items-center justify-center h-[60vh]">
-            <Loader2 className="animate-spin text-emerald-600 mb-4" size={48} />
+            <Loader2 className="animate-spin text-emerald-600 mb-4" size={48} style={{ color: primaryColor }} />
             <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest animate-pulse">Sincronizando Sensores ESG...</p>
         </div>
     );
@@ -60,13 +67,13 @@ const Sustainability = () => {
     );
 
     return (
-        <div className="space-y-8 animate-fade-in pb-12">
-            <div className="bg-emerald-950 rounded-[3.5rem] p-12 text-white relative overflow-hidden shadow-2xl border border-white/5">
+        <div className="space-y-8 animate-fade-in pb-12 h-full">
+            <div className="bg-emerald-950 rounded-[3.5rem] p-12 text-white relative overflow-hidden shadow-2xl border border-white/5" style={{ backgroundColor: '#064e3b' }}>
                 <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
                 <div className="relative z-10 flex flex-col md:flex-row justify-between items-center gap-10">
                     <div className="space-y-6 max-w-2xl text-center md:text-left">
                         <div className="flex items-center gap-3 px-4 py-1.5 bg-white/10 rounded-full w-fit mx-auto md:mx-0 border border-white/10 backdrop-blur-md">
-                            <Leaf size={16} className="text-emerald-400"/>
+                            <Leaf size={16} className="text-emerald-400" style={{ color: primaryColor }}/>
                             <span className="text-[10px] font-black uppercase tracking-widest text-emerald-200">Protocolo ESG Ativo</span>
                         </div>
                         <h1 className="text-4xl md:text-5xl font-black tracking-tighter leading-tight uppercase">Eficiência & <br/>Recursos.</h1>
@@ -158,7 +165,7 @@ const Sustainability = () => {
 
             <div className="bg-slate-900 rounded-[3rem] p-10 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-8 border border-white/5">
                 <div className="flex items-center gap-6">
-                    <div className="p-5 bg-emerald-500 rounded-[2rem] shadow-lg shadow-emerald-500/20 text-white"><ShieldCheck size={32}/></div>
+                    <div className="p-5 bg-emerald-500 rounded-[2rem] shadow-lg shadow-emerald-500/20 text-white" style={{ backgroundColor: primaryColor }}><ShieldCheck size={32}/></div>
                     <div>
                         <h4 className="text-xl font-black tracking-tight uppercase">Certificação S.I.E GREEN</h4>
                         <p className="text-slate-400 text-xs mt-1 font-medium">Relatórios de conformidade ESG auditados automaticamente pelo Kernel.</p>
@@ -174,14 +181,14 @@ const Sustainability = () => {
                     <div className="sie-modal-container">
                         <div className="h-20 px-10 bg-slate-900 text-white flex justify-between items-center shrink-0 shadow-2xl relative z-20 border-b border-white/5">
                             <div className="flex items-center gap-5">
-                                <div className="p-3.5 bg-emerald-600 rounded-xl shadow-xl"><FileText size={22}/></div>
+                                <div className="p-3.5 bg-emerald-600 rounded-xl shadow-xl" style={{ backgroundColor: primaryColor }}><FileText size={22}/></div>
                                 <div>
                                     <h3 className="font-black text-xl uppercase tracking-tighter leading-none">Relatório de Impacto</h3>
                                     <p className="text-indigo-400 text-[9px] font-black uppercase mt-1.5 tracking-widest opacity-80">SRE Environmental Audit V5.0</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">
-                                <button onClick={handleGenerateReport} disabled={isGenerating} className="px-10 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95">
+                                <button onClick={handleGenerateReport} disabled={isGenerating} className="px-10 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95" style={{ backgroundColor: primaryColor }}>
                                     {isGenerating ? <Loader2 className="animate-spin" size={16}/> : <Printer size={16}/>} Imprimir Certificado
                                 </button>
                                 <button onClick={() => setIsModalOpen(false)} className="p-3.5 hover:bg-rose-500 hover:text-white text-slate-400 rounded-xl transition-all border border-white/5"><X size={24}/></button>
@@ -193,7 +200,7 @@ const Sustainability = () => {
                                 <div className="absolute top-0 right-0 p-10 opacity-[0.03] pointer-events-none"><Globe size={200}/></div>
                                 
                                 <div className="text-center space-y-4">
-                                    <div className="w-24 h-24 bg-emerald-50 text-emerald-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner border border-emerald-100"><ShieldCheck size={48}/></div>
+                                    <div className="w-24 h-24 bg-emerald-50 text-emerald-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner border border-emerald-100"><ShieldCheck size={48} style={{ color: primaryColor }}/></div>
                                     <h2 className="text-4xl font-black text-slate-800 uppercase tracking-tightest">Certificado de Eficiência</h2>
                                     <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.4em]">Auditado pelo Kernel S.I.E PRO em {new Date().toLocaleDateString()}</p>
                                 </div>
@@ -207,7 +214,7 @@ const Sustainability = () => {
                                     <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100">
                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Gestão Hídrica</p>
                                         <h4 className="text-3xl font-black text-indigo-600">88.1%</h4>
-                                        <div className="w-full h-1.5 bg-slate-200 rounded-full mt-4 overflow-hidden"><div className="w-[88%] h-full bg-indigo-500"></div></div>
+                                        <div className="w-full h-1.5 bg-slate-200 rounded-full mt-4 overflow-hidden"><div className="w-[88%] h-full bg-indigo-500" style={{ backgroundColor: primaryColor }}></div></div>
                                     </div>
                                 </div>
 

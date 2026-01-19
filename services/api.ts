@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 
 const api = axios.create({
@@ -23,18 +24,35 @@ api.interceptors.response.use(
 
 export const authService = {
     login: (creds: { username: string; password: string }) => api.post('/auth/login', creds),
-    register: (data: { name: string; cpf_cnpj: string; phone: string; unit: string; role: string }) => api.post('/auth/register', data),
     me: () => api.get('/auth/me'),
-    updatePassword: (password: string) => api.post('/auth/update-password', { password }),
+};
+
+export const systemService = {
+    getInfo: () => api.get('/settings/system'),
+    updateInfo: (info: any) => api.put('/settings/system', info),
+    getRoles: () => api.get('/settings/roles'),
+    saveRole: (role: any) => api.post('/settings/roles', role),
+    updateRole: (id: string, role: any) => api.put(`/settings/roles/${id}`, role),
+    deleteRole: (id: string) => api.delete(`/settings/roles/${id}`),
+    getPermissions: () => api.get('/settings/permissions'),
+    togglePermission: (data: any) => api.post('/settings/permissions/toggle', data),
+    getSustainabilityStats: () => api.get('/sustainability/stats'),
+};
+
+export const aiKeyService = {
+    getAll: () => api.get('/settings/ai-keys'),
+    create: (data: any) => api.post('/settings/ai-keys', data),
+    update: (id: any, data: any) => api.put(`/settings/ai-keys/${id}`, data),
+    delete: (id: any) => api.delete(`/settings/ai-keys/${id}`),
 };
 
 export const userService = {
     getAll: (page = 1, limit = 50, search = '') => api.get('/users', { params: { page, limit, search } }),
-    create: (data: any) => api.post('/users', data),
     update: (id: any, data: any) => api.put(`/users/${id}`, data),
-    delete: (id: any) => api.delete(`/users/${id}`),
+    create: (data: any) => api.post('/users', data),
     activate: (id: any) => api.post(`/users/${id}/activate`),
-    generateInvite: (id: any) => api.post(`/users/${id}/invite`),
+    delete: (id: any) => api.delete(`/users/${id}`),
+    getDependents: (id: any) => api.get(`/users/${id}/dependents`),
 };
 
 export const financialService = {
@@ -42,43 +60,55 @@ export const financialService = {
     getDashboardStats: () => api.get('/financials/stats'),
     create: (data: any) => api.post('/financials', data),
     update: (id: any, data: any) => api.put(`/financials/${id}`, data),
-};
-
-export const residentService = {
-    getDashboard: () => api.get('/resident/dashboard'),
-};
-
-export const communicationService = {
-    getNotices: () => api.get('/notices'),
-    sendNotice: (data: any) => api.post('/notices', data),
-    deleteNotice: (id: any) => api.delete(`/notices/${id}`),
-    broadcastWhatsApp: (message: string, targetRole: string) => api.post('/communication/whatsapp-broadcast', { message, targetRole }),
-    updateNotice: (id: any, data: any) => api.put(`/notices/${id}`, data),
-};
-
-export const surveyService = {
-    getAll: () => api.get('/surveys'),
-    getPublic: (id: string) => api.get(`/surveys/public/${id}`),
-    submitPublic: (id: string, data: any) => api.post(`/surveys/public/${id}/submit`, data),
-    suggestQuestions: (data: any) => api.post('/surveys/suggest', data),
-    update: (id: any, data: any) => api.put(`/surveys/${id}`, data),
-    create: (data: any) => api.post('/surveys', data),
-    delete: (id: any) => api.delete(`/surveys/${id}`),
-    getResponsesByCpf: (cpf: string) => api.get(`/surveys/responses/cpf/${cpf}`),
-};
-
-/**
- * CENSUS SERVICE (SRE PROTOCOL V22.5)
- */
-export const censusService = {
-    register: (data: any) => api.post('/census/register', data),
-    createProfile: (registryId: number, data: any) => api.post(`/census/profile/${registryId}`, data),
+    delete: (id: any) => api.delete(`/financials/${id}`),
 };
 
 export const aiService = {
     chat: (prompt: string) => api.post('/ai/chat', { contents: prompt }),
     generateUserDossier: (id: any) => api.post(`/ai/dossier/${id}`),
     generateDocument: (prompt: string) => api.post('/ai/generate-document', { prompt }),
+};
+
+export const documentService = {
+    getAll: () => api.get('/governance/documents'),
+    create: (data: any) => api.post('/governance/documents', data),
+    update: (id: any, data: any) => api.put(`/governance/documents/${id}`, data),
+    delete: (id: any) => api.delete(`/governance/documents/${id}`),
+    // Prompt Management
+    getTemplates: () => api.get('/governance/prompts'),
+    saveTemplate: (data: { title: string, content: string }) => api.post('/governance/prompts', data),
+    deleteTemplate: (id: number | string) => api.delete(`/governance/prompts/${id}`),
+};
+
+export const communicationService = {
+    getNotices: () => api.get('/communication/notices'),
+    sendNotice: (data: any) => api.post('/communication/notices', data),
+    updateNotice: (id: any, data: any) => api.put(`/communication/notices/${id}`, data),
+    deleteNotice: (id: any) => api.delete(`/communication/notices/${id}`),
+    getSchedules: () => api.get('/communication/schedules'),
+    createSchedule: (data: any) => api.post('/communication/schedules', data),
+    deleteSchedule: (id: any) => api.delete(`/communication/schedules/${id}`),
+};
+
+export const operationsService = {
+    getIncidents: () => api.get('/incidents'),
+    createIncident: (data: any) => api.post('/incidents', data),
+    updateIncident: (id: any, data: any) => api.put(`/incidents/${id}`, data),
+    deleteIncident: (id: any) => api.delete(`/incidents/${id}`),
+};
+
+export const surveyService = {
+    getAll: () => api.get('/surveys'),
+    getResponsesByCpf: (cpf: string) => api.get(`/surveys/responses/cpf/${cpf}`),
+    suggestQuestions: (data: any) => api.post('/surveys/suggest', data),
+    create: (data: any) => api.post('/surveys', data),
+    update: (id: any, data: any) => api.put(`/surveys/${id}`, data),
+    delete: (id: any) => api.delete(`/surveys/${id}`),
+};
+
+export const censusService = {
+    register: (data: any) => api.post('/census/register', data),
+    createProfile: (id: any, data: any) => api.post(`/census/register/${id}/profile`, data),
 };
 
 export const cameraService = {
@@ -89,32 +119,31 @@ export const cameraService = {
     delete: (id: any) => api.delete(`/cameras/${id}`),
 };
 
-export const aiKeyService = {
-    getAll: () => api.get('/ai-keys'),
-    create: (data: any) => api.post('/ai-keys', data),
-    delete: (id: any) => api.delete(`/ai-keys/${id}`),
+export const marketplaceService = {
+    getAll: () => api.get('/community/marketplace'),
+    create: (data: any) => api.post('/community/marketplace', data),
+    update: (id: any, data: any) => api.put(`/community/marketplace/${id}`, data),
+    delete: (id: any) => api.delete(`/community/marketplace/${id}`),
 };
 
-export const systemService = {
-    getInfo: () => api.get('/settings/system'),
-    updateInfo: (info: any) => api.put('/settings/system', info),
-    getSustainabilityStats: () => api.get('/sustainability/stats'),
-    getPermissions: () => api.get('/settings/permissions'),
-    updatePermissions: (data: any) => api.post('/settings/permissions', data),
+export const reservationService = {
+    getAll: () => api.get('/community/reservations'),
+    create: (data: any) => api.post('/community/reservations', data),
+    delete: (id: any) => api.delete(`/community/reservations/${id}`),
 };
 
-export const mapService = {
-    getUnits: () => api.get('/users'),
+export const suggestionService = {
+    getAll: () => api.get('/community/suggestions'),
+    create: (data: any) => api.post('/community/suggestions', data),
+    update: (id: any, data: any) => api.put(`/community/suggestions/${id}`, data),
+    delete: (id: any) => api.delete(`/community/suggestions/${id}`),
 };
 
-export const demographicsService = {
-    getStats: () => api.get('/demographics/stats'),
-};
-
-export const operationsService = {
-    getIncidents: () => api.get('/incidents'),
-    createIncident: (data: any) => api.post('/incidents', data),
-    updateIncident: (id: any, data: any) => api.put(`/incidents/${id}`, data),
+export const assetService = {
+    getAll: () => api.get('/assets'),
+    create: (data: any) => api.post('/assets', data),
+    update: (id: any, data: any) => api.put(`/assets/${id}`, data),
+    delete: (id: any) => api.delete(`/assets/${id}`),
 };
 
 export const agendaService = {
@@ -131,37 +160,19 @@ export const projectService = {
     delete: (id: any) => api.delete(`/projects/${id}`),
 };
 
-export const marketplaceService = {
-    getAll: () => api.get('/marketplace'),
-    create: (data: any) => api.post('/marketplace', data),
-    update: (id: any, data: any) => api.put(`/marketplace/${id}`, data),
-};
-
-export const reservationService = {
-    getAll: () => api.get('/reservations'),
-    create: (data: any) => api.post('/reservations', data),
-    delete: (id: any) => api.delete(`/reservations/${id}`),
-};
-
-export const assetService = {
-    getAll: () => api.get('/assets'),
-    create: (data: any) => api.post('/assets', data),
-    update: (id: any, data: any) => api.put(`/assets/${id}`, data),
-    delete: (id: any) => api.delete(`/assets/${id}`),
-};
-
-export const documentService = {
-    getAll: () => api.get('/documents'),
-    create: (data: any) => api.post('/documents', data),
-    update: (id: any, data: any) => api.put(`/documents/${id}`, data),
-    delete: (id: any) => api.delete(`/documents/${id}`),
-};
-
 export const assemblyService = {
-    getAll: () => api.get('/assemblies'),
-    create: (data: any) => api.post('/assemblies', data),
-    update: (id: any, data: any) => api.put(`/assemblies/${id}`, data),
-    delete: (id: any) => api.delete(`/assemblies/${id}`),
+    getAll: () => api.get('/governance/assemblies'),
+    create: (data: any) => api.post('/governance/assemblies', data),
+    update: (id: any, data: any) => api.put(`/governance/assemblies/${id}`, data),
+    delete: (id: any) => api.delete(`/governance/assemblies/${id}`),
+};
+
+export const mapService = {
+    getUnits: () => api.get('/users'),
+};
+
+export const demographicsService = {
+    getStats: () => api.get('/demographics/stats'),
 };
 
 export { api };

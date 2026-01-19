@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { CommunityProject } from '../types';
+import { CommunityProject, SystemInfo } from '../types';
 import { projectService } from '../services/api';
 import { 
   Plus, Search, Briefcase, TrendingUp, DollarSign, 
@@ -9,7 +9,11 @@ import {
   Users, MessageSquare, ThumbsUp, Camera, Landmark, Trash2, Edit2, Printer, Zap, Shield
 } from 'lucide-react';
 
-const ProjectManagement = () => {
+interface ProjectManagementProps {
+    systemInfo: SystemInfo;
+}
+
+const ProjectManagement = ({ systemInfo }: ProjectManagementProps) => {
   const [projects, setProjects] = useState([] as CommunityProject[]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -70,14 +74,14 @@ const ProjectManagement = () => {
     }
   };
 
-  if (loading) return <div className="p-20 text-center"><Loader2 className="animate-spin text-indigo-600 mx-auto" size={48}/></div>;
+  if (loading) return <div className="p-20 text-center"><Loader2 className="animate-spin text-indigo-600 mx-auto" size={48} style={{ color: systemInfo.primaryColor }}/></div>;
 
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-6 animate-fade-in h-full relative">
       <div className="flex flex-col md:flex-row justify-between items-center gap-6 bg-slate-900 p-10 rounded-[3rem] text-white shadow-xl shrink-0 overflow-hidden relative">
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
         <div className="flex items-center gap-6 relative z-10">
-            <div className="p-5 bg-indigo-600 rounded-[2rem] shadow-xl"><Building2 size={28}/></div>
+            <div className="p-5 bg-indigo-600 rounded-[2rem] shadow-xl" style={{ backgroundColor: systemInfo.primaryColor }}><Building2 size={28}/></div>
             <div>
               <h2 className="text-3xl font-black tracking-tightest leading-none uppercase">Obras & Projetos</h2>
               <p className="text-indigo-300 text-[10px] font-black uppercase tracking-[0.3em] mt-2 opacity-80">SRE Infrastructure Pipeline V5.0</p>
@@ -99,13 +103,13 @@ const ProjectManagement = () => {
                     </div>
                     
                     <div className="flex items-center gap-6 mb-8 mt-4">
-                        <div className="w-16 h-16 bg-slate-950 text-white rounded-[1.5rem] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                        <div className="w-16 h-16 bg-slate-950 text-white rounded-[1.5rem] flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform" style={{ backgroundColor: systemInfo.primaryColor || '#020617' }}>
                             {project.category === 'INFRA' ? <Building2 size={32}/> : <Landmark size={32}/>}
                         </div>
                         <div>
                             <h3 className="text-2xl font-black text-slate-800 leading-none uppercase tracking-tight">{project.title}</h3>
                             <div className="flex items-center gap-3 mt-3">
-                                <span className={`px-4 py-1 rounded-xl text-[8px] font-black uppercase border shadow-inner ${project.status === 'CONCLUÍDO' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-indigo-50 text-indigo-600 border-indigo-100'}`}>{project.status}</span>
+                                <span className={`px-4 py-1 rounded-xl text-[8px] font-black uppercase border shadow-inner ${project.status === 'CONCLUÍDO' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-indigo-50 text-indigo-600 border-indigo-100'}`} style={project.status !== 'CONCLUÍDO' ? { color: systemInfo.primaryColor, borderColor: systemInfo.primaryColor + '40', backgroundColor: systemInfo.primaryColor + '10' } : {}}>{project.status}</span>
                                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Início: {new Date(project.startDate).toLocaleDateString('pt-BR')}</span>
                             </div>
                         </div>
@@ -116,10 +120,10 @@ const ProjectManagement = () => {
                     <div className="space-y-4 mb-10 bg-slate-50 p-8 rounded-[2rem] border border-slate-100 shadow-inner">
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Execução Física</span>
-                            <span className="text-base font-black text-indigo-600">{project.progress}%</span>
+                            <span className="text-base font-black text-indigo-600" style={{ color: systemInfo.primaryColor }}>{project.progress}%</span>
                         </div>
                         <div className="w-full h-4 bg-white rounded-full overflow-hidden border border-slate-200 shadow-inner">
-                            <div className="h-full bg-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.5)] transition-all duration-1000" style={{ width: `${project.progress}%` }}></div>
+                            <div className="h-full bg-indigo-600 shadow-[0_0_20px_rgba(79,70,229,0.5)] transition-all duration-1000" style={{ width: `${project.progress}%`, backgroundColor: systemInfo.primaryColor }}></div>
                         </div>
                     </div>
 
@@ -149,14 +153,14 @@ const ProjectManagement = () => {
           <div className="sie-modal-container">
                 <div className="h-20 px-10 bg-slate-900 text-white flex justify-between items-center shrink-0 shadow-2xl relative z-20 border-b border-white/5">
                     <div className="flex items-center gap-5">
-                        <div className="p-3.5 bg-indigo-600 rounded-xl shadow-xl"><Zap size={22}/></div>
+                        <div className="p-3.5 bg-indigo-600 rounded-xl shadow-xl" style={{ backgroundColor: systemInfo.primaryColor }}><Zap size={22}/></div>
                         <div>
                             <h3 className="font-black text-xl uppercase tracking-tighter leading-none">Protocolar Empreendimento</h3>
                             <p className="text-indigo-400 text-[9px] font-black uppercase mt-1.5 tracking-widest opacity-80">SRE Infrastructure Planning Suite V5.0</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <button onClick={handleSave} disabled={isSaving} className="px-10 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95">
+                        <button onClick={handleSave} disabled={isSaving} className="px-10 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95" style={{ backgroundColor: systemInfo.primaryColor }}>
                             {isSaving ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>} Commitar Edital
                         </button>
                         <button onClick={() => setIsModalOpen(false)} className="p-3.5 hover:bg-rose-500 hover:text-white text-slate-400 rounded-xl transition-all border border-white/5"><X size={24}/></button>
@@ -192,7 +196,7 @@ const ProjectManagement = () => {
                         </div>
                         <div className="p-8 bg-indigo-900/5 border border-indigo-100 rounded-[3rem] flex flex-col md:flex-row gap-8 items-center shadow-sm">
                             <div className="flex items-center gap-6 flex-1">
-                                <div className="p-4 bg-white rounded-2xl shadow-sm text-indigo-600"><Shield size={28}/></div>
+                                <div className="p-4 bg-white rounded-2xl shadow-sm text-indigo-600" style={{ color: systemInfo.primaryColor }}><Shield size={28}/></div>
                                 <div>
                                     <p className="text-base font-black text-indigo-950 uppercase tracking-tight">Transparência SRE</p>
                                     <p className="text-[10px] text-indigo-400 font-bold uppercase mt-1 tracking-widest">Os dados de execução física e financeira são auditáveis por todos os membros do Conselho.</p>
@@ -202,7 +206,6 @@ const ProjectManagement = () => {
                     </form>
                 </div>
 
-                {/* SRE FIX: Reestruturação do rodapé do modal para evitar erros de compilação JSX e garantir fechamento correto de tags */}
                 <div className="p-8 border-t bg-slate-50 flex justify-between items-center shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>

@@ -1,0 +1,102 @@
+
+import pool from '../config/database.js';
+import { IAProviderManager } from '../core/ai/IAProviderManager.js';
+
+export const getPublicSurvey = async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM surveys WHERE id = ? AND status = "ACTIVE"', [req.params.id]);
+        if (!rows.length) return res.status(404).json({ error: 'SURVEY_OFFLINE' });
+        const survey = rows[0];
+        if (typeof survey.questions === 'string') survey.questions = JSON.parse(survey.questions);
+        res.json(survey);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+export const checkResident = async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT name, unit, email, phone FROM users WHERE cpf_cnpj = ?', [req.params.cpf]);
+        if (rows.length) res.json({ found: true, ...rows[0] });
+        else res.json({ found: false });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+export const submitResponse = async (req, res) => {
+    const { cpf, userData, answers } = req.body;
+    const surveyId = req.params.surveyId;
+    try {
+        const [existing] = await pool.query('SELECT id, socialData FROM users WHERE cpf_cnpj = ?', [cpf]);
+        let userId = existing[0]?.id;
+        
+        // Mapeamento Inteligente de Atributos do Censo para o Core do Usuário
+        const socialMapping = {
+            risk: existing[0]?.socialData?.risk || 0,
+            tags: existing[0]?.socialData?.tags || [],
+            last_census_date: new Date().toISOString(),
+            education_level: answers['edu_01'],
+            nis_number: answers['soc_02'],
+            benefits: [
+                answers['soc_03'] === 'SIM' ? 'BOLSA_FAMILIA' : null,
+                answers['soc_04'] === 'SIM' ? 'BPC' : null,
+                answers['soc_05'] === 'SIM' ? 'TARIFA_SOCIAL' : null
+            ].filter(Boolean)
+        };
+
+        if (!userId) {
+            const [result] = await pool.query('INSERT INTO users (name, cpf_cnpj, unit, email, phone, role, status, active, socialData) VALUES (?, ?, ?, ?, ?, "RESIDENT", "PENDING", 1, ?)',
+                [userData.name, cpf, userData.unit, userData.email, userData.phone, JSON.stringify(socialMapping)]);
+            userId = result.insertId;
+        } else {
+            await pool.query('UPDATE users SET unit = ?, email = ?, phone = ?, socialData = ? WHERE id = ?', 
+                [userData.unit, userData.email, userData.phone, JSON.stringify(socialMapping), userId]);
+        }
+
+        await pool.query('INSERT INTO survey_responses (survey_id, user_id, cpf, user_name, answers) VALUES (?, ?, ?, ?, ?)',
+            [surveyId, userId, cpf, userData.name, JSON.stringify(answers)]);
+
+        await pool.query('INSERT INTO audit_logs (user_id, action, table_name, record_id, details) VALUES (?, "SUBMIT_CENSUS", "survey_responses", ?, ?)',
+            [userId, surveyId, `Censo S.I.E PRO V9 Protocolado por ${userData.name}`]);
+
+        res.json({ success: true, protocolId: Date.now() });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+export const getResponses = async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM survey_responses WHERE survey_id = ? ORDER BY created_at DESC', [req.params.id]);
+        rows.forEach(r => { if (typeof r.answers === 'string') r.answers = JSON.parse(r.answers); });
+        res.json({ data: rows });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+export const getResponsesByCpf = async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM survey_responses WHERE cpf = ? ORDER BY created_at DESC', [req.params.cpf]);
+        rows.forEach(r => { if (typeof r.answers === 'string') r.answers = JSON.parse(r.answers); });
+        res.json({ data: rows });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+};
+
+export const suggestQuestions = async (req, res) => {
+    const { title, description, type } = req.body;
+    try {
+        const prompt = `Crie um conjunto de 5 perguntas avançadas para um formulário de ${type} intitulado "${title}". 
+        Contexto: ${description}. FOCO: Assistência Social, Educação e Vulnerabilidade.
+        REGRAS: 
+        1. Use logic para branching (ex: se tem filhos, pergunta idade).
+        2. Use repeater para multi-membros.
+        Retorne um array JSON com objetos: id, text, type, options (se select), mapping_tag (EDUCATION, GOV_AID, etc), logic (objeto opcional), repeater_fields (array opcional).`;
+        
+        const responseText = await IAProviderManager.execute('suggest', {
+            contents: prompt,
+            config: { 
+                responseMimeType: "application/json",
+                systemInstruction: "Você é um arquiteto sênior de dados sociais especializado em governança pública."
+            }
+        });
+
+        let cleanJson = responseText.replace(/```json|```/gi, '').trim();
+        res.json({ data: JSON.parse(cleanJson) });
+    } catch (e) {
+        res.status(500).json({ error: "FALHA_PREDICT_IA: " + e.message });
+    }
+};

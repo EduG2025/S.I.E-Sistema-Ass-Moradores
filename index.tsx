@@ -29,10 +29,10 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       return (
         <div style={{ padding: '60px', background: '#020617', color: 'white', height: '100vh', fontFamily: 'Inter, sans-serif', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
           <div style={{ background: '#ef4444', padding: '20px', borderRadius: '20px', marginBottom: '30px' }}>
-             <h1 style={{ margin: 0, fontWeight: 900, letterSpacing: '-0.05em' }}>FALHA DE KERNEL S.I.E</h1>
+             <h1 style={{ margin: 0, fontWeight: 900, letterSpacing: '-0.05em' }}>FALHA DE KERNEL ATIVO</h1>
           </div>
           <p style={{ color: '#94a3b8', maxWidth: '600px', lineHeight: '1.6' }}>
-            Ocorreu uma exceção não tratada no módulo de renderização. 
+            Ocorreu uma exceção não tratada no módulo de renderização de identidade. 
             Isso pode ser causado por inconsistência no cache da VPS ou falha de interop em bibliotecas externas.
           </p>
           <pre style={{ background: 'rgba(255,255,255,0.05)', padding: '20px', borderRadius: '15px', color: '#f87171', fontSize: '12px', overflow: 'auto', maxWidth: '90%' }}>
@@ -56,7 +56,6 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
 const rootEl = document.getElementById('root');
 if (rootEl) {
-  // CORREÇÃO DEFINITIVA: createRoot chamado diretamente via Named Export
   const root = createRoot(rootEl);
   root.render(
     <ErrorBoundary>

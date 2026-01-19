@@ -6,10 +6,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "prebuild": "rm -rf dist",
+    "build": "vite build --emptyOutDir",
     "preview": "vite preview",
     "start": "NODE_ENV=production node server.js",
-    "vps-deploy": "npm install && npm run build && pm2 restart sie-kernel || pm2 start server.js --name sie-kernel"
+    "vps-deploy": "npm install && npm run build && pm2 restart sie-kernel || pm2 start server.js --name sie-kernel",
+    "fix-perms": "sudo chown -R $(whoami):$(whoami) . && sudo chmod -R 755 . && rm -rf dist/"
   },
   "dependencies": {
     "@google/genai": "1.34.0",

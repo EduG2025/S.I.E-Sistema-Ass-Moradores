@@ -1,17 +1,20 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { 
     Gavel, Play, StopCircle, FileText, Download, Trash2, Edit2, 
     Plus, Search, Clock, Users, ChevronRight, X, Save, Sparkles, Printer, Loader2, ThumbsUp, ThumbsDown, CircleSlash, Send, MonitorPlay, BarChart3
 } from 'lucide-react';
 import { assemblyService, aiService } from '../services/api';
-import { User } from '../types';
+// FIX: Added SystemInfo to imports from types to satisfy TS requirements in App.tsx
+import { User, SystemInfo } from '../types';
 
+// FIX: Added optional systemInfo to props interface to resolve line 150 error in App.tsx
 interface AssemblyManagerProps {
     currentUser?: User | null;
+    systemInfo?: SystemInfo;
 }
 
-const AssemblyManager = ({ currentUser }: AssemblyManagerProps) => {
+// FIX: Added systemInfo to destructured parameters to match the passed props from App.tsx
+const AssemblyManager = ({ currentUser, systemInfo }: AssemblyManagerProps) => {
     const [assemblies, setAssemblies] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'HISTORY' | 'LIVE'>('HISTORY');

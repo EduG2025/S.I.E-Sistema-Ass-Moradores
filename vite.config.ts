@@ -27,10 +27,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         format: 'esm',
-        entryFileNames: `assets/[name].js`,
-        chunkFileNames: `assets/[name].js`,
-        assetFileNames: `assets/[name].[ext]`,
-        manualChunks: undefined // Força bundle único para evitar erro de exportação 'D'
+        // SRE FIX: Removida a simplificação de nomes que quebrava o dynamic import
+        // O Vite precisa dos hashes para gerenciar o carregamento de componentes via lazy()
+        entryFileNames: `assets/[name].[hash].js`,
+        chunkFileNames: `assets/[name].[hash].js`,
+        assetFileNames: `assets/[name].[hash].[ext]`
       }
     }
   },

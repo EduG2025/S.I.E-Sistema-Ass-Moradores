@@ -1,53 +1,65 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 /**
- * S.I.E IA Cluster Manager - Protocolo SRE v228.0
- * Gerencia múltiplos nós neurais com failover automático.
+ * S.I.E IA Cluster Manager - Protocolo SRE v190.0 (STABILIZED)
+ * Compliance total com as diretrizes da SDK Gemini 3.
  */
 export const IAProviderManager = {
   
-  // SRE FIX: API key must be obtained exclusively from environment variable process.env.API_KEY
-  // Removed getEffectiveKey method as it used database lookups for API keys which is prohibited
-
-  normalize(contents) {
-    if (typeof contents === 'string') return contents;
-    if (Array.isArray(contents)) return contents;
-    if (contents.parts) return contents;
-    return { parts: [{ text: JSON.stringify(contents) }] };
+  /**
+   * Normalização de conteúdos para o formato exigido pela SDK.
+   */
+  normalizeContents(contents) {
+    if (typeof contents === 'string') {
+        return [{ role: 'user', parts: [{ text: contents }] }];
+    }
+    if (Array.isArray(contents)) {
+        return contents.map(c => {
+            if (typeof c === 'string') return { role: 'user', parts: [{ text: c }] };
+            return c;
+        });
+    }
+    if (contents.parts) return [contents];
+    return [{ role: 'user', parts: [{ text: JSON.stringify(contents) }] }];
   },
 
-  async execute(task, payload, retryCount = 0) {
-    // SRE FIX: API key must be obtained exclusively from process.env.API_KEY per Gemini guidelines
-    if (!process.env.API_KEY) {
-        console.error("🛑 SRE CRITICAL: Nenhuma API_KEY disponível no Cluster.");
-        throw new Error("CLUSTER_AI_OFFLINE");
-    }
-
+  /**
+   * Executa uma tarefa neural utilizando o modelo Gemini 3.
+   * A API Key é obtida EXCLUSIVAMENTE de process.env.API_KEY.
+   */
+  async execute(task, payload) {
+    // Inicialização mandatória via named parameter
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    
     try {
-      // SRE FIX: Always use new GoogleGenAI({apiKey: process.env.API_KEY}); as per guidelines
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      // SRE FIX: Default to 'gemini-3-flash-preview' for text and 'gemini-2.5-flash-image' for image tasks
-      const modelName = task === 'ocr' ? 'gemini-2.5-flash-image' : 'gemini-3-flash-preview';
+      const modelName = payload.model || 'gemini-3-flash-preview';
       
       const response = await ai.models.generateContent({
         model: modelName,
-        contents: this.normalize(payload.contents),
+        contents: this.normalizeContents(payload.contents),
         config: {
-          systemInstruction: payload.config?.systemInstruction || "Você é o advisor oficial do S.I.E PRO.",
-          temperature: payload.config?.temperature ?? 0.7
+          systemInstruction: payload.config?.systemInstruction || "Você é o mentor de governança do S.I.E PRO.",
+          temperature: payload.config?.temperature ?? 0.7,
+          responseMimeType: payload.config?.responseMimeType || "text/plain"
         }
       });
 
-      // SRE FIX: Use .text property directly (not a method) to extract response content
-      const text = response.text;
-      if (!text) throw new Error("Vácuo Neural detectado.");
-      return text;
+      // Acesso direto à propriedade .text conforme diretrizes
+      const textOutput = response.text;
+      
+      if (!textOutput) {
+          throw new Error("Resposta neural vazia interceptada pelo Kernel.");
+      }
+      
+      return textOutput;
 
     } catch (error) {
-        console.error(`[SRE AI CLUSTER FAIL - NODE ATTEMPT ${retryCount}]`, error.message);
-        if (retryCount > 3) throw new Error("SRE AI Cluster: Exaustão de Nós.");
-        // Se a falha for transitória, o retryCount forçará o sistema a tentar novamente
-        return this.execute(task, payload, retryCount + 1);
+        console.error(`[SRE AI ERROR]`, error.message);
+        if (error.message?.includes('API key not valid')) {
+            throw new Error("SRE CRITICAL: API_KEY no .env é inválida ou expirou.");
+        }
+        throw error;
     }
   }
 };

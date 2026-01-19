@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { MarketItem, User } from '../types';
+import { MarketItem, User, SystemInfo } from '../types';
 import { marketplaceService, authService } from '../services/api';
 import { 
   ShoppingBag, Search, Plus, Filter, 
@@ -8,7 +8,11 @@ import {
   Tag, Utensils, Wrench, Package, X, Save, Sparkles, Phone
 } from 'lucide-react';
 
-const MarketPlace = () => {
+interface MarketPlaceProps {
+    systemInfo: SystemInfo;
+}
+
+const MarketPlace = ({ systemInfo }: MarketPlaceProps) => {
   const [items, setItems] = useState([] as MarketItem[]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,12 +60,14 @@ const MarketPlace = () => {
     return categoryMatch && searchMatch;
   });
 
+  const primaryColor = systemInfo.primaryColor || '#10b981';
+
   return (
     <div className="flex-1 flex flex-col min-h-0 space-y-6 animate-fade-in relative h-full">
       <div className="bg-emerald-950 rounded-[2.5rem] p-8 text-white shadow-xl shrink-0 flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
           <div className="flex items-center gap-5 relative z-10">
-              <div className="p-4 bg-emerald-600 rounded-2xl shadow-xl"><ShoppingBag size={24}/></div>
+              <div className="p-4 bg-emerald-600 rounded-2xl shadow-xl" style={{ backgroundColor: primaryColor }}><ShoppingBag size={24}/></div>
               <div>
                   <h1 className="text-2xl font-black uppercase tracking-tighter leading-none">Vitrine Comunitária</h1>
                   <p className="text-emerald-400 text-[10px] font-black uppercase tracking-[0.3em] mt-2 opacity-80">Economia Circular Ativa V2.0</p>
@@ -79,7 +85,7 @@ const MarketPlace = () => {
           </div>
           <div className="flex bg-white p-1 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
              {['ALL', 'GOODS', 'FOOD', 'SERVICE'].map(cat => (
-                 <button key={cat} onClick={() => setActiveCategory(cat as any)} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeCategory === cat ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}>{cat}</button>
+                 <button key={cat} onClick={() => setActiveCategory(cat as any)} className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeCategory === cat ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`} style={activeCategory === cat ? { backgroundColor: primaryColor } : {}}>{cat}</button>
              ))}
           </div>
       </div>
@@ -90,7 +96,7 @@ const MarketPlace = () => {
                   {filteredItems.map(item => (
                     <div key={item.id} className="bg-white rounded-[2.5rem] border border-slate-200 p-6 shadow-sm hover:shadow-xl transition-all flex flex-col h-full relative group">
                         <div className="flex justify-between items-start mb-5">
-                            <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors shadow-inner">
+                            <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors shadow-inner" style={ { color: primaryColor } }>
                                 {item.category === 'FOOD' ? <Utensils size={24}/> : item.category === 'SERVICE' ? <Wrench size={24}/> : <Package size={24}/>}
                             </div>
                             <div className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-xl text-[10px] font-black border border-emerald-100 shadow-sm">R$ {Number(item.price || 0).toLocaleString('pt-BR')}</div>
@@ -103,7 +109,7 @@ const MarketPlace = () => {
                                 <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[8px] font-black text-slate-400">?</div>
                                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-tight">Vendedor Local</span>
                             </div>
-                            <a href={`https://wa.me/${(item.whatsapp || '').replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="p-3 bg-emerald-600 text-white rounded-xl shadow-lg hover:bg-emerald-500 transition-all active:scale-90"><Phone size={16}/></a>
+                            <a href={`https://wa.me/${(item.whatsapp || '').replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="p-3 bg-emerald-600 text-white rounded-xl shadow-lg hover:bg-emerald-500 transition-all active:scale-90" style={{ backgroundColor: primaryColor }}><Phone size={16}/></a>
                         </div>
                     </div>
                   ))}
@@ -122,14 +128,14 @@ const MarketPlace = () => {
             <div className="sie-modal-container">
                 <div className="h-20 px-10 bg-slate-900 text-white flex justify-between items-center shrink-0 shadow-2xl relative z-20 border-b border-white/5">
                     <div className="flex items-center gap-5">
-                        <div className="p-3.5 bg-emerald-600 rounded-xl shadow-xl"><Tag size={22}/></div>
+                        <div className="p-3.5 bg-emerald-600 rounded-xl shadow-xl" style={{ backgroundColor: primaryColor }}><Tag size={22}/></div>
                         <div>
                             <h3 className="font-black text-xl uppercase tracking-tighter leading-none">Anunciar Oferta</h3>
                             <p className="text-emerald-400 text-[9px] font-black uppercase mt-1.5 tracking-widest opacity-80">Marketplace Core Suite V5.0</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <button onClick={handleSave} disabled={isSaving} className="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95">
+                        <button onClick={handleSave} disabled={isSaving} className="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95" style={{ backgroundColor: primaryColor }}>
                             {isSaving ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>} Commitar Anúncio
                         </button>
                         <button onClick={() => setIsModalOpen(false)} className="p-3.5 hover:bg-rose-500 hover:text-white text-slate-400 rounded-xl transition-all border border-white/5"><X size={24}/></button>
@@ -167,7 +173,7 @@ const MarketPlace = () => {
                             </div>
                         </div>
                         <div className="p-8 bg-emerald-900/5 border border-emerald-100 rounded-[2.5rem] flex items-center gap-6 shadow-sm">
-                            <div className="p-4 bg-white text-emerald-600 rounded-2xl shadow-sm"><Sparkles size={24}/></div>
+                            <div className="p-4 bg-white text-emerald-600 rounded-2xl shadow-sm" style={{ color: primaryColor }}><Sparkles size={24}/></div>
                             <div>
                                 <h4 className="text-sm font-black text-emerald-950 uppercase tracking-tight">Fomento Circular</h4>
                                 <p className="text-[10px] text-emerald-700 font-bold uppercase mt-1 tracking-widest">Seu anúncio será visível para todos os membros ativos do cluster S.I.E PRO.</p>
