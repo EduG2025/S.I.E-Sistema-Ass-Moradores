@@ -64,7 +64,13 @@ export const financialService = {
 };
 
 export const aiService = {
-    chat: (prompt: string) => api.post('/ai/chat', { contents: prompt }),
+    chat: (prompt: string, grounding?: { search?: boolean, maps?: boolean, location?: { lat: number, lng: number } }) => 
+        api.post('/ai/chat', { 
+            contents: prompt, 
+            useSearch: grounding?.search, 
+            useMaps: grounding?.maps, 
+            location: grounding?.location 
+        }),
     generateUserDossier: (id: any) => api.post(`/ai/dossier/${id}`),
     generateDocument: (prompt: string) => api.post('/ai/generate-document', { prompt }),
 };
@@ -74,7 +80,6 @@ export const documentService = {
     create: (data: any) => api.post('/governance/documents', data),
     update: (id: any, data: any) => api.put(`/governance/documents/${id}`, data),
     delete: (id: any) => api.delete(`/governance/documents/${id}`),
-    // Prompt Management
     getTemplates: () => api.get('/governance/prompts'),
     saveTemplate: (data: { title: string, content: string }) => api.post('/governance/prompts', data),
     deleteTemplate: (id: number | string) => api.delete(`/governance/prompts/${id}`),

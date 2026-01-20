@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { FinancialRecord, SystemInfo } from '../types';
 import { financialService, api } from '../services/api';
@@ -7,7 +6,7 @@ import {
     Plus, X, CreditCard,
     ArrowDownLeft, ArrowUpRight, Loader2, Save, Edit2, Wallet, Receipt, Shield,
     BarChart3, FileSpreadsheet, Printer, Download, Filter, RefreshCw, Heart, Calendar, Activity, TrendingUp, History,
-    AlertCircle, Search, Eye, DollarSign
+    AlertCircle, Search, Eye, DollarSign, Clock
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line } from 'recharts';
 
@@ -72,9 +71,10 @@ const Finance = ({ systemInfo }: FinanceProps) => {
       await api.post('/reports/log', { title: `Relatório Financeiro ${type}`, type: 'EXPORT' });
       
       if (type === 'CSV') {
-        const headers = ["Data", "Descrição", "Categoria", "Tipo", "Valor", "Status"];
+        const headers = ["Data Emissão", "Vencimento", "Descrição", "Categoria", "Tipo", "Valor", "Status"];
         const csv = records.map(r => [
             new Date(r.date).toLocaleDateString(),
+            r.next_due_date ? new Date(r.next_due_date).toLocaleDateString() : '---',
             r.description,
             r.category,
             r.type,
@@ -101,7 +101,7 @@ const Finance = ({ systemInfo }: FinanceProps) => {
   const COLORS = [systemInfo.primaryColor || '#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 space-y-4 animate-fade-in relative h-full">
+    <div className="flex h-full flex-col space-y-4 animate-fade-in relative overflow-hidden">
       <div className="flex flex-row justify-between items-center bg-slate-900 p-6 rounded-[2.5rem] text-white shadow-xl shrink-0 overflow-hidden relative">
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
         <div className="flex items-center gap-4 relative z-10">
@@ -113,7 +113,7 @@ const Finance = ({ systemInfo }: FinanceProps) => {
         </div>
         <div className="flex gap-3 relative z-10">
             <button onClick={() => handleExport('CSV')} className="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all flex items-center gap-2 shadow-lg"><FileSpreadsheet size={16}/> Planilha</button>
-            <button onClick={() => { setEditingRecord({ description: '', amount: '', type: 'INCOME', category: 'CONDOMÍNIO', date: new Date().toISOString().slice(0, 10), status: 'PENDING', is_recurring: 0 }); setIsModalOpen(true); }} className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-2xl flex items-center gap-3 transition-all" style={{ backgroundColor: systemInfo.primaryColor }}><Plus size={18}/> Novo Lançamento</button>
+            <button onClick={() => { setEditingRecord({ description: '', amount: '', type: 'INCOME', category: 'CONDOMÍNIO', date: new Date().toISOString().slice(0, 10), next_due_date: new Date().toISOString().slice(0, 10), status: 'PENDING', is_recurring: 0 }); setIsModalOpen(true); }} className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-2xl flex items-center gap-3 transition-all" style={{ backgroundColor: systemInfo.primaryColor }}><Plus size={18}/> Novo Lançamento</button>
         </div>
       </div>
 
@@ -224,23 +224,17 @@ const Finance = ({ systemInfo }: FinanceProps) => {
                                       </div>
                                   </div>
                               ))}
-                              {auditLogs.length === 0 && (
-                                  <div className="py-20 text-center bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
-                                      <History size={48} className="mx-auto text-slate-200 mb-4 opacity-30"/>
-                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nenhuma alteração registrada nesta sessão.</p>
-                                  </div>
-                              )}
                           </div>
                       </div>
                   </div>
               ) : (
                 <table className="w-full text-left border-separate border-spacing-0">
                   <thead className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b sticky top-0 z-10 backdrop-blur-md">
-                      <tr className="bg-white/95"><th className="p-8 border-b">Protocolo do Título</th><th className="p-8 border-b">Modo / Classificação</th><th className="p-8 text-right border-b">Montante Efetivo</th><th className="p-8 text-right border-b">Gestão</th></tr>
+                      <tr className="bg-white/95"><th className="p-8 border-b">Protocolo / Emissão</th><th className="p-8 border-b text-center">Vencimento</th><th className="p-8 border-b">Modo / Classificação</th><th className="p-8 text-right border-b">Montante</th><th className="p-8 text-right border-b">Gestão</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                       {isLoading ? (
-                          <tr><td colSpan={4} className="p-20 text-center"><Loader2 className="animate-spin mx-auto text-indigo-600" size={40} /></td></tr>
+                          <tr><td colSpan={5} className="p-20 text-center"><Loader2 className="animate-spin mx-auto text-indigo-600" size={40} /></td></tr>
                       ) : records.map(r => (
                           <tr key={r.id} className="hover:bg-slate-50 transition-colors group">
                               <td className="p-8">
@@ -257,6 +251,16 @@ const Finance = ({ systemInfo }: FinanceProps) => {
                                       </div>
                                   </div>
                               </td>
+                              <td className="p-8 text-center">
+                                  <div className="flex flex-col items-center">
+                                      <span className={`text-sm font-black ${r.status !== 'PAID' && new Date(r.next_due_date || '') < new Date() ? 'text-rose-600' : 'text-slate-700'}`}>
+                                          {r.next_due_date ? new Date(r.next_due_date).toLocaleDateString('pt-BR') : '---'}
+                                      </span>
+                                      {r.status !== 'PAID' && new Date(r.next_due_date || '') < new Date() && (
+                                          <span className="text-[8px] font-black text-rose-500 uppercase tracking-tighter mt-1 animate-pulse">Vencido</span>
+                                      )}
+                                  </div>
+                              </td>
                               <td className="p-8">
                                   <div className="flex items-center gap-3">
                                       <span className={`px-4 py-1.5 text-[9px] font-black uppercase rounded-xl border ${r.category === 'DOAÇÃO' ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-indigo-50 text-indigo-600 border-indigo-100'}`}>{r.category}</span>
@@ -267,9 +271,6 @@ const Finance = ({ systemInfo }: FinanceProps) => {
                               <td className="p-8 text-right"><button onClick={() => { setEditingRecord(r); setIsModalOpen(true); }} className="p-4 text-slate-300 hover:text-indigo-600 hover:bg-white hover:shadow-xl rounded-2xl transition-all border border-transparent hover:border-indigo-100"><Edit2 size={18}/></button></td>
                           </tr>
                       ))}
-                      {records.length === 0 && !isLoading && (
-                          <tr><td colSpan={4} className="p-40 text-center bg-white"><div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6"><Receipt size={32} className="text-slate-200"/></div><p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Nenhum título localizado no cluster.</p></td></tr>
-                      )}
                   </tbody>
                 </table>
               )}
@@ -288,7 +289,7 @@ const Finance = ({ systemInfo }: FinanceProps) => {
                           </div>
                       </div>
                       <div className="flex items-center gap-4">
-                          <button onClick={handleSave} disabled={isSaving} className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-2xl active:scale-95" style={{ backgroundColor: systemInfo.primaryColor }}>
+                          <button onClick={handleSave} disabled={isSaving} className="px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-3 shadow-xl active:scale-95" style={{ backgroundColor: systemInfo.primaryColor }}>
                               {isSaving ? <Loader2 className="animate-spin" size={16}/> : <Save size={16}/>} Sincronizar Registro
                           </button>
                           <button onClick={() => setIsModalOpen(false)} className="p-3.5 hover:bg-rose-500 hover:text-white text-slate-400 rounded-xl transition-all border border-white/5"><X size={24}/></button>
@@ -301,6 +302,19 @@ const Finance = ({ systemInfo }: FinanceProps) => {
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Identificação do Título</label>
                                 <input required className="w-full font-black h-16 bg-white border border-slate-200 rounded-2xl px-8 text-2xl focus:border-indigo-500 transition-all shadow-sm" placeholder="Ex: Mensalidade - Unidade 104..." value={editingRecord.description} onChange={e => setEditingRecord({...editingRecord, description: e.target.value})} />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data de Emissão</label>
+                                    <input type="date" required className="w-full font-black h-14 bg-white border border-slate-200 rounded-xl px-6 text-xl" value={editingRecord.date} onChange={e => setEditingRecord({...editingRecord, date: e.target.value})} />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-rose-500 uppercase tracking-widest ml-1">Data de Vencimento</label>
+                                    <div className="relative">
+                                        <Clock className="absolute right-4 top-1/2 -translate-y-1/2 text-rose-300" size={20} />
+                                        <input type="date" required className="w-full font-black h-14 bg-white border border-rose-200 rounded-xl px-6 text-xl focus:border-rose-500 shadow-sm" value={editingRecord.next_due_date} onChange={e => setEditingRecord({...editingRecord, next_due_date: e.target.value})} />
+                                    </div>
+                                </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                 <div className="space-y-2">
