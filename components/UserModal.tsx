@@ -258,6 +258,10 @@ const UserModal = ({ user, onClose, onSaveSuccess }: UserModalProps) => {
                                     <input className="w-full font-mono font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-xl shadow-inner outline-none" value={editingUser.cpf_cnpj} onChange={e => setEditingUser({...editingUser, cpf_cnpj: formatCPF(e.target.value)})} maxLength={14} />
                                 </div>
                                 <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Idade Cronológica</label>
+                                    <input type="number" className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-xl shadow-inner outline-none" value={editingUser.age || ''} onChange={e => setEditingUser({...editingUser, age: parseInt(e.target.value) || undefined})} />
+                                </div>
+                                <div className="space-y-3">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidade / Cluster</label>
                                     <input className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-xl uppercase shadow-inner outline-none" value={editingUser.unit} onChange={e => setEditingUser({...editingUser, unit: e.target.value})} />
                                 </div>

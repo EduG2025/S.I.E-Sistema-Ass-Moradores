@@ -2,6 +2,19 @@
 import pool from '../config/database.js';
 import { IAProviderManager } from '../core/ai/IAProviderManager.js';
 
+/**
+ * SRE Utils: Cálculo de idade cronológica
+ */
+const calculateAge = (dob) => {
+    if (!dob) return null;
+    const birth = new Date(dob);
+    const now = new Date();
+    let age = now.getFullYear() - birth.getFullYear();
+    const m = now.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+    return age;
+};
+
 export const getPublicSurvey = async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM surveys WHERE id = ? AND status = "ACTIVE"', [req.params.id]);
@@ -27,6 +40,9 @@ export const submitResponse = async (req, res) => {
         const [existing] = await pool.query('SELECT id, socialData FROM users WHERE cpf_cnpj = ?', [cpf]);
         let userId = existing[0]?.id;
         
+        // SRE: Cálculo de Idade do Titular
+        const titularAge = calculateAge(userData.birthDate);
+
         // Mapeamento Inteligente de Atributos do Censo para o Core do Usuário
         const socialMapping = {
             risk: existing[0]?.socialData?.risk || 0,
@@ -34,6 +50,7 @@ export const submitResponse = async (req, res) => {
             last_census_date: new Date().toISOString(),
             education_level: answers['edu_01'],
             nis_number: answers['soc_02'],
+            birth_date: userData.birthDate,
             benefits: [
                 answers['soc_03'] === 'SIM' ? 'BOLSA_FAMILIA' : null,
                 answers['soc_04'] === 'SIM' ? 'BPC' : null,
@@ -42,12 +59,27 @@ export const submitResponse = async (req, res) => {
         };
 
         if (!userId) {
-            const [result] = await pool.query('INSERT INTO users (name, cpf_cnpj, unit, email, phone, role, status, active, socialData) VALUES (?, ?, ?, ?, ?, "RESIDENT", "PENDING", 1, ?)',
-                [userData.name, cpf, userData.unit, userData.email, userData.phone, JSON.stringify(socialMapping)]);
+            const [result] = await pool.query('INSERT INTO users (name, cpf_cnpj, unit, email, phone, age, role, status, active, socialData) VALUES (?, ?, ?, ?, ?, ?, "RESIDENT", "PENDING", 1, ?)',
+                [userData.name, cpf, userData.unit, userData.email, userData.phone, titularAge, JSON.stringify(socialMapping)]);
             userId = result.insertId;
         } else {
-            await pool.query('UPDATE users SET unit = ?, email = ?, phone = ?, socialData = ? WHERE id = ?', 
-                [userData.unit, userData.email, userData.phone, JSON.stringify(socialMapping), userId]);
+            await pool.query('UPDATE users SET unit = ?, email = ?, phone = ?, age = ?, socialData = ? WHERE id = ?', 
+                [userData.unit, userData.email, userData.phone, titularAge, JSON.stringify(socialMapping), userId]);
+        }
+
+        // SRE: Processamento de Dependentes (Repeater)
+        // Busca perguntas do tipo repeater que contenham campos de data de nascimento
+        for (const [qId, responseValue] of Object.entries(answers)) {
+            if (Array.isArray(responseValue)) {
+                // Para cada dependente no repeater
+                for (const member of responseValue) {
+                    // Tenta localizar um campo de nascimento (ex: dep_nasc)
+                    const dobField = Object.keys(member).find(k => k.toLowerCase().includes('nasc') || k.toLowerCase().includes('birth'));
+                    if (dobField && member[dobField]) {
+                        member.age = calculateAge(member[dobField]);
+                    }
+                }
+            }
         }
 
         await pool.query('INSERT INTO survey_responses (survey_id, user_id, cpf, user_name, answers) VALUES (?, ?, ?, ?, ?)',

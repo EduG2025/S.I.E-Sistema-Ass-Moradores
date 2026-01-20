@@ -92,6 +92,7 @@ export interface User {
   status: UserStatus;
   active: boolean;
   cpf_cnpj: string;
+  age?: number; // SRE: Atributo bioestatístico
   email?: string;
   phone?: string;
   avatar_url?: string;

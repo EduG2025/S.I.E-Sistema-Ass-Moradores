@@ -6,7 +6,7 @@ import { normalizeCPF, validateCPF, formatCPF } from '../utils/cpf';
 import {
     ShieldCheck, CheckCircle2, X, Fingerprint, Loader2, Save, ChevronRight, 
     AlertTriangle, Users, Plus, Trash2, ArrowRight, Brain, Sparkles, ClipboardList,
-    ChevronLeft, RotateCcw, HeartPulse, User, MapPin, Building, Laptop, GraduationCap, HandHelping, Landmark, Info
+    ChevronLeft, RotateCcw, HeartPulse, User, MapPin, Building, Laptop, GraduationCap, HandHelping, Landmark, Info, Calendar
 } from 'lucide-react';
 
 const PublicSenso = () => {
@@ -20,7 +20,7 @@ const PublicSenso = () => {
     const [cpfIdentifier, setCpfIdentifier] = useState('');
     const [aiSummary, setAiSummary] = useState('');
 
-    const [userData, setUserData] = useState({ name: '', unit: '', email: '', phone: '' });
+    const [userData, setUserData] = useState({ name: '', unit: '', email: '', phone: '', birthDate: '' });
     const [answers, setAnswers] = useState({} as Record<string, any>);
 
     useEffect(() => {
@@ -79,7 +79,8 @@ const PublicSenso = () => {
                     name: res.data.name, 
                     unit: res.data.unit || '', 
                     email: res.data.email || '', 
-                    phone: res.data.phone || '' 
+                    phone: res.data.phone || '',
+                    birthDate: res.data.birthDate || '' // SRE: Sincronização de DOB se existir
                 });
             }
             setStep('FORM');
@@ -95,20 +96,19 @@ const PublicSenso = () => {
 
     const visibleQuestions = survey?.questions?.filter(isQuestionVisible) || [];
     
-    // Agrupamento de seções para o Wizard (5 perguntas por página)
     const questionsPerSection = 5;
-    const totalSteps = Math.ceil(visibleQuestions.length / questionsPerSection) + 1; // +1 para Dados de Contato
+    const totalSteps = Math.ceil(visibleQuestions.length / questionsPerSection) + 1;
     const progress = ((currentSection + 1) / totalSteps) * 100;
 
     const getCurrentQuestions = () => {
-        if (currentSection === 0) return []; // Seção de contato manual
+        if (currentSection === 0) return [];
         const start = (currentSection - 1) * questionsPerSection;
         return visibleQuestions.slice(start, start + questionsPerSection);
     };
 
     const handleNext = () => {
-        if (currentSection === 0 && (!userData.name || !userData.unit)) {
-            alert("Nome e Unidade são obrigatórios."); return;
+        if (currentSection === 0 && (!userData.name || !userData.unit || !userData.birthDate)) {
+            alert("Nome, Unidade e Data de Nascimento são obrigatórios."); return;
         }
         if (currentSection < totalSteps - 1) {
             setCurrentSection(prev => prev + 1);
@@ -212,9 +212,16 @@ const PublicSenso = () => {
                                             <User size={18}/> 01. Informações Básicas
                                         </h4>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            <div className="space-y-2">
+                                            <div className="space-y-2 md:col-span-2">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
                                                 <input className="w-full h-14 bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 text-sm font-black uppercase focus:bg-white focus:border-indigo-500 transition-all" value={userData.name} onChange={e => setUserData({...userData, name: e.target.value})} placeholder="Seu nome completo..." />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data de Nascimento</label>
+                                                <div className="relative">
+                                                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                                                    <input type="date" className="w-full h-14 bg-slate-50 border-2 border-slate-100 rounded-2xl pl-12 pr-6 text-sm font-black uppercase focus:bg-white focus:border-indigo-500 transition-all" value={userData.birthDate} onChange={e => setUserData({...userData, birthDate: e.target.value})} />
+                                                </div>
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidade / Cluster</label>

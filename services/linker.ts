@@ -1,8 +1,20 @@
 
 import { userService } from './api';
 import { User, UserRole, UserStatus } from '../types';
-// FIX: Corrected import source for CPF utilities
 import { normalizeCPF, validateCPF } from '../utils/cpf';
+
+/**
+ * SRE Utils: Cálculo de idade cronológica
+ */
+const calculateAge = (dob: string | undefined): number | undefined => {
+    if (!dob) return undefined;
+    const birth = new Date(dob);
+    const now = new Date();
+    let age = now.getFullYear() - birth.getFullYear();
+    const m = now.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+    return age;
+};
 
 export const SensoResidentLinker = {
     /**
@@ -19,13 +31,16 @@ export const SensoResidentLinker = {
 
         try {
             const allUsers = await userService.getAll();
-            // FIX: Access data correctly through .data.data and fixed u.cpfCnpj to u.cpf_cnpj
             const found = allUsers.data.data.find((u: User) => normalizeCPF(u.cpf_cnpj || '') === cleanCPF);
+            
+            // SRE: Idade calculada para persistência
+            const age = calculateAge(data.birthDate);
 
             if (found) {
                 // FLUXO 1: ATUALIZAÇÃO SOBERANA
                 const updates: any = { 
-                    socialData: { ...found.socialData, ...data.socialData } 
+                    socialData: { ...found.socialData, ...data.socialData },
+                    age: age
                 };
                 
                 // Mapeia campos do senso para o core do usuário
@@ -44,6 +59,7 @@ export const SensoResidentLinker = {
                     cpf_cnpj: cleanCPF,
                     email: data.email,
                     unit: data.unit,
+                    age: age,
                     role: UserRole.RESIDENT,
                     status: 'PENDING' as UserStatus,
                     active: true,

@@ -18,8 +18,8 @@ app.use(cors());
 app.use(express.json({ limit: '100mb' }));
 
 /**
- * SRE SCHEMA ENFORCEMENT - PROTOCOLO TOTAL V530.0
- * Inclusão de prompt_templates para biblioteca do Ghostwriter.
+ * SRE SCHEMA ENFORCEMENT - PROTOCOLO TOTAL V530.1
+ * Inclusão de campo age para bioestatística de membros.
  */
 const ensureSchema = async () => {
     try {
@@ -29,14 +29,14 @@ const ensureSchema = async () => {
             'CREATE TABLE IF NOT EXISTS roles (id VARCHAR(50) PRIMARY KEY, label VARCHAR(100) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)',
             'CREATE TABLE IF NOT EXISTS role_permissions (role VARCHAR(50) NOT NULL, permission_id VARCHAR(100) NOT NULL, PRIMARY KEY (role, permission_id))',
             
-            // USERS & IDENTITY
-            'CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, cpf_cnpj VARCHAR(20) NOT NULL UNIQUE, email VARCHAR(255), password_hash VARCHAR(255), role VARCHAR(50) DEFAULT "RESIDENT", status VARCHAR(20) DEFAULT "PENDING", active TINYINT(1) DEFAULT 0, unit VARCHAR(50), phone VARCHAR(50), avatar_url LONGTEXT, socialData JSON, coordinates JSON, parent_id INT, last_login DATETIME, address TEXT, neighborhood VARCHAR(100), city VARCHAR(100), state VARCHAR(50), zip_code VARCHAR(20), profession VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)',
+            // USERS & IDENTITY (SRE UPDATE: Added age field)
+            'CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, cpf_cnpj VARCHAR(20) NOT NULL UNIQUE, email VARCHAR(255), password_hash VARCHAR(255), role VARCHAR(50) DEFAULT "RESIDENT", status VARCHAR(20) DEFAULT "PENDING", active TINYINT(1) DEFAULT 0, unit VARCHAR(50), age INT, phone VARCHAR(50), avatar_url LONGTEXT, socialData JSON, coordinates JSON, parent_id INT, last_login DATETIME, address TEXT, neighborhood VARCHAR(100), city VARCHAR(100), state VARCHAR(50), zip_code VARCHAR(20), profession VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)',
             
             // FINANCE & ASSETS
             'CREATE TABLE IF NOT EXISTS financials (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT, description VARCHAR(255) NOT NULL, amount DECIMAL(15,2) NOT NULL, type ENUM("INCOME", "EXPENSE") NOT NULL, category VARCHAR(100), status ENUM("PAID", "PENDING", "OVERDUE", "CANCELLED") DEFAULT "PENDING", is_recurring TINYINT(1) DEFAULT 0, billing_cycle VARCHAR(50), next_due_date DATE, date DATE NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)',
             'CREATE TABLE IF NOT EXISTS assets (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, category VARCHAR(100), value DECIMAL(15,2), status VARCHAR(50), date_acquired DATE, responsible_id INT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)',
             
-            // GOVERNANCE & DOCUMENTS
+            // GOVERNANÇA & DOCUMENTS
             'CREATE TABLE IF NOT EXISTS documents (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255) NOT NULL, content LONGTEXT, type VARCHAR(50), status VARCHAR(20) DEFAULT "DRAFT", created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)',
             'CREATE TABLE IF NOT EXISTS assemblies (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255) NOT NULL, description TEXT, date DATETIME, status VARCHAR(20) DEFAULT "SCHEDULED", created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)',
             'CREATE TABLE IF NOT EXISTS prompt_templates (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255) NOT NULL, content TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)',
@@ -94,7 +94,12 @@ const ensureSchema = async () => {
             await pool.query('INSERT IGNORE INTO role_permissions (role, permission_id) VALUES ("ADMIN", ?)', [perm]);
         }
 
-        console.log("✅ SRE KERNEL: Integridade Operacional V530 Homologada.");
+        // SRE HOTFIX: Ensure age column exists on existing installations
+        try {
+            await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS age INT AFTER unit');
+        } catch (e) { /* Coluna pode já existir */ }
+
+        console.log("✅ SRE KERNEL: Integridade Operacional V530.1 Homologada.");
     } catch (e) { 
         console.error("❌ Schema Panic:", e.message); 
     }
