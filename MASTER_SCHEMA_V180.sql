@@ -1,6 +1,6 @@
 
 -- ---------------------------------------------------------
--- S.I.E PRO - MASTER DATABASE SCHEMA V180.0
+-- S.I.E PRO - MASTER DATABASE SCHEMA V180.1
 -- PADRÃO DE RESILIÊNCIA SRE - CLUSTER MASTER
 -- ---------------------------------------------------------
 
@@ -44,10 +44,11 @@ CREATE TABLE IF NOT EXISTS `users` (
   `cpf_cnpj` VARCHAR(20) NOT NULL,
   `email` VARCHAR(255),
   `password_hash` VARCHAR(255),
-  `role` VARCHAR(50) DEFAULT 'RESIDENT',
+  `role强` VARCHAR(50) DEFAULT 'RESIDENT',
   `status` VARCHAR(20) DEFAULT 'PENDING',
   `active` TINYINT(1) DEFAULT 0,
   `unit` VARCHAR(50),
+  `age` INT, -- SRE UPDATE: Atributo biográfico
   `phone` VARCHAR(50),
   `avatar_url` LONGTEXT,
   `socialData` JSON DEFAULT NULL, -- Score de risco, vulnerabilidades, etc.

@@ -1,16 +1,15 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { UnitData, SystemInfo, User } from '../types';
-import { mapService, userService, aiService } from '../services/api';
+import { UnitData, SystemInfo, SocialData } from '../types';
+import { mapService, aiService } from '../services/api';
 import { 
   Loader2, X, Map as MapIcon, Layers, Flame, User as UserIcon, 
-  MapPin, RefreshCw, Info, Search, Shield, Activity, Fingerprint, 
-  Target, AlertCircle, ChevronRight, Plus, Sparkles, Brain, LayoutGrid,
-  Filter, ZoomIn, ZoomOut, Zap, Crosshair, HelpCircle, Globe, ExternalLink, Navigation,
-  ShieldAlert
+  MapPin, Search, Plus, Sparkles, Brain, LayoutGrid,
+  ZoomIn, ZoomOut, Navigation2, Phone, Calendar, Heart,
+  Fingerprint, Briefcase, GraduationCap, ShieldCheck, Sun, Moon,
+  Home, Building2, MapPinned, AlertCircle
 } from 'lucide-react';
 import * as L from 'leaflet';
-import UserModal from './UserModal';
 
 interface SmartMapProps {
   systemInfo?: SystemInfo;
@@ -19,29 +18,17 @@ interface SmartMapProps {
 const SmartMap = ({ systemInfo }: SmartMapProps) => {
   const [allUnits, setAllUnits] = useState<UnitData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isInitializingHQ, setIsInitializingHQ] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState<UnitData | null>(null);
-  const [investigatingUser, setInvestigatingUser] = useState<User | null>(null);
-  const [activeTagFilter, setActiveTagFilter] = useState('TODOS');
   const [mapMode, setMapMode] = useState<'MARKERS' | 'HEATMAP'>('MARKERS');
-  const [apiError, setApiError] = useState<string | null>(null);
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
+  const [layersPanelOpen, setLayersPanelOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
-  // GROUNDING STATE
-  const [geoQuery, setGeoQuery] = useState('');
-  const [isGeoLoading, setIsGeoLoading] = useState(false);
-  const [geoResults, setGeoResults] = useState<{text: string, groundingChunks: any[]} | null>(null);
-  const [useLiveSearch, setUseLiveSearch] = useState(true);
-
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any | null>(null);
   const markersGroupRef = useRef<any | null>(null);
+  const tileLayerRef = useRef<any | null>(null);
   const heatLayerRef = useRef<any | null>(null);
-
-  const dynamicTags = useMemo(() => {
-    const tags = new Set<string>();
-    allUnits.forEach(u => u.tags?.forEach(t => tags.add(t)));
-    return Array.from(tags).sort();
-  }, [allUnits]);
 
   useEffect(() => {
     loadUnits();
@@ -49,249 +36,253 @@ const SmartMap = ({ systemInfo }: SmartMapProps) => {
   }, []);
 
   const loadUnits = async () => {
-    setIsLoading(true);
     try {
       const res = await mapService.getUnits();
       const rawUsers = res.data?.data || [];
-      const mappedUnits = rawUsers.map((u: any) => ({
-        id: u.id,
-        residentName: u.name,
-        cpf: u.cpf_cnpj || '',
-        address: u.address || '',
-        unit: u.unit || 'S/N',
-        status: u.status,
-        role: u.role,
-        coordinates: typeof u.coordinates === 'string' ? JSON.parse(u.coordinates) : u.coordinates,
-        tags: (typeof u.socialData === 'string' ? JSON.parse(u.socialData) : u.socialData)?.tags || [],
-        socialData: typeof u.socialData === 'string' ? JSON.parse(u.socialData) : u.socialData,
-      })).filter((u: any) => u.coordinates?.lat && u.coordinates?.lng);
+      const mappedUnits = rawUsers.map((u: any) => {
+        const social = typeof u.socialData === 'string' ? JSON.parse(u.socialData) : u.socialData;
+        return {
+          id: u.id,
+          residentName: u.name,
+          cpf: u.cpf_cnpj || '',
+          address: u.address || '',
+          unit: u.unit || 'S/N',
+          status: u.status,
+          role: u.role,
+          phone: u.phone || '',
+          age: u.age || 0,
+          coordinates: typeof u.coordinates === 'string' ? JSON.parse(u.coordinates) : u.coordinates,
+          tags: social?.tags || [],
+          socialData: social,
+        };
+      }).filter((u: any) => u.coordinates?.lat && u.coordinates?.lng);
       setAllUnits(mappedUnits);
-    } catch (e) { setAllUnits([]); } 
-    finally { setIsLoading(false); }
-  };
-
-  // Neural Geocoding HQ
-  const locateHQ = async () => {
-      if (!systemInfo?.address || !mapInstanceRef.current) return;
-      setIsInitializingHQ(true);
-      setApiError(null);
-      try {
-          const res = await aiService.chat(
-              `Localize as coordenadas geográficas (latitude e longitude) exatas do seguinte endereço: ${systemInfo.address}. Retorne APENAS um objeto JSON no formato {"lat": valor, "lng": valor}.`, 
-              { maps: true }
-          );
-          
-          // Tenta extrair JSON da resposta
-          const jsonMatch = res.data.text.match(/\{.*\}/s);
-          if (jsonMatch) {
-              const coords = JSON.parse(jsonMatch[0]);
-              if (coords.lat && coords.lng) {
-                  mapInstanceRef.current.flyTo([coords.lat, coords.lng], 17, { animate: true, duration: 2 });
-                  // Adiciona marcador da sede
-                  L.marker([coords.lat, coords.lng], {
-                      icon: L.divIcon({
-                          className: 'hq-marker',
-                          html: `<div class="w-12 h-12 bg-slate-900 rounded-full border-4 border-white shadow-2xl flex items-center justify-center text-indigo-400 animate-bounce"><Shield size={24}/></div>`
-                      })
-                  }).addTo(mapInstanceRef.current).bindPopup(`<b class="uppercase font-black">Sede Administrativa</b><br/>${systemInfo.shortName}`).openPopup();
-              }
-          }
-      } catch (e: any) {
-          console.error("Geocoding Fail", e);
-          if (e.response?.data?.error?.includes("NEURAL_LINK_INVALID") || e.message?.includes("NEURAL_LINK_INVALID")) {
-              setApiError("FALHA DE COMUNICAÇÃO NEURAL: Chave de API inválida ou expirada.");
-          }
-      } finally {
-          setIsInitializingHQ(false);
-      }
+    } catch (e) { 
+        console.error("Map Load Fail", e);
+    } finally { setIsLoading(false); }
   };
 
   useEffect(() => {
     if (!isLoading && mapContainerRef.current && !mapInstanceRef.current) {
         mapInstanceRef.current = L.map(mapContainerRef.current, { 
           center: [-23.5505, -46.6333], 
-          zoom: 15, 
+          zoom: 16, 
           zoomControl: false, 
           attributionControl: false 
         });
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(mapInstanceRef.current);
-        markersGroupRef.current = L.layerGroup().addTo(mapInstanceRef.current);
-        
-        // Se houver endereço, tenta localizar HQ após pequeno delay para estabilidade do mapa
-        if (systemInfo?.address) {
-            setTimeout(locateHQ, 1000);
-        }
-    }
-  }, [isLoading, systemInfo]);
 
-  const filteredUnits = useMemo(() => {
-    return allUnits.filter(u => activeTagFilter === 'TODOS' || u.tags?.includes(activeTagFilter));
-  }, [allUnits, activeTagFilter]);
+        updateTiles();
+        markersGroupRef.current = L.layerGroup().addTo(mapInstanceRef.current);
+    }
+  }, [isLoading]);
+
+  const updateTiles = () => {
+    if (!mapInstanceRef.current) return;
+    if (tileLayerRef.current) mapInstanceRef.current.removeLayer(tileLayerRef.current);
+    
+    const tileUrl = theme === 'dark' 
+        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+        : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+    
+    tileLayerRef.current = L.tileLayer(tileUrl).addTo(mapInstanceRef.current);
+  };
+
+  useEffect(() => {
+      updateTiles();
+  }, [theme]);
+
+  // MOTOR DE BUSCA EM TEMPO REAL
+  const searchResults = useMemo(() => {
+      if (!searchQuery.trim() || searchQuery.length < 2) return [];
+      const q = searchQuery.toLowerCase();
+      return allUnits.filter(u => {
+          const searchableFields = [
+              u.residentName, u.cpf, u.unit, u.phone, u.address, u.role,
+              u.tags.join(' ')
+          ].join(' ').toLowerCase();
+          return searchableFields.includes(q);
+      }).slice(0, 6);
+  }, [allUnits, searchQuery]);
+
+  const handleSelectFromSearch = (unit: UnitData) => {
+      setSearchQuery('');
+      focusOnUnit(unit);
+  };
+
+  const focusOnUnit = (unit: UnitData) => {
+      setSelectedUnit(unit);
+      mapInstanceRef.current.flyTo([unit.coordinates.lat, unit.coordinates.lng], 18, { 
+          animate: true, 
+          duration: 1.5 
+      });
+  };
 
   useEffect(() => {
     if (!mapInstanceRef.current || !markersGroupRef.current) return;
     markersGroupRef.current.clearLayers();
     if (heatLayerRef.current) { mapInstanceRef.current.removeLayer(heatLayerRef.current); heatLayerRef.current = null; }
 
-    if (filteredUnits.length > 0) {
-      filteredUnits.forEach(unit => {
-        if (mapMode === 'MARKERS') {
-          const riskColor = (unit.socialData?.risk || 0) > 70 ? '#ef4444' : (unit.socialData?.risk || 0) > 40 ? '#f59e0b' : '#10b981';
-          L.marker([unit.coordinates.lat, unit.coordinates.lng] as any, {
-            icon: L.divIcon({ 
-              className: 'custom-marker', 
-              html: `<div class="w-8 h-8 rounded-xl border-2 border-slate-900 shadow-lg flex items-center justify-center transition-all hover:scale-125" style="background-color: ${riskColor}"><div class="w-1.5 h-1.5 bg-white rounded-full"></div></div>` 
-            })
-          }).on('click', () => { setSelectedUnit(unit); setGeoResults(null); }).addTo(markersGroupRef.current);
-        }
-      });
-      if (mapMode === 'HEATMAP' && (window as any).L.heatLayer) {
-          const heatPoints = filteredUnits.map(u => [u.coordinates.lat, u.coordinates.lng, (u.socialData?.risk || 50) / 100]);
-          heatLayerRef.current = (window as any).L.heatLayer(heatPoints, { radius: 35, blur: 20 }).addTo(mapInstanceRef.current);
-      }
-    }
-  }, [filteredUnits, mapMode]);
+    allUnits.forEach(unit => {
+      const riskColor = (unit.socialData?.risk || 0) > 70 ? '#ef4444' : (unit.socialData?.risk || 0) > 40 ? '#f59e0b' : '#4f46e5';
+      const isActive = selectedUnit?.id === unit.id;
 
-  const handleGeoSearch = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!geoQuery.trim()) return;
-      setIsGeoLoading(true);
-      setGeoResults(null);
-      setApiError(null);
-      try {
-          const center = mapInstanceRef.current.getCenter();
-          const res = await aiService.chat(geoQuery, { 
-              search: useLiveSearch, 
-              maps: true, 
-              location: { lat: center.lat, lng: center.lng } 
-          });
-          setGeoResults(res.data);
-      } catch (e: any) { 
-          setApiError(e.response?.data?.error || "Falha na consulta geo-neural."); 
+      if (mapMode === 'MARKERS') {
+        L.marker([unit.coordinates.lat, unit.coordinates.lng] as any, {
+          icon: L.divIcon({ 
+            className: 'custom-marker', 
+            html: `
+              <div class="relative group">
+                <div class="w-10 h-10 rounded-full border-4 ${isActive ? 'border-white scale-125 shadow-[0_0_30px_rgba(79,70,229,0.8)]' : 'border-white shadow-xl'} transition-all flex items-center justify-center" style="background-color: ${riskColor}">
+                  <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+                </div>
+              </div>`
+          })
+        }).on('click', () => focusOnUnit(unit)).addTo(markersGroupRef.current);
       }
-      finally { setIsGeoLoading(false); }
-  };
+    });
+
+    if (mapMode === 'HEATMAP' && (window as any).L.heatLayer) {
+        const heatPoints = allUnits.map(u => [u.coordinates.lat, u.coordinates.lng, (u.socialData?.risk || 50) / 100]);
+        heatLayerRef.current = (window as any).L.heatLayer(heatPoints, { radius: 35, blur: 15 }).addTo(mapInstanceRef.current);
+    }
+  }, [allUnits, mapMode, selectedUnit, theme]);
 
   return (
-    <div className="h-full w-full flex flex-col relative bg-slate-950 rounded-[3rem] overflow-hidden border border-white/5 shadow-2xl">
-      <div ref={mapContainerRef} className="absolute inset-0 z-0 brightness-[0.7] contrast-[1.2]"></div>
-      
-      {/* ERROR BANNER SRE */}
-      {apiError && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[2000] animate-bounce">
-              <div className="bg-rose-600 text-white px-8 py-3 rounded-full flex items-center gap-3 shadow-2xl border border-rose-500 font-black text-[10px] uppercase tracking-widest">
-                  <ShieldAlert size={18}/> {apiError}
+    <div className={`h-screen w-full flex flex-col relative overflow-hidden transition-all duration-700 ${theme === 'dark' ? 'bg-slate-950' : 'bg-slate-50'}`}>
+      <div ref={mapContainerRef} className={`absolute inset-0 z-0 ${theme === 'dark' ? 'brightness-[0.7] contrast-[1.2]' : ''}`}></div>
+
+      {/* FLOATING SEARCH HUD (GOOGLE MAPS STYLE) */}
+      <div className="absolute top-10 left-10 z-[2000] w-full max-w-[500px] px-6 lg:px-0">
+          <div className={`backdrop-blur-3xl p-3 rounded-[2.5rem] shadow-[0_40px_100px_rgba(0,0,0,0.3)] border transition-all ${theme === 'dark' ? 'bg-slate-900/95 border-white/10' : 'bg-white/95 border-slate-200'}`}>
+              <div className="flex items-center gap-4">
+                  <div className="pl-6 text-indigo-500"><Search size={22} className="animate-pulse" /></div>
+                  <input 
+                      type="text" 
+                      placeholder="Pesquisar Membro, Unid, CPF..." 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className={`flex-1 bg-transparent border-none outline-none font-black text-sm py-4 uppercase tracking-widest placeholder:text-slate-300 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}
+                  />
+                  <div className="flex items-center gap-2 pr-4">
+                    <button onClick={() => setLayersPanelOpen(!layersPanelOpen)} title="Camadas" className={`p-4 rounded-2xl transition-all ${layersPanelOpen ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
+                        <Layers size={20}/>
+                    </button>
+                    <div className="w-px h-8 bg-slate-200 mx-2"></div>
+                    <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-4 text-slate-400 hover:text-indigo-600 rounded-2xl transition-all">
+                        {theme === 'dark' ? <Sun size={20}/> : <Moon size={20}/>}
+                    </button>
+                  </div>
+              </div>
+
+              {/* SEARCH RESULTS DINÂMICOS */}
+              {searchResults.length > 0 && (
+                  <div className={`mt-4 py-3 border-t overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar ${theme === 'dark' ? 'border-white/5' : 'border-slate-100'}`}>
+                      {searchResults.map(res => (
+                          <button key={res.id} onClick={() => handleSelectFromSearch(res)} className={`w-full flex items-center gap-5 px-6 py-5 text-left transition-all border-b last:border-0 ${theme === 'dark' ? 'hover:bg-white/5 border-white/5' : 'hover:bg-slate-50 border-slate-50'}`}>
+                              <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-500 shrink-0">
+                                  <UserIcon size={20}/>
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                  <div className="flex justify-between items-center mb-1">
+                                      <p className={`text-sm font-black uppercase truncate ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{res.residentName}</p>
+                                      <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-2 py-1 rounded uppercase border border-slate-200">Unid {res.unit}</span>
+                                  </div>
+                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">Documento: {res.cpf}</p>
+                              </div>
+                          </button>
+                      ))}
+                  </div>
+              )}
+          </div>
+      </div>
+
+      {/* MODAL DE CAMADAS (HUD) */}
+      {layersPanelOpen && (
+          <div className={`absolute top-40 left-10 z-[2000] w-[340px] backdrop-blur-3xl rounded-[3rem] border shadow-2xl animate-slide-up p-10 ${theme === 'dark' ? 'bg-slate-900/95 border-white/10' : 'bg-white/95 border-slate-200'}`}>
+              <div className="flex justify-between items-center mb-8 px-2">
+                <h5 className="text-[11px] font-black text-indigo-500 uppercase tracking-[0.2em]">Malha Territorial</h5>
+                <button onClick={() => setLayersPanelOpen(false)} className="text-slate-400 hover:text-rose-500 transition-colors"><X size={18}/></button>
+              </div>
+              <div className="space-y-4">
+                  <button onClick={() => setMapMode('MARKERS')} className={`w-full flex items-center justify-between p-6 rounded-[2rem] transition-all border ${mapMode === 'MARKERS' ? 'bg-indigo-600 text-white border-indigo-500 shadow-xl' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'}`}>
+                    <div className="flex items-center gap-4">
+                        <LayoutGrid size={20}/>
+                        <span className="text-[11px] font-black uppercase tracking-widest">Registros Ativos</span>
+                    </div>
+                    {mapMode === 'MARKERS' && <ShieldCheck size={18}/>}
+                  </button>
+                  <button onClick={() => setMapMode('HEATMAP')} className={`w-full flex items-center justify-between p-6 rounded-[2rem] transition-all border ${mapMode === 'HEATMAP' ? 'bg-rose-600 text-white border-rose-500 shadow-xl' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'}`}>
+                    <div className="flex items-center gap-4">
+                        <Flame size={20}/>
+                        <span className="text-[11px] font-black uppercase tracking-widest">Calor Social</span>
+                    </div>
+                    {mapMode === 'HEATMAP' && <ShieldCheck size={18}/>}
+                  </button>
               </div>
           </div>
       )}
 
-      {/* HQ INITIALIZING OVERLAY */}
-      {isInitializingHQ && (
-          <div className="absolute inset-0 z-[1500] bg-slate-950/40 backdrop-blur-sm flex items-center justify-center">
-              <div className="flex flex-col items-center gap-4 text-white">
-                  <Loader2 className="animate-spin text-indigo-400" size={48}/>
-                  <p className="font-black text-[10px] uppercase tracking-[0.4em] animate-pulse">Localizando Sede Administrativa...</p>
-              </div>
-          </div>
-      )}
-      
-      {/* GROUNDED GEO-INTELLIGENCE CONSOLE */}
-      <div className="absolute top-8 left-8 right-8 z-[1000] flex flex-col gap-4 items-center">
-        <form onSubmit={handleGeoSearch} className="bg-slate-900/90 backdrop-blur-3xl p-2 rounded-[2.5rem] shadow-2xl border border-white/10 flex items-center gap-4 w-full max-w-4xl group focus-within:border-indigo-500/50 transition-all">
-          <div className="pl-6 text-indigo-400 group-focus-within:animate-pulse"><Globe size={24}/></div>
-          <input 
-            type="text" 
-            placeholder="Pergunte ao SRE Vision: 'Onde há hospitais próximos?' ou 'Como está o trânsito?'" 
-            value={geoQuery}
-            onChange={(e) => setGeoQuery(e.target.value)}
-            className="flex-1 bg-transparent border-none outline-none text-white font-bold text-sm placeholder:text-slate-500 py-5 uppercase tracking-wide"
-          />
-          <div className="flex items-center gap-2 pr-4">
-              <button type="button" onClick={() => setUseLiveSearch(!useLiveSearch)} className={`p-3 rounded-xl transition-all ${useLiveSearch ? 'bg-indigo-600 text-white' : 'bg-white/5 text-slate-500'}`} title="Search Grounding">
-                  <Zap size={16}/>
-              </button>
-              <button type="submit" disabled={isGeoLoading} className="p-4 bg-white text-slate-950 rounded-2xl hover:bg-indigo-500 hover:text-white transition-all shadow-xl active:scale-95 disabled:opacity-30">
-                  {isGeoLoading ? <Loader2 className="animate-spin" size={20}/> : <ChevronRight size={20}/>}
-              </button>
-          </div>
-        </form>
-
-        {geoResults && (
-            <div className="w-full max-w-4xl bg-slate-900/95 backdrop-blur-3xl rounded-[3rem] p-10 border border-white/10 shadow-2xl animate-slide-up max-h-[400px] overflow-y-auto custom-scrollbar">
-                <div className="flex justify-between items-start mb-6">
-                    <div className="flex items-center gap-3">
-                        <div className="p-3 bg-indigo-600 rounded-2xl text-white shadow-lg"><Brain size={20}/></div>
-                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Resposta Grounded</p>
-                    </div>
-                    <button onClick={() => setGeoResults(null)} className="p-2 text-slate-500 hover:text-white"><X size={20}/></button>
-                </div>
-                <p className="text-slate-100 text-lg font-medium leading-relaxed uppercase italic mb-8 border-l-4 border-indigo-600 pl-6">"{geoResults.text}"</p>
-                
-                {geoResults.groundingChunks.length > 0 && (
-                    <div className="space-y-4">
-                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Navigation size={12}/> Fontes de Ancoragem (Grounding):</p>
-                        <div className="flex flex-wrap gap-3">
-                            {geoResults.groundingChunks.map((chunk, idx) => (
-                                <a key={idx} href={chunk.maps?.uri || chunk.web?.uri} target="_blank" rel="noreferrer" className="flex items-center gap-3 px-5 py-3 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-indigo-300 uppercase hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
-                                    {chunk.maps?.title || chunk.web?.title} <ExternalLink size={12}/>
-                                </a>
-                            ))}
-                        </div>
-                    </div>
-                )}
-            </div>
-        )}
-      </div>
-
-      <div className="absolute top-32 left-8 z-[1000] flex flex-col gap-4 animate-fade-in">
-        <div className="bg-slate-900/95 backdrop-blur-3xl p-7 rounded-[3rem] shadow-2xl border border-white/10 min-w-[280px]">
-          <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-6 flex items-center gap-3"><Filter size={14}/> Camadas Sociais</p>
-          <div className="space-y-2">
-            <button onClick={() => setActiveTagFilter('TODOS')} className={`w-full text-left px-6 py-4 text-[9px] font-black uppercase rounded-2xl transition-all border ${activeTagFilter === 'TODOS' ? 'bg-indigo-600 text-white' : 'bg-white/5 border-white/5 text-slate-400'}`}>MAPA INTEGRAL</button>
-            {dynamicTags.map(tag => (
-              <button key={tag} onClick={() => setActiveTagFilter(tag)} className={`w-full text-left px-6 py-4 text-[9px] font-black uppercase rounded-2xl transition-all border ${activeTagFilter === tag ? 'bg-indigo-600 text-white' : 'bg-white/5 border-white/5 text-slate-400'}`}>{tag}</button>
-            ))}
-          </div>
-        </div>
-        <div className="bg-slate-900/90 backdrop-blur-3xl p-2 rounded-[2rem] border border-white/10 flex flex-col gap-1">
-            <button onClick={() => setMapMode('MARKERS')} className={`p-4 rounded-xl ${mapMode === 'MARKERS' ? 'bg-indigo-600 text-white' : 'text-slate-400'}`}><LayoutGrid size={20}/></button>
-            <button onClick={() => setMapMode('HEATMAP')} className={`p-4 rounded-xl ${mapMode === 'HEATMAP' ? 'bg-rose-600 text-white' : 'text-slate-400'}`}><Flame size={20}/></button>
-        </div>
-      </div>
-
+      {/* DOSSIÊ DO MORADOR (HUD INFERIOR) */}
       {selectedUnit && (
-          <div className="absolute bottom-10 left-10 right-10 z-[2000] animate-slide-up">
-              <div className="bg-slate-900/95 backdrop-blur-3xl rounded-[4rem] p-10 lg:p-16 shadow-2xl border border-white/10 max-w-[1400px] mx-auto overflow-hidden">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 items-center">
-                      <div className="lg:col-span-4 flex items-center gap-8">
-                          <div className="w-24 h-24 rounded-[2.5rem] bg-indigo-600/20 text-indigo-500 flex items-center justify-center border-4 border-slate-800"><UserIcon size={48}/></div>
+          <div className="absolute bottom-10 right-10 left-10 lg:left-auto lg:w-[500px] z-[2000] animate-slide-up">
+              <div className={`backdrop-blur-3xl rounded-[4rem] shadow-[0_50px_100px_rgba(0,0,0,0.4)] border overflow-hidden flex flex-col ${theme === 'dark' ? 'bg-slate-900/95 border-white/10' : 'bg-white/95 border-slate-200'}`}>
+                  <div className="p-10 pb-6 flex justify-between items-start">
+                      <div className="flex items-center gap-8">
+                          <div className="w-24 h-24 rounded-[2.5rem] bg-indigo-600 text-white flex items-center justify-center shadow-2xl border-4 border-white/10 transition-transform hover:rotate-3">
+                              <UserIcon size={40}/>
+                          </div>
                           <div>
-                              <h4 className="text-3xl font-black text-white uppercase leading-none">{selectedUnit.residentName}</h4>
-                              <p className="text-[10px] font-black text-indigo-400 uppercase mt-3 tracking-widest">Unid {selectedUnit.unit} • {selectedUnit.role}</p>
+                              <h4 className={`text-3xl font-black uppercase leading-none tracking-tight mb-3 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{selectedUnit.residentName}</h4>
+                              <div className="flex gap-3">
+                                  <span className="px-4 py-1.5 bg-indigo-500/10 text-indigo-500 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-indigo-500/20"><MapPin size={12}/> Unid {selectedUnit.unit}</span>
+                                  <span className="px-4 py-1.5 bg-slate-500/10 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-500/20">{selectedUnit.role}</span>
+                              </div>
                           </div>
                       </div>
-                      <div className="lg:col-span-5 bg-white/5 p-8 rounded-[3rem] border border-white/5 flex flex-col justify-center">
-                          <p className="text-[10px] font-black text-slate-500 uppercase mb-4 tracking-widest">Vulnerabilidade Local</p>
-                          <div className="flex items-center gap-6">
-                              <div className="flex-1 h-3 bg-white/5 rounded-full overflow-hidden"><div className={`h-full ${(selectedUnit.socialData?.risk || 0) > 70 ? 'bg-rose-500' : 'bg-indigo-500'}`} style={{width: `${selectedUnit.socialData?.risk || 0}%`}}></div></div>
-                              <span className="text-3xl font-black text-white">{selectedUnit.socialData?.risk || 0}%</span>
+                      <button onClick={() => setSelectedUnit(null)} className="p-4 text-slate-400 hover:bg-rose-500 hover:text-white rounded-2xl transition-all border border-transparent shadow-inner"><X size={24}/></button>
+                  </div>
+
+                  <div className="px-10 pb-10 space-y-8">
+                      <div className="grid grid-cols-2 gap-6">
+                          <div className={`p-6 rounded-[2rem] border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-100'}`}>
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Fingerprint size={14} className="text-indigo-500"/> Documento</p>
+                              <p className={`text-sm font-black uppercase ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{selectedUnit.cpf}</p>
+                          </div>
+                          <div className={`p-6 rounded-[2rem] border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-100'}`}>
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Calendar size={14} className="text-indigo-500"/> Idade</p>
+                              <p className={`text-sm font-black uppercase ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{selectedUnit.age} Anos</p>
                           </div>
                       </div>
-                      <div className="lg:col-span-3 flex flex-col gap-4">
-                          <button onClick={() => setInvestigatingUser(selectedUnit as any)} className="w-full py-5 bg-indigo-600 text-white rounded-[2rem] font-black text-[10px] uppercase shadow-xl hover:bg-indigo-500 transition-all">Abrir Dossiê</button>
-                          <button onClick={() => setSelectedUnit(null)} className="w-full py-5 bg-white/5 text-slate-500 rounded-[2rem] font-black text-[10px] uppercase">Fechar</button>
+
+                      <div className="flex gap-4">
+                          <button className="flex-1 py-6 bg-slate-950 text-white rounded-[2rem] font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:bg-indigo-600 transition-all flex items-center justify-center gap-3"><Brain size={18}/> Dossiê Master</button>
+                          <a href={`https://wa.me/${selectedUnit.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="p-6 bg-emerald-600 text-white rounded-[2rem] shadow-2xl hover:bg-emerald-500 transition-all active:scale-95 flex items-center justify-center"><Phone size={24}/></a>
                       </div>
                   </div>
               </div>
           </div>
       )}
 
-      {investigatingUser && <UserModal user={investigatingUser} onClose={() => setInvestigatingUser(null)} onSaveSuccess={() => { setInvestigatingUser(null); loadUnits(); }} />}
+      {/* MAP TOOLS FLOATING (RIGHT) */}
+      <div className="absolute top-1/2 -translate-y-1/2 right-10 z-[2000] flex flex-col gap-6">
+          <div className={`backdrop-blur-3xl p-2 rounded-[2rem] border shadow-2xl flex flex-col gap-2 ${theme === 'dark' ? 'bg-slate-900/80 border-white/10' : 'bg-white/80 border-slate-200'}`}>
+              <button onClick={() => mapInstanceRef.current?.zoomIn()} className="p-5 text-slate-400 hover:text-indigo-600 transition-all hover:bg-slate-50 rounded-2xl"><Plus size={28}/></button>
+              <div className="h-px bg-slate-200 mx-4"></div>
+              <button onClick={() => mapInstanceRef.current?.zoomOut()} className="p-5 text-slate-400 hover:text-indigo-600 transition-all hover:bg-slate-50 rounded-2xl"><ZoomOut size={28}/></button>
+          </div>
+          <button className={`p-8 backdrop-blur-3xl rounded-[2.5rem] border shadow-2xl transition-all ${theme === 'dark' ? 'bg-slate-900/80 border-white/10 text-indigo-400' : 'bg-white/80 border-slate-200 text-indigo-600'}`}>
+              <Home size={28} />
+          </button>
+          <button onClick={() => { if(selectedUnit) focusOnUnit(selectedUnit); }} className={`p-8 backdrop-blur-3xl rounded-[2.5rem] border shadow-2xl transition-all ${theme === 'dark' ? 'bg-slate-900/80 border-white/10 text-indigo-400' : 'bg-white/80 border-slate-200 text-indigo-600'}`}>
+              <Navigation2 size={28} className="animate-pulse" />
+          </button>
+      </div>
 
       <style>{`
-        .leaflet-container { background: #020617 !important; }
+        .leaflet-container { background: ${theme === 'dark' ? '#020617' : '#f1f5f9'} !important; cursor: crosshair !important; }
         .custom-marker { background: none !important; border: none !important; }
-        .hq-marker { background: none !important; border: none !important; }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(79, 70, 229, 0.4); border-radius: 20px; }
       `}</style>
     </div>
   );

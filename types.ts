@@ -184,6 +184,9 @@ export interface UnitData {
   socialData?: any;
   status?: string;
   role?: string;
+  // SRE FIX: Added missing properties to fix property access errors in SmartMap.tsx
+  phone: string;
+  age: number;
 }
 
 export interface ScheduledBroadcast {

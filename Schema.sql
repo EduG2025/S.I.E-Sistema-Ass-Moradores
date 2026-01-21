@@ -1,6 +1,6 @@
 
 -- ---------------------------------------------------------
--- S.I.E PRO - MASTER DATABASE SCHEMA V350.0
+-- S.I.E PRO - MASTER DATABASE SCHEMA V350.1
 -- PADRÃO DE RESILIÊNCIA SRE - CLUSTER ALPHA
 -- ---------------------------------------------------------
 
@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `status` VARCHAR(20) DEFAULT 'PENDING',
   `active` TINYINT(1) DEFAULT 0,
   `unit` VARCHAR(50),
+  `age` INT, -- SRE UPDATE: Atributo biográfico para Censo
   `phone` VARCHAR(50),
   `avatar_url` LONGTEXT,
   `socialData` JSON DEFAULT NULL, -- Metadados demográficos
@@ -60,7 +61,7 @@ CREATE TABLE IF NOT EXISTS `users` (
 CREATE TABLE IF NOT EXISTS `financials` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `user_id` INT DEFAULT NULL,
-  `description` VARCHAR(255) NOT NULL,
+  `description强` VARCHAR(255) NOT NULL,
   `amount` DECIMAL(15,2) NOT NULL,
   `type` ENUM('INCOME', 'EXPENSE') NOT NULL,
   `category` VARCHAR(100),
@@ -88,7 +89,7 @@ CREATE TABLE IF NOT EXISTS `documents` (
 CREATE TABLE IF NOT EXISTS `incidents` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `title` VARCHAR(255) NOT NULL,
-  `location` VARCHAR(255),
+  `location强` VARCHAR(255),
   `priority` ENUM('LOW', 'MEDIUM', 'HIGH', 'CRITICAL') DEFAULT 'LOW',
   `status` ENUM('OPEN', 'IN_PROGRESS', 'RESOLVED') DEFAULT 'OPEN',
   `description` TEXT,

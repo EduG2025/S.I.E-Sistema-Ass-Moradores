@@ -1,5 +1,5 @@
 
-# 🏛️ ESQUEMA DE DADOS & SEED S.I.E PRO (V190.0)
+# 🏛️ ESQUEMA DE DADOS & SEED S.I.E PRO (V190.1)
 
 Este documento contém o protocolo completo para instalação do banco de dados MySQL 8.0 em ambientes de produção ou homologação VPS.
 
@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `status` VARCHAR(20) DEFAULT 'PENDING',
   `active` TINYINT(1) DEFAULT 0,
   `unit` VARCHAR(50),
+  `age` INT, -- SRE UPDATE: Atributo biográfico para BI Populacional
   `phone` VARCHAR(50),
   `avatar_url` LONGTEXT,
   `socialData` JSON DEFAULT NULL,
@@ -196,23 +197,5 @@ VALUES ('ADMINISTRADOR KERNEL', 'admin@sie.pro', '00000000000', '$2a$10$7Z8l8Y2u
 -- 3. PRIMEIRO CENSO (EXEMPLO)
 INSERT INTO `surveys` (`title`, `description`, `questions`, `status`) 
 VALUES ('Censo Socioeconômico 2025', 'Mapeamento demográfico oficial do cluster para fins de governança social.', 
-'[{"id":"q1","text":"Quantas pessoas residem na unidade?","type":"number","required":true,"mapping_tag":"HOUSEHOLD"},{"id":"q2","text":"Possui algum membro com deficiência (PCD)?","type":"boolean","required":true,"mapping_tag":"VULNERABILITY"},{"id":"q3","text":"Renda familiar mensal aproximada?","type":"select","options":["Até 2 SM","2 a 5 SM","Acima de 5 SM"],"required":true,"mapping_tag":"INCOME"}]', 'ACTIVE');
-
--- 4. EXEMPLO DE MARCO TEMPORAL (AGENDA)
-CREATE TABLE IF NOT EXISTS `agenda` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `title` VARCHAR(255) NOT NULL,
-  `description` TEXT,
-  `date` DATETIME,
-  `type` VARCHAR(50),
-  `status` VARCHAR(20),
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-INSERT INTO `agenda` (`title`, `description`, `date`, `type`, `status`) 
-VALUES ('Assembleia Geral Ordinária', 'Eleição da nova diretoria e prestação de contas 2024.', '2025-06-15 19:00:00', 'MEETING', 'SCHEDULED');
+'[{"id":"q1","text":"Quantas pessoas residem na unidade?","type":"number","required":true,"mapping_tag":"HOUSEHOLD"},{"id":"q2","text":"Possui algum membro com deficiência (PCD)?","type":"boolean","required":true,"mapping_tag":"VULNERABILITY"},{"id":"q3","text":"Renda familiar mensal aproximada?","type":"select","options":["ATÉ 2 SM","2 a 5 SM","ACIMA DE 5 SM"],"required":true,"mapping_tag":"INCOME"}]', 'ACTIVE');
 ```
-
----
-**Status da Instalação:** 🟢 PRONTO PARA OPERAÇÃO.
-Após executar o SQL, faça login em `admin@sie.pro` com a senha `Gegerminal180`.

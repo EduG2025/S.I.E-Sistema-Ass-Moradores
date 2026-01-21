@@ -27,7 +27,7 @@ export const getPublicSurvey = async (req, res) => {
 
 export const checkResident = async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT name, unit, email, phone FROM users WHERE cpf_cnpj = ?', [req.params.cpf]);
+        const [rows] = await pool.query('SELECT name, unit, email, phone, avatar_url, birthDate FROM users WHERE cpf_cnpj = ?', [req.params.cpf]);
         if (rows.length) res.json({ found: true, ...rows[0] });
         else res.json({ found: false });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -37,7 +37,7 @@ export const submitResponse = async (req, res) => {
     const { cpf, userData, answers } = req.body;
     const surveyId = req.params.surveyId;
     try {
-        const [existing] = await pool.query('SELECT id, socialData FROM users WHERE cpf_cnpj = ?', [cpf]);
+        const [existing] = await pool.query('SELECT id, socialData, avatar_url FROM users WHERE cpf_cnpj = ?', [cpf]);
         let userId = existing[0]?.id;
         
         // SRE: Cálculo de Idade do Titular
@@ -58,22 +58,22 @@ export const submitResponse = async (req, res) => {
             ].filter(Boolean)
         };
 
+        // Salvar avatar_url se fornecido (binário base64 ou link)
+        const avatarToSave = userData.avatar_url || existing[0]?.avatar_url || null;
+
         if (!userId) {
-            const [result] = await pool.query('INSERT INTO users (name, cpf_cnpj, unit, email, phone, age, role, status, active, socialData) VALUES (?, ?, ?, ?, ?, ?, "RESIDENT", "PENDING", 1, ?)',
-                [userData.name, cpf, userData.unit, userData.email, userData.phone, titularAge, JSON.stringify(socialMapping)]);
+            const [result] = await pool.query('INSERT INTO users (name, cpf_cnpj, unit, email, phone, age, role, status, active, socialData, avatar_url) VALUES (?, ?, ?, ?, ?, ?, "RESIDENT", "PENDING", 1, ?, ?)',
+                [userData.name, cpf, userData.unit, userData.email, userData.phone, titularAge, JSON.stringify(socialMapping), avatarToSave]);
             userId = result.insertId;
         } else {
-            await pool.query('UPDATE users SET unit = ?, email = ?, phone = ?, age = ?, socialData = ? WHERE id = ?', 
-                [userData.unit, userData.email, userData.phone, titularAge, JSON.stringify(socialMapping), userId]);
+            await pool.query('UPDATE users SET unit = ?, email = ?, phone = ?, age = ?, socialData = ?, avatar_url = ? WHERE id = ?', 
+                [userData.unit, userData.email, userData.phone, titularAge, JSON.stringify(socialMapping), avatarToSave, userId]);
         }
 
         // SRE: Processamento de Dependentes (Repeater)
-        // Busca perguntas do tipo repeater que contenham campos de data de nascimento
         for (const [qId, responseValue] of Object.entries(answers)) {
             if (Array.isArray(responseValue)) {
-                // Para cada dependente no repeater
                 for (const member of responseValue) {
-                    // Tenta localizar um campo de nascimento (ex: dep_nasc)
                     const dobField = Object.keys(member).find(k => k.toLowerCase().includes('nasc') || k.toLowerCase().includes('birth'));
                     if (dobField && member[dobField]) {
                         member.age = calculateAge(member[dobField]);
@@ -86,7 +86,7 @@ export const submitResponse = async (req, res) => {
             [surveyId, userId, cpf, userData.name, JSON.stringify(answers)]);
 
         await pool.query('INSERT INTO audit_logs (user_id, action, table_name, record_id, details) VALUES (?, "SUBMIT_CENSUS", "survey_responses", ?, ?)',
-            [userId, surveyId, `Censo S.I.E PRO V9 Protocolado por ${userData.name}`]);
+            [userId, surveyId, `Censo S.I.E PRO Protocolado por ${userData.name} com captura Vision.`]);
 
         res.json({ success: true, protocolId: Date.now() });
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -113,16 +113,13 @@ export const suggestQuestions = async (req, res) => {
     try {
         const prompt = `Crie um conjunto de 5 perguntas avançadas para um formulário de ${type} intitulado "${title}". 
         Contexto: ${description}. FOCO: Assistência Social, Educação e Vulnerabilidade.
-        REGRAS: 
-        1. Use logic para branching (ex: se tem filhos, pergunta idade).
-        2. Use repeater para multi-membros.
-        Retorne um array JSON com objetos: id, text, type, options (se select), mapping_tag (EDUCATION, GOV_AID, etc), logic (objeto opcional), repeater_fields (array opcional).`;
+        Retorne um array JSON com objetos: id, text, type, options (se select), mapping_tag, logic, repeater_fields.`;
         
         const responseText = await IAProviderManager.execute('suggest', {
             contents: prompt,
             config: { 
                 responseMimeType: "application/json",
-                systemInstruction: "Você é um arquiteto sênior de dados sociais especializado em governança pública."
+                systemInstruction: "Você é um arquiteto sênior de dados sociais."
             }
         });
 

@@ -1,11 +1,10 @@
 
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { Users, DollarSign, Droplets, HeartHandshake, Loader2, LayoutDashboard, Map as MapIcon, TrendingUp, ShieldCheck, Activity } from 'lucide-react';
+import { Users, DollarSign, HeartHandshake, Loader2, LayoutDashboard, Map as MapIcon, TrendingUp, ShieldCheck, Activity } from 'lucide-react';
 import { SystemInfo } from '../types';
 import { demographicsService } from '../services/api';
 
-// Carregamento dinâmico do mapa para evitar conflitos de useRef no bundle principal
 const SmartMap = lazy(() => import('./SmartMap'));
 
 interface DemographicAnalysisProps {
@@ -13,7 +12,7 @@ interface DemographicAnalysisProps {
 }
 
 const DemographicAnalysis = ({ systemInfo }: DemographicAnalysisProps) => {
-    const [activeTab, setActiveTab] = useState('DASHBOARD' as 'DASHBOARD' | 'MAP');
+    const [activeTab, setActiveTab] = useState('MAP' as 'DASHBOARD' | 'MAP');
     const [stats, setStats] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(false);
@@ -40,7 +39,6 @@ const DemographicAnalysis = ({ systemInfo }: DemographicAnalysisProps) => {
         loadData();
     }, []);
 
-    // SRE: Fallbacks estruturados garantem que Recharts nunca receba undefined
     const safeStats = stats || {};
     const incomeDist = safeStats.incomeDistribution || { low: 0, midLow: 0, mid: 0, high: 0 };
     const vulDist = safeStats.vulnerability || { low: 0, moderate: 0, critical: 0 };
@@ -62,45 +60,47 @@ const DemographicAnalysis = ({ systemInfo }: DemographicAnalysisProps) => {
     if (isLoading) return (
         <div className="flex-1 flex flex-col items-center justify-center p-20 h-full min-h-[500px]">
             <Loader2 className="animate-spin text-indigo-600 mb-4" size={48}/>
-            <p className="text-slate-400 font-black animate-pulse text-[10px] uppercase tracking-widest">Sincronizando Dossiê Populacional...</p>
+            <p className="text-slate-400 font-black animate-pulse text-[10px] uppercase tracking-widest">Sincronizando Dossiê Territorial...</p>
         </div>
     );
 
     if (error) return (
-        <div className="flex-1 flex flex-col items-center justify-center p-20 text-center h-full min-h-[500px]">
+        <div className="flex-1 flex flex-col items-center justify-center p-20 text-center h-full">
             <div className="p-6 bg-rose-50 rounded-full mb-6 text-rose-500"><Activity size={48}/></div>
-            <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Falha de Telemetria</h3>
-            <p className="text-slate-500 text-sm mt-2 max-w-xs">O Kernel não conseguiu processar os dados sociais do cluster.</p>
-            <button onClick={() => window.location.reload()} className="mt-8 px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-lg">Reiniciar Módulo</button>
+            <h3 className="text-xl font-black text-slate-800 uppercase">Falha de Telemetria</h3>
+            <button onClick={() => window.location.reload()} className="mt-8 px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase">Reiniciar Módulo</button>
         </div>
     );
     
     return (
-        <div className="flex-1 flex flex-col min-h-0 space-y-6 animate-fade-in overflow-hidden h-full">
-            <div className="flex justify-between items-center bg-white p-6 lg:p-8 rounded-[2.5rem] shadow-sm border border-slate-200 shrink-0">
-                <div>
-                    <h2 className="text-2xl font-black text-slate-800 tracking-tighter">Observatório Social</h2>
-                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">BI Demográfico & Geoprocessamento V112.5</p>
-                </div>
-                <div className="flex bg-slate-100 p-1.5 rounded-2xl gap-1 border border-slate-200 shadow-inner">
+        <div className="flex-1 flex flex-col min-h-0 animate-fade-in overflow-hidden h-full">
+            {activeTab === 'MAP' ? (
+                <div className="flex-1 relative">
+                    {/* BOTÃO FLUTUANTE PARA ANALYTICS */}
                     <button 
-                        onClick={() => setActiveTab('DASHBOARD')} 
-                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 ${activeTab === 'DASHBOARD' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-indigo-600'}`}
+                        onClick={() => setActiveTab('DASHBOARD')}
+                        className="absolute bottom-10 left-10 z-[2000] px-8 py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest shadow-[0_20px_50px_rgba(0,0,0,0.3)] hover:bg-indigo-600 transition-all flex items-center gap-3 border border-white/10"
                     >
-                        <LayoutDashboard size={16}/> Analytics
+                        <LayoutDashboard size={18}/> Ver Analytics
                     </button>
-                    <button 
-                        onClick={() => setActiveTab('MAP')} 
-                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 ${activeTab === 'MAP' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-indigo-600'}`}
-                    >
-                        <MapIcon size={16}/> Mapa de Calor
-                    </button>
+                    
+                    <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="animate-spin text-indigo-600" /></div>}>
+                        <SmartMap systemInfo={systemInfo} />
+                    </Suspense>
                 </div>
-            </div>
+            ) : (
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-10 space-y-10 bg-white">
+                    <div className="flex justify-between items-center pb-6 border-b">
+                         <div>
+                            <h2 className="text-2xl font-black text-slate-800 tracking-tighter">Observatório Social</h2>
+                            <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">BI Territorial v2.1</p>
+                        </div>
+                        <button onClick={() => setActiveTab('MAP')} className="px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl flex items-center gap-3 hover:bg-indigo-700 transition-all">
+                            <MapIcon size={18}/> Retornar ao Mapa
+                        </button>
+                    </div>
 
-            {activeTab === 'DASHBOARD' ? (
-                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6 pr-2">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         {[
                           { title: "População Ativa", value: totalPop, icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' },
                           { title: "Score Sanitário", value: "94%", icon: ShieldCheck, color: 'text-emerald-600', bg: 'bg-emerald-50' },
@@ -117,7 +117,7 @@ const DemographicAnalysis = ({ systemInfo }: DemographicAnalysisProps) => {
                         ))}
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                         <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm">
                             <h3 className="text-xl font-black text-slate-800 tracking-tight mb-10 flex items-center gap-4">
                                 <DollarSign size={20} className="text-emerald-500"/> Distribuição de Renda Familiar
@@ -137,44 +137,32 @@ const DemographicAnalysis = ({ systemInfo }: DemographicAnalysisProps) => {
 
                         <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm flex flex-col">
                             <h3 className="text-xl font-black text-slate-800 tracking-tight mb-10 flex items-center gap-4">
-                                <HeartHandshake size={20} className="text-rose-500"/> Índices de Vulnerabilidade
+                                <HeartHandshake size={20} className="text-rose-500"/> Vulnerabilidade Social
                             </h3>
                             <div className="flex-1 flex items-center">
-                                <div className="w-1/2 h-[250px] relative">
+                                <div className="w-1/2 h-[220px] relative">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
-                                            <Pie data={vulnerabilityData} innerRadius={60} outerRadius={90} paddingAngle={8} dataKey="value" stroke="none">
+                                            <Pie data={vulnerabilityData} innerRadius={50} outerRadius={80} paddingAngle={8} dataKey="value" stroke="none">
                                                 {vulnerabilityData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                                             </Pie>
                                         </PieChart>
                                     </ResponsiveContainer>
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                        <span className="text-3xl font-black text-slate-800">
-                                            {totalPop > 0 ? Math.round(((Number(vulDist.critical) || 0) / totalPop) * 100) : 0}%
-                                        </span>
-                                        <span className="text-[8px] font-black text-rose-500 uppercase tracking-widest">ALTA PRIORIDADE</span>
-                                    </div>
                                 </div>
-                                <div className="w-1/2 space-y-4 pl-10">
+                                <div className="w-1/2 space-y-4 pl-4">
                                     {vulnerabilityData.map((item, idx) => (
-                                        <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-3 h-3 rounded-full" style={{backgroundColor: item.color}}></div>
-                                                <span className="text-[10px] font-black text-slate-500 uppercase">{item.name}</span>
+                                        <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full" style={{backgroundColor: item.color}}></div>
+                                                <span className="text-[8px] font-black text-slate-500 uppercase">{item.name}</span>
                                             </div>
-                                            <span className="text-sm font-black text-slate-800">{item.value}</span>
+                                            <span className="text-xs font-black text-slate-800">{item.value}</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            ) : (
-                <div className="flex-1 bg-white rounded-[3rem] border border-slate-200 shadow-sm overflow-hidden p-2 relative min-h-[750px]">
-                    <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="animate-spin text-indigo-600" /></div>}>
-                        <SmartMap systemInfo={systemInfo} />
-                    </Suspense>
                 </div>
             )}
         </div>
