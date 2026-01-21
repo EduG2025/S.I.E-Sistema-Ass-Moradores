@@ -1,13 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User, FinancialRecord, FinancialStatus, SystemInfo } from '../types';
 import { systemService, userService, financialService, aiService, communicationService, api } from '../services/api';
-import { formatCPF } from '../utils/cpf';
+import { formatCPF, formatCEP } from '../utils/cpf';
 import { FINANCIAL_CATEGORIES, DEFAULT_SYSTEM_INFO } from '../constants';
 import {
     Save, X, Loader2, Users, Info, Heart, Wallet, Brain, 
     User as UserIcon, Plus, Trash2, AlertCircle, Activity, Sparkles, TrendingUp, RefreshCw, 
-    ArrowUpRight, ArrowDownLeft, Receipt, CheckCircle2, MessageCircle, Printer, Filter, Send, CreditCard, Calendar, Clock
+    ArrowUpRight, ArrowDownLeft, Receipt, CheckCircle2, MessageCircle, Printer, Filter, Send, CreditCard, Calendar, Clock,
+    Camera, ScanLine, RotateCcw, Upload, Image as ImageIcon, MapPin, Building
 } from 'lucide-react';
 import SocialQuestionnaire from './SocialQuestionnaire';
 
@@ -29,6 +30,11 @@ const UserModal = ({ user, onClose, onSaveSuccess }: UserModalProps) => {
     const [isGeneratingDossier, setIsGeneratingDossier] = useState(false);
     const [isFinLoading, setIsFinLoading] = useState(false);
     const [systemInfo, setSystemInfo] = useState<SystemInfo>(DEFAULT_SYSTEM_INFO);
+    
+    // Camera States
+    const [cameraActive, setCameraActive] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
     
     const [finFilter, setFinFilter] = useState<'ALL' | FinancialStatus>('ALL');
 
@@ -76,6 +82,47 @@ const UserModal = ({ user, onClose, onSaveSuccess }: UserModalProps) => {
             setFinRecords(res.data.data || []);
         } catch (e) { console.error("Ledger Fail"); }
         finally { setIsFinLoading(false); }
+    };
+
+    // Camera Handlers
+    const startCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                setCameraActive(true);
+            }
+        } catch (e) {
+            alert("Erro ao acessar hardware de vídeo.");
+        }
+    };
+
+    const stopCamera = () => {
+        if (videoRef.current?.srcObject) {
+            (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+            setCameraActive(false);
+        }
+    };
+
+    const capturePhoto = () => {
+        if (videoRef.current && canvasRef.current) {
+            const ctx = canvasRef.current.getContext('2d');
+            canvasRef.current.width = videoRef.current.videoWidth;
+            canvasRef.current.height = videoRef.current.videoHeight;
+            ctx?.drawImage(videoRef.current, 0, 0);
+            const b64 = canvasRef.current.toDataURL('image/jpeg', 0.8);
+            setEditingUser({ ...editingUser, avatar_url: b64 });
+            stopCamera();
+        }
+    };
+
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => setEditingUser({ ...editingUser, avatar_url: reader.result as string });
+            reader.readAsDataURL(file);
+        }
     };
 
     const handleSaveFinance = async () => {
@@ -242,39 +289,118 @@ const UserModal = ({ user, onClose, onSaveSuccess }: UserModalProps) => {
                 <div className="flex-1 overflow-y-auto p-10 custom-scrollbar bg-[#fdfdfe]">
                     <div className="max-w-6xl mx-auto space-y-12 pb-10">
                         {activeTab === 'PERSONAL' && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 animate-fade-in">
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
-                                    <input className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-xl focus:bg-white focus:border-indigo-500 shadow-inner outline-none uppercase" value={editingUser.name} onChange={e => setEditingUser({...editingUser, name: e.target.value})} />
+                            <div className="animate-fade-in space-y-12">
+                                {/* AVATAR SECTION */}
+                                <div className="flex flex-col md:flex-row items-center gap-10 bg-slate-50 p-10 rounded-[3rem] border border-slate-100 shadow-inner">
+                                    <div className="relative group">
+                                        <div className="w-44 h-44 rounded-[2.5rem] bg-slate-200 border-4 border-white shadow-2xl overflow-hidden relative flex items-center justify-center">
+                                            {editingUser.avatar_url ? (
+                                                <img src={editingUser.avatar_url} className="w-full h-full object-cover" />
+                                            ) : cameraActive ? (
+                                                <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover grayscale brightness-110" />
+                                            ) : (
+                                                <UserIcon size={64} className="text-slate-400" />
+                                            )}
+                                            
+                                            {cameraActive && (
+                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                    <ScanLine size={100} className="text-white/20 animate-pulse" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        {cameraActive && (
+                                            <button onClick={capturePhoto} className="absolute -bottom-4 left-1/2 -translate-x-1/2 px-6 py-2 bg-indigo-600 text-white rounded-full font-black text-[8px] uppercase tracking-widest shadow-xl flex items-center gap-2 hover:bg-indigo-500 transition-all">
+                                                <Camera size={14}/> Capturar
+                                            </button>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="space-y-6 flex-1 text-center md:text-left">
+                                        <h4 className="text-lg font-black text-slate-800 uppercase tracking-tight">Foto de Identidade</h4>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest max-w-sm">Capture ou carregue uma imagem clara para o crachá digital e portaria vision.</p>
+                                        <div className="flex flex-wrap justify-center md:justify-start gap-4">
+                                            {!cameraActive ? (
+                                                <button onClick={startCamera} className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-sm hover:bg-indigo-50 hover:text-indigo-600 transition-all flex items-center gap-2">
+                                                    <Camera size={16}/> Iniciar Câmera
+                                                </button>
+                                            ) : (
+                                                <button onClick={stopCamera} className="px-6 py-3 bg-rose-50 text-rose-600 rounded-xl font-black text-[9px] uppercase tracking-widest border border-rose-100 hover:bg-rose-100 transition-all flex items-center gap-2">
+                                                    <X size={16}/> Cancelar Lente
+                                                </button>
+                                            )}
+                                            <label className="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-black text-[9px] uppercase tracking-widest shadow-sm cursor-pointer hover:bg-emerald-50 hover:text-emerald-600 transition-all flex items-center gap-2">
+                                                <Upload size={16}/> Upload Arquivo
+                                                <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                                            </label>
+                                            {editingUser.avatar_url && (
+                                                <button onClick={() => setEditingUser({...editingUser, avatar_url: ''})} className="px-4 py-3 text-rose-400 hover:text-rose-600"><Trash2 size={16}/></button>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Perfil de Acesso</label>
-                                    <select className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-sm uppercase shadow-inner appearance-none focus:bg-white focus:border-indigo-500" value={editingUser.role} onChange={e => setEditingUser({...editingUser, role: e.target.value})}>
-                                        {roles.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
-                                    </select>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
+                                        <input className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-xl focus:bg-white focus:border-indigo-500 shadow-inner outline-none uppercase" value={editingUser.name} onChange={e => setEditingUser({...editingUser, name: e.target.value})} />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Perfil de Acesso</label>
+                                        <select className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-sm uppercase shadow-inner appearance-none focus:bg-white focus:border-indigo-500" value={editingUser.role} onChange={e => setEditingUser({...editingUser, role: e.target.value})}>
+                                            {roles.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CPF / Documento</label>
+                                        <input className="w-full font-mono font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-xl shadow-inner outline-none" value={editingUser.cpf_cnpj} onChange={e => setEditingUser({...editingUser, cpf_cnpj: formatCPF(e.target.value)})} maxLength={14} />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Idade Cronológica</label>
+                                        <input type="number" className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-xl shadow-inner outline-none" value={editingUser.age || ''} onChange={e => setEditingUser({...editingUser, age: parseInt(e.target.value) || undefined})} />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidade / Cluster</label>
+                                        <input className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-xl uppercase shadow-inner outline-none" value={editingUser.unit} onChange={e => setEditingUser({...editingUser, unit: e.target.value})} />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Telefone WhatsApp</label>
+                                        <input className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-lg shadow-inner outline-none" value={editingUser.phone} onChange={e => setEditingUser({...editingUser, phone: e.target.value})} placeholder="Ex: 11999998888" />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado Cadastral</label>
+                                        <div className="flex gap-3">
+                                            {['ACTIVE', 'PENDING', 'VALIDATION_REQUIRED'].map(st => (
+                                                <button key={st} onClick={() => setEditingUser({...editingUser, status: st as any})} className={`flex-1 py-4 rounded-xl text-[8px] font-black uppercase tracking-widest border transition-all ${editingUser.status === st ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : 'bg-white border-slate-100 text-slate-400 hover:bg-slate-50'}`} style={editingUser.status === st ? { backgroundColor: systemInfo.primaryColor, borderColor: systemInfo.primaryColor } : {}}>{st.replace('_', ' ')}</button>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CPF / Documento</label>
-                                    <input className="w-full font-mono font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-xl shadow-inner outline-none" value={editingUser.cpf_cnpj} onChange={e => setEditingUser({...editingUser, cpf_cnpj: formatCPF(e.target.value)})} maxLength={14} />
-                                </div>
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Idade Cronológica</label>
-                                    <input type="number" className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-xl shadow-inner outline-none" value={editingUser.age || ''} onChange={e => setEditingUser({...editingUser, age: parseInt(e.target.value) || undefined})} />
-                                </div>
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidade / Cluster</label>
-                                    <input className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-xl uppercase shadow-inner outline-none" value={editingUser.unit} onChange={e => setEditingUser({...editingUser, unit: e.target.value})} />
-                                </div>
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Telefone WhatsApp</label>
-                                    <input className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-lg shadow-inner outline-none" value={editingUser.phone} onChange={e => setEditingUser({...editingUser, phone: e.target.value})} placeholder="Ex: 11999998888" />
-                                </div>
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado Cadastral</label>
-                                    <div className="flex gap-3">
-                                        {['ACTIVE', 'PENDING', 'VALIDATION_REQUIRED'].map(st => (
-                                            <button key={st} onClick={() => setEditingUser({...editingUser, status: st as any})} className={`flex-1 py-4 rounded-xl text-[8px] font-black uppercase tracking-widest border transition-all ${editingUser.status === st ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : 'bg-white border-slate-100 text-slate-400 hover:bg-slate-50'}`} style={editingUser.status === st ? { backgroundColor: systemInfo.primaryColor, borderColor: systemInfo.primaryColor } : {}}>{st.replace('_', ' ')}</button>
-                                        ))}
+
+                                {/* ADDRESS SECTION */}
+                                <div className="space-y-8 bg-slate-50 p-10 rounded-[3rem] border border-slate-100 shadow-inner">
+                                    <h4 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-3"><MapPin size={18} className="text-indigo-600"/> Localização Residencial</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                                        <div className="md:col-span-8 space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Endereço Completo</label>
+                                            <input className="w-full h-14 bg-white border border-slate-200 rounded-xl px-5 text-sm font-bold uppercase focus:border-indigo-500 outline-none shadow-sm" value={editingUser.address || ''} onChange={e => setEditingUser({...editingUser, address: e.target.value})} placeholder="RUA, NÚMERO, COMPLEMENTO..." />
+                                        </div>
+                                        <div className="md:col-span-4 space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Bairro</label>
+                                            <input className="w-full h-14 bg-white border border-slate-200 rounded-xl px-5 text-sm font-bold uppercase focus:border-indigo-500 outline-none shadow-sm" value={editingUser.neighborhood || ''} onChange={e => setEditingUser({...editingUser, neighborhood: e.target.value})} />
+                                        </div>
+                                        <div className="md:col-span-5 space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cidade</label>
+                                            <input className="w-full h-14 bg-white border border-slate-200 rounded-xl px-5 text-sm font-bold uppercase focus:border-indigo-500 outline-none shadow-sm" value={editingUser.city || ''} onChange={e => setEditingUser({...editingUser, city: e.target.value})} />
+                                        </div>
+                                        <div className="md:col-span-3 space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado (UF)</label>
+                                            <input className="w-full h-14 bg-white border border-slate-200 rounded-xl px-5 text-sm font-bold uppercase focus:border-indigo-500 outline-none shadow-sm" value={editingUser.state || ''} onChange={e => setEditingUser({...editingUser, state: e.target.value})} maxLength={2} />
+                                        </div>
+                                        <div className="md:col-span-4 space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CEP</label>
+                                            <input className="w-full h-14 bg-white border border-slate-200 rounded-xl px-5 text-sm font-bold focus:border-indigo-500 outline-none shadow-sm" value={editingUser.zip_code || ''} onChange={e => setEditingUser({...editingUser, zip_code: formatCEP(e.target.value)})} maxLength={9} placeholder="00000-000" />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -403,11 +529,12 @@ const UserModal = ({ user, onClose, onSaveSuccess }: UserModalProps) => {
                     </div>
                 </div>
 
-                <div className="p-8 border-t bg-slate-50 flex justify-between items-center shrink-0">
-                    <div className="flex items-center gap-3"><div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" /><span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Protocolo de Identidade {systemInfo.shortName}</span></div>
-                    <button onClick={onClose} className="px-10 py-3.5 text-slate-400 font-black text-[10px] uppercase tracking-widest hover:text-slate-600">Fechar</button>
+                <div className="p-4 border-t bg-slate-50 flex justify-between items-center shrink-0">
+                    <div className="flex items-center gap-3"><div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" /><span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">SRE Core Identity Active</span></div>
+                    <button onClick={onClose} className="px-6 py-2 text-slate-400 font-black text-[9px] uppercase tracking-widest hover:text-slate-600">Fechar</button>
                 </div>
             </div>
+            <canvas ref={canvasRef} className="hidden" />
         </div>
     );
 };

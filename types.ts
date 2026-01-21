@@ -37,6 +37,8 @@ export interface WhatsAppConfig {
   api_key: string;
   sender: string;
   footer: string;
+  welcome_template?: string; // SRE: Modelo de mensagem para novos membros
+  default_password?: string; // SRE: Senha padrão para novos cadastros
   webhook_url?: string;
 }
 

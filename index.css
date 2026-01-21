@@ -10,7 +10,7 @@
   --sie-card-bg: #ffffff;
   --sie-border: #e2e8f0;
   --sie-text-main: #1e293b;
-  --sie-radius-xl: 0px; /* SRE: Alterado para 0 conforme solicitação de remoção de arredondados */
+  --sie-radius-xl: 3rem; /* SRE: Restaurado para 3rem conforme solicitado */
   /* Dimensões A4 Precisas (96DPI) */
   --a4-width: 850px;
   --a4-height: 1123px;
@@ -39,13 +39,13 @@ body {
   color: #ffffff !important;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
   transform: translateX(4px);
-  border-radius: 0 !important;
+  border-radius: 1rem !important;
 }
 
 .nav-item-hover:hover {
   background: rgba(255, 255, 255, 0.03);
   transform: translateX(4px);
-  border-radius: 0 !important;
+  border-radius: 1rem !important;
 }
 
 /* SRE FLOATING WORKSPACE - EDITOR CONTAINER */
@@ -58,7 +58,7 @@ body {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 0px; /* SRE: Reduzido para ocupar tela cheia */
+  padding: 0px; 
   animation: sieFadeIn 0.3s ease-out forwards;
 }
 
@@ -67,13 +67,22 @@ body {
   width: 100%;
   max-width: 100%;
   height: 100vh;
-  border-radius: 0px !important;
+  border-radius: 0px; /* SRE: Modais de tela cheia mantêm 0, mas internos usam radius */
   box-shadow: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   border: none;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (min-width: 1024px) {
+  .sie-modal-container:not(.full-screen) {
+    width: 96%;
+    height: 92vh;
+    border-radius: var(--sie-radius-xl) !important;
+    border: 1px solid rgba(0,0,0,0.1);
+  }
 }
 
 /* RÉGUA DE PRECISÃO SRE */
@@ -88,23 +97,6 @@ body {
   align-items: flex-end;
   padding: 0 3cm;
   opacity: 0.6;
-}
-
-.sie-editor-ruler-mark {
-  flex: 1;
-  border-left: 1px solid #cbd5e1;
-  height: 8px;
-  position: relative;
-}
-
-.sie-editor-ruler-mark::after {
-  content: attr(data-cm);
-  position: absolute;
-  top: -14px;
-  left: -4px;
-  font-size: 8px;
-  font-weight: 900;
-  color: #94a3b8;
 }
 
 /* MOTOR DE PÁGINAÇÃO SRE V5 - FOLHAS REPETIDAS */
@@ -123,7 +115,7 @@ body {
   width: var(--a4-width);
   min-height: var(--a4-height);
   background: white; 
-  padding: 2.5cm 2.5cm 2cm 3cm; /* Margens ABNT Oficiais */
+  padding: 2.5cm 2.5cm 2cm 3cm; 
   outline: none;
   font-family: 'Georgia', 'Times New Roman', serif;
   font-size: 14px;
@@ -134,123 +126,12 @@ body {
   box-sizing: border-box;
   box-shadow: 0 0 50px rgba(0,0,0,0.1);
   margin-bottom: var(--page-gap);
-  border-radius: 0 !important;
-}
-
-.sie-printable-content table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 1rem 0;
-}
-
-.sie-printable-content td, .sie-printable-content th {
-  border: 1px solid #e2e8f0;
-  padding: 8px 12px;
-}
-
-/* ESTILO DA QUEBRA DE PÁGINA PARA EDIÇÃO */
-.page-break {
-  display: block;
-  height: 2px;
-  margin: 30px -3cm 30px -3cm;
-  border: none;
-  background: repeating-linear-gradient(90deg, #94a3b8 0, #94a3b8 10px, transparent 10px, transparent 20px);
-  position: relative;
-  page-break-after: always;
-  clear: both;
-}
-
-.page-break::after {
-  content: '✂️ QUEBRA DE PÁGINA A4';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  background: #f8fafc;
-  padding: 4px 15px;
-  font-size: 9px;
-  font-weight: 900;
-  color: #64748b;
-  border-radius: 99px;
-  letter-spacing: 0.1em;
-  border: 1px solid #e2e8f0;
-  white-space: nowrap;
-}
-
-/* PROTOCOLO DE IMPRESSÃO - ISOLAMENTO ABSOLUTO */
-@media print {
-  @page {
-    size: A4;
-    margin: 0;
-  }
-  
-  body * {
-    visibility: hidden !important;
-  }
-
-  .sie-editor-overlay,
-  .sie-editor-overlay *,
-  .sie-printable-content,
-  .sie-printable-content * {
-    visibility: visible !important;
-  }
-
-  .sie-editor-overlay {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    height: auto !important;
-    background: white !important;
-    padding: 0 !important;
-    backdrop-filter: none !important;
-  }
-
-  .sie-modal-container {
-    width: 100% !important;
-    height: auto !important;
-    max-width: none !important;
-    background: white !important;
-    box-shadow: none !important;
-    border: none !important;
-    border-radius: 0 !important;
-  }
-
-  .sie-editor-toolbar, .sie-editor-sidebar, .print-hidden, .h-24, .h-20 {
-    display: none !important;
-  }
-
-  .sie-a4-viewport {
-    background: white !important;
-    padding: 0 !important;
-    overflow: visible !important;
-    display: block !important;
-  }
-
-  .sie-printable-content {
-    width: 210mm !important;
-    padding: 3cm 2.5cm 2cm 2.5cm !important; 
-    font-size: 12pt !important;
-    line-height: 1.5 !important;
-    box-shadow: none !important;
-    margin: 0 auto !important;
-    background: white !important;
-  }
-
-  .page-break {
-    height: 0 !important;
-    margin: 0 !important;
-    page-break-after: always !important;
-    visibility: hidden !important;
-  }
+  border-radius: 0;
 }
 
 @keyframes sieFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-.custom-scrollbar::-webkit-scrollbar { width: 4px; } /* SRE: Reduzido para maior densidade */
-.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.1); border-radius: 0px; }
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.1); border-radius: 10px; }
 
-/* SRE: Global Square Borders Enforcement */
-input, button, select, textarea, div {
-  border-radius: 0px !important;
-}
+/* SRE: Global Square Borders Enforcement - REMOVIDO PARA RESTAURAR ROUNDED */
