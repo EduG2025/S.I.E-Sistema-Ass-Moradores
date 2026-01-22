@@ -1,18 +1,20 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { Survey, SurveyQuestion, SystemInfo } from '../types';
+import { Survey, SystemInfo } from '../types';
 import { api } from '../services/api';
 import { normalizeCPF, validateCPF, formatCPF } from '../utils/cpf';
 import {
     ShieldCheck, CheckCircle2, X, Fingerprint, Loader2, Save, ChevronRight, 
-    AlertTriangle, Users, Plus, Trash2, ArrowRight, Brain, Sparkles, ClipboardList,
-    ChevronLeft, RotateCcw, HeartPulse, User, MapPin, Building, Laptop, GraduationCap, HandHelping, Landmark, Info, Calendar,
-    Camera, ScanLine, Upload, Image as ImageIcon
+    AlertTriangle, Users, Plus, Trash2, ArrowRight, Brain, Sparkles, ClipboardCheck,
+    ChevronLeft, RotateCcw, User, MapPin, Building, Info, Camera, ScanLine, Upload,
+    // SRE FIX: Added missing Zap icon import to resolve "Cannot find name 'Zap'" error on line 354
+    Zap
 } from 'lucide-react';
 
 const PublicSenso = () => {
-    const [survey, setSurvey] = useState(null as Survey | null);
-    const [systemInfo, setSystemInfo] = useState(null as SystemInfo | null);
-    const [step, setStep] = useState('IDENTIFY' as 'IDENTIFY' | 'FORM' | 'PHOTO' | 'REVIEW' | 'SUCCESS');
+    const [survey, setSurvey] = useState<Survey | null>(null);
+    const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
+    const [step, setStep] = useState<'IDENTIFY' | 'FORM' | 'PHOTO' | 'REVIEW' | 'SUCCESS'>('IDENTIFY');
     const [currentSection, setCurrentSection] = useState(0); 
     const [isLoading, setIsLoading] = useState(false);
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
@@ -22,25 +24,13 @@ const PublicSenso = () => {
     const [isNewResident, setIsNewResident] = useState(false);
 
     const [userData, setUserData] = useState({ name: '', unit: '', email: '', phone: '', birthDate: '', avatar_url: '' });
-    const [answers, setAnswers] = useState({} as Record<string, any>);
+    const [answers, setAnswers] = useState<Record<string, any>>({});
 
-    // Camera Refs
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [cameraActive, setCameraActive] = useState(false);
 
     useEffect(() => {
-        const saved = localStorage.getItem('sie_census_draft');
-        if (saved) {
-            try {
-                const { cpf, ans, usr, isNew } = JSON.parse(saved);
-                setCpfIdentifier(cpf);
-                setAnswers(ans);
-                setUserData(usr);
-                setIsNewResident(isNew);
-            } catch (e) { localStorage.removeItem('sie_census_draft'); }
-        }
-        
         const paths = window.location.pathname.split('/');
         const id = paths[paths.length - 1];
         if (id && id !== 'census') {
@@ -49,19 +39,11 @@ const PublicSenso = () => {
         } else { setError('Protocolo de link inválido.'); }
     }, []);
 
-    useEffect(() => {
-        if (cpfIdentifier) {
-            localStorage.setItem('sie_census_draft', JSON.stringify({ 
-                cpf: cpfIdentifier, ans: answers, usr: userData, isNew: isNewResident
-            }));
-        }
-    }, [answers, userData, cpfIdentifier, isNewResident]);
-
     const loadSystemInfo = async () => {
         try { 
             const res = await api.get('/settings/system'); 
             setSystemInfo(res.data); 
-        } catch (e) { console.error("Identity Offline"); }
+        } catch (e) { console.error("Identity Core Offline"); }
     };
 
     const loadSurvey = async (id: string) => {
@@ -70,22 +52,19 @@ const PublicSenso = () => {
             const res = await api.get(`/surveys/public/${id}`); 
             setSurvey(res.data); 
         } catch (e) { 
-            setError('Formulário indisponível.'); 
+            setError('Este formulário de censo não está mais disponível no cluster.'); 
         } finally { setIsLoading(false); }
     };
 
     const handleIdentify = async () => {
         const cleanCPF = normalizeCPF(cpfIdentifier);
-        
         if (!validateCPF(cleanCPF)) { 
-            setError('Falha de Protocolo: CPF Inválido.'); 
+            setError('Falha de Protocolo: CPF Inválido matematicamente.'); 
             return; 
         }
-
         setIsLoading(true); 
         setError('');
         try {
-            // SRE FIX: Envia CPF purificado para evitar erros de encode de caracteres especiais
             const res = await api.get(`/surveys/public/check-resident/${cleanCPF}`);
             if (res.data && res.data.found) {
                 setUserData({ 
@@ -97,34 +76,17 @@ const PublicSenso = () => {
                     avatar_url: res.data.avatar_url || ''
                 });
                 setIsNewResident(false);
-            } else {
-                setIsNewResident(true);
-            }
+            } else { setIsNewResident(true); }
             setStep('FORM');
-        } catch (e) { 
-            setError('Falha no Kernel de identificação. Verifique a conexão.'); 
-        } finally { 
-            setIsLoading(false); 
-        }
+        } catch (e) { setError('Falha no Kernel de identificação. Verifique sua conexão.'); } 
+        finally { setIsLoading(false); }
     };
 
     const startCamera = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                setCameraActive(true);
-            }
-        } catch (e) {
-            alert("Acesso à câmera negado. Use o upload de arquivo.");
-        }
-    };
-
-    const stopCamera = () => {
-        if (videoRef.current?.srcObject) {
-            (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
-            setCameraActive(false);
-        }
+            if (videoRef.current) { videoRef.current.srcObject = stream; setCameraActive(true); }
+        } catch (e) { alert("Hardware de Vision bloqueado ou indisponível."); }
     };
 
     const capturePhoto = () => {
@@ -135,32 +97,19 @@ const PublicSenso = () => {
             ctx?.drawImage(videoRef.current, 0, 0);
             const b64 = canvasRef.current.toDataURL('image/jpeg', 0.8);
             setUserData({ ...userData, avatar_url: b64 });
-            stopCamera();
-        }
-    };
-
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => setUserData({ ...userData, avatar_url: reader.result as string });
-            reader.readAsDataURL(file);
+            (videoRef.current.srcObject as MediaStream).getTracks().forEach(t => t.stop());
+            setCameraActive(false);
         }
     };
 
     const handleNext = () => {
         if (currentSection === 0 && (!userData.name || !userData.unit || !userData.birthDate)) {
-            alert("Nome, Unidade e Data de Nascimento são obrigatórios."); return;
+            alert("Atributos de Identidade (Nome, Unidade e Nascimento) são obrigatórios."); return;
         }
-        if (currentSection < totalSteps - 1) {
-            setCurrentSection(prev => prev + 1);
-            window.scrollTo(0, 0);
-        } else {
-            if (isNewResident && !userData.avatar_url) {
-                setStep('PHOTO');
-            } else {
-                handleFinalReview();
-            }
+        if (currentSection < totalSteps - 1) { setCurrentSection(prev => prev + 1); window.scrollTo(0, 0); } 
+        else {
+            if (isNewResident && !userData.avatar_url) { setStep('PHOTO'); } 
+            else { handleFinalReview(); }
         }
     };
 
@@ -169,36 +118,24 @@ const PublicSenso = () => {
         setIsGeneratingSummary(true);
         try {
             const res = await api.post('/ai/chat', { 
-                contents: `Analise este perfil demográfico: ${JSON.stringify({...userData, ...answers})}. Gere um diagnóstico social curto e humanizado. Comece com "Perfil analisado..."`
+                contents: `Analise este perfil: ${JSON.stringify({...userData, ...answers})}. Gere um diagnóstico social curto. Comece com "Dossiê S.I.E analisado..."`
             });
             setAiSummary(res.data.text);
-        } catch (e) {
-            setAiSummary("O Kernel S.I.E protocolou seus dados com sucesso.");
-        } finally { setIsGeneratingSummary(false); }
+        } catch (e) { setAiSummary("Seu protocolo foi processado com sucesso pelo Kernel S.I.E."); } 
+        finally { setIsGeneratingSummary(false); }
     };
 
     const handleSubmit = async () => {
         setIsLoading(true);
         try {
-            await api.post(`/surveys/public/${survey?.id}/submit`, {
-                cpf: normalizeCPF(cpfIdentifier),
-                userData: userData, 
-                answers: answers
-            });
-            localStorage.removeItem('sie_census_draft');
+            await api.post(`/surveys/public/${survey?.id}/submit`, { cpf: normalizeCPF(cpfIdentifier), userData, answers });
             setStep('SUCCESS');
-        } catch (e: any) { alert(`Erro ao protocolar: ${e.response?.data?.error || 'Erro de rede.'}`); } 
+        } catch (e: any) { alert(`Erro ao comitar: ${e.response?.data?.error || 'Erro de rede.'}`); } 
         finally { setIsLoading(false); }
     };
 
-    const isQuestionVisible = (q: any) => {
-        if (!q.logic || !q.logic.show_if_question) return true;
-        const dependentValue = answers[q.logic.show_if_question];
-        return String(dependentValue).toUpperCase() === String(q.logic.show_if_value).toUpperCase();
-    };
-
-    const visibleQuestions = survey?.questions?.filter(isQuestionVisible) || [];
     const questionsPerSection = 8;
+    const visibleQuestions = survey?.questions || [];
     const totalSteps = Math.ceil(visibleQuestions.length / questionsPerSection) + 1;
     const progress = ((currentSection + 1) / totalSteps) * 100;
 
@@ -208,144 +145,127 @@ const PublicSenso = () => {
         return visibleQuestions.slice(start, start + questionsPerSection);
     };
 
+    const primaryColor = systemInfo?.primaryColor || '#4f46e5';
+
     if (step === 'SUCCESS') return (
         <div className="h-screen w-screen bg-slate-950 flex items-center justify-center text-white">
-            <div className="bg-white p-10 rounded-[2rem] shadow-2xl max-w-lg w-full text-center mx-4">
-                <div className="w-16 h-16 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto mb-6"><CheckCircle2 size={32} /></div>
-                <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Dados Sincronizados</h2>
-                <p className="text-slate-500 font-medium mt-4 mb-8 text-[11px] uppercase tracking-widest leading-relaxed italic">Sua participação fortalece o cluster.</p>
-                <button onClick={() => window.location.href = '/'} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest shadow-xl">Encerrar Sessão</button>
+            <div className="bg-white p-16 rounded-[4rem] shadow-2xl max-w-lg w-full text-center mx-4 animate-scale-in">
+                <div className="w-24 h-24 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto mb-8 shadow-xl"><CheckCircle2 size={48} /></div>
+                <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Sincronizado!</h2>
+                <p className="text-slate-500 font-medium mt-6 mb-12 text-[11px] uppercase tracking-widest leading-relaxed italic">Sua participação fortalece o cluster {systemInfo?.shortName}.</p>
+                <button onClick={() => window.location.href = '/'} className="w-full py-6 bg-slate-900 text-white rounded-3xl font-black text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all">Encerrar Terminal</button>
             </div>
         </div>
     );
 
     return (
-        <div className="min-h-screen w-screen bg-white flex flex-col overflow-x-hidden relative selection:bg-indigo-600 selection:text-white">
-            
-            <div className="relative z-10 flex-1 flex flex-col items-center">
+        <div className="min-h-screen w-screen bg-white flex flex-col overflow-x-hidden relative">
+            <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-6">
                 
                 {step === 'IDENTIFY' && (
-                    <div className="bg-white border border-slate-100 sm:rounded-[3rem] rounded-none w-full max-w-lg p-10 lg:p-14 text-center sm:mt-20 mt-0 h-full sm:h-auto flex flex-col justify-center">
-                        <div className="w-14 h-14 bg-slate-900 rounded-2xl mx-auto flex items-center justify-center text-white mb-6">
-                            {systemInfo?.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain p-2 rounded-2xl" /> : <Fingerprint size={28} />}
+                    <div className="bg-white border border-slate-100 sm:rounded-[4rem] rounded-none w-full max-w-xl p-12 lg:p-20 text-center animate-fade-in shadow-2xl">
+                        <div className="w-20 h-20 bg-slate-900 rounded-[2rem] mx-auto flex items-center justify-center text-white mb-8 shadow-xl">
+                            {systemInfo?.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain p-4" /> : <Fingerprint size={32} />}
                         </div>
-                        <h2 className="text-xl font-black text-slate-900 uppercase mb-2 tracking-tight">Censo Ativo 2025</h2>
-                        <p className="text-slate-400 mb-10 text-[7px] font-black uppercase tracking-[0.4em]">Protocolo SRE - Identidade Digital</p>
-                        <div className="space-y-6">
+                        <h2 className="text-3xl font-black text-slate-800 uppercase mb-4 tracking-tight">Censo Ativo 2025</h2>
+                        <p className="text-slate-400 mb-12 text-[9px] font-black uppercase tracking-[0.4em]">Protocolo SRE - Identificação Soberana</p>
+                        <div className="space-y-8">
                             <div className="relative">
-                                <input type="text" value={cpfIdentifier} onChange={e => { setCpfIdentifier(formatCPF(e.target.value)); setError(''); }} className="w-full py-5 bg-slate-50 border border-slate-200 rounded-2xl text-center text-xl font-black outline-none focus:bg-white focus:border-indigo-500 transition-all uppercase" placeholder="000.000.000-00" maxLength={14} />
-                                {validateCPF(normalizeCPF(cpfIdentifier)) && <div className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500"><ShieldCheck size={18}/></div>}
+                                <input type="text" value={cpfIdentifier} onChange={e => { setCpfIdentifier(formatCPF(e.target.value)); setError(''); }} className="w-full py-7 bg-slate-50 border border-slate-200 rounded-3xl text-center text-3xl font-black outline-none focus:bg-white focus:border-indigo-500 transition-all uppercase placeholder:text-slate-200" placeholder="000.000.000-00" maxLength={14} />
+                                {validateCPF(normalizeCPF(cpfIdentifier)) && <div className="absolute right-6 top-1/2 -translate-y-1/2 text-emerald-500"><ShieldCheck size={28}/></div>}
                             </div>
-                            <button onClick={handleIdentify} disabled={isLoading || !validateCPF(normalizeCPF(cpfIdentifier))} className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-[9px] uppercase tracking-[0.4em] hover:bg-indigo-600 transition-all flex items-center justify-center gap-3">
-                                {isLoading ? <Loader2 className="animate-spin" size={14}/> : <>Avançar Protocolo <ChevronRight size={14}/></>}
+                            <button onClick={handleIdentify} disabled={isLoading || !validateCPF(normalizeCPF(cpfIdentifier))} className="w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-[11px] uppercase tracking-[0.4em] hover:bg-indigo-600 transition-all flex items-center justify-center gap-4 active:scale-95 shadow-2xl disabled:opacity-30">
+                                {isLoading ? <Loader2 className="animate-spin" size={20}/> : <>Avançar Handshake <ChevronRight size={20}/></>}
                             </button>
-                            {error && <div className="p-3 bg-rose-50 text-rose-600 rounded-xl border border-rose-100 font-black text-[8px] uppercase">{error}</div>}
+                            {error && <div className="p-4 bg-rose-50 text-rose-600 rounded-2xl border border-rose-100 font-black text-[10px] uppercase shadow-sm">{error}</div>}
                         </div>
                     </div>
                 )}
 
                 {step === 'FORM' && (
-                    <div className="bg-white w-full flex flex-col flex-1 animate-fade-in">
-                        <div className="shrink-0 border-b bg-slate-900 p-8 py-4 flex justify-between items-center text-white">
-                            <div className="flex items-center gap-4">
-                                <div className="p-2 bg-indigo-600 rounded-xl"><ClipboardList size={18}/></div>
+                    <div className="bg-white w-full max-w-6xl flex flex-col flex-1 animate-fade-in sm:my-10 shadow-2xl sm:rounded-[4rem] overflow-hidden border border-slate-100">
+                        <div className="shrink-0 border-b bg-slate-900 p-8 flex justify-between items-center text-white">
+                            <div className="flex items-center gap-6">
+                                <div className="p-4 bg-indigo-600 rounded-2xl shadow-lg" style={{ backgroundColor: primaryColor }}><ClipboardCheck size={24}/></div>
                                 <div>
-                                    <h3 className="font-black text-sm uppercase tracking-tight leading-none">{survey?.title}</h3>
-                                    <p className="text-[7px] text-indigo-300 font-black uppercase mt-1 tracking-widest">Seção {currentSection + 1} de {totalSteps}</p>
+                                    <h3 className="font-black text-xl uppercase tracking-tight leading-none">{survey?.title}</h3>
+                                    <p className="text-[9px] text-indigo-300 font-black uppercase mt-2 tracking-widest">Protocolo: Seção {currentSection + 1} de {totalSteps}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-4">
-                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest hidden sm:inline">{Math.round(progress)}%</span>
-                                <div className="w-20 sm:w-32 h-1 bg-white/10 rounded-full overflow-hidden">
-                                    <div className="h-full bg-indigo-500 transition-all duration-700" style={{ width: `${progress}%` }} />
+                            <div className="flex items-center gap-6">
+                                <div className="w-48 h-2 bg-white/10 rounded-full overflow-hidden hidden md:block">
+                                    <div className="h-full bg-indigo-500 transition-all duration-700" style={{ width: `${progress}%`, backgroundColor: primaryColor }} />
                                 </div>
+                                <span className="text-[11px] font-black text-white/50 uppercase tracking-widest">{Math.round(progress)}%</span>
                             </div>
                         </div>
 
-                        <div className="flex-1 p-4 sm:p-8 lg:p-14 bg-white">
-                            <div className="w-full mx-auto space-y-8">
+                        <div className="flex-1 p-10 lg:p-20 bg-white">
+                            <div className="w-full mx-auto space-y-12">
                                 {currentSection === 0 ? (
-                                    <div className="space-y-6">
-                                        <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.4em] mb-4 border-b border-indigo-50 pb-2 flex items-center gap-2">
-                                            <User size={14}/> 01. Ficha Cadastral
+                                    <div className="space-y-10 animate-fade-in">
+                                        <h4 className="text-[11px] font-black text-indigo-600 uppercase tracking-[0.4em] mb-10 border-b border-indigo-50 pb-4 flex items-center gap-4">
+                                            <User size={20}/> 01. Ficha de Identidade
                                         </h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                                            <div className="md:col-span-8 space-y-1">
-                                                <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
-                                                <input className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-[10px] font-black uppercase focus:bg-white focus:border-indigo-500 outline-none" value={userData.name} onChange={e => setUserData({...userData, name: e.target.value})} />
+                                        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+                                            <div className="md:col-span-8 space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
+                                                <input disabled={!isNewResident} className="w-full h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-xl font-black uppercase focus:bg-white focus:border-indigo-500 outline-none" value={userData.name} onChange={e => setUserData({...userData, name: e.target.value})} />
                                             </div>
-                                            <div className="md:col-span-4 space-y-1">
-                                                <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest ml-1">Data Nascimento</label>
-                                                <input type="date" className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-[10px] font-black focus:bg-white focus:border-indigo-500 outline-none" value={userData.birthDate} onChange={e => setUserData({...userData, birthDate: e.target.value})} />
+                                            <div className="md:col-span-4 space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data Nascimento</label>
+                                                <input type="date" className="w-full h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-xl font-black focus:bg-white focus:border-indigo-500 outline-none" value={userData.birthDate} onChange={e => setUserData({...userData, birthDate: e.target.value})} />
                                             </div>
-                                            <div className="md:col-span-4 space-y-1">
-                                                <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidade / Lote</label>
-                                                <input className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-[10px] font-black uppercase focus:bg-white focus:border-indigo-500 outline-none" value={userData.unit} onChange={e => setUserData({...userData, unit: e.target.value})} />
+                                            <div className="md:col-span-4 space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidade / Cluster</label>
+                                                <input className="w-full h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-xl font-black uppercase focus:bg-white focus:border-indigo-500 outline-none" value={userData.unit} onChange={e => setUserData({...userData, unit: e.target.value})} />
                                             </div>
-                                            <div className="md:col-span-4 space-y-1">
-                                                <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
-                                                <input className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-[10px] font-black focus:bg-white focus:border-indigo-500 outline-none" value={userData.email} onChange={e => setUserData({...userData, email: e.target.value})} />
+                                            <div className="md:col-span-4 space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">E-mail</label>
+                                                <input className="w-full h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-xl font-black focus:bg-white focus:border-indigo-500 outline-none" value={userData.email} onChange={e => setUserData({...userData, email: e.target.value})} />
                                             </div>
-                                            <div className="md:col-span-4 space-y-1">
-                                                <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest ml-1">WhatsApp</label>
-                                                <input className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-[10px] font-black focus:bg-white focus:border-indigo-500 outline-none" value={userData.phone} onChange={e => setUserData({...userData, phone: e.target.value})} />
+                                            <div className="md:col-span-4 space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">WhatsApp</label>
+                                                <input className="w-full h-16 bg-slate-50 border border-slate-200 rounded-2xl px-6 text-xl font-black focus:bg-white focus:border-indigo-500 outline-none" value={userData.phone} onChange={e => setUserData({...userData, phone: e.target.value})} />
                                             </div>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-10">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-12 animate-fade-in">
                                         {getCurrentQuestions().map((q, idx) => (
-                                            <div key={q.id} className="space-y-3 group border-l-2 border-slate-100 pl-4 hover:border-indigo-500 transition-colors">
-                                                <h4 className="text-[11px] font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
-                                                    <span className="text-[8px] text-indigo-500">{(visibleQuestions.indexOf(q) + 2).toString().padStart(2, '0')}</span>
+                                            <div key={q.id} className="space-y-4 group border-l-4 border-slate-50 pl-8 hover:border-indigo-500 transition-all">
+                                                <h4 className="text-lg font-black text-slate-800 uppercase tracking-tight flex items-center gap-4">
+                                                    <span className="text-xs text-indigo-500 bg-indigo-50 px-3 py-1 rounded-lg">{(visibleQuestions.indexOf(q) + 1).toString().padStart(2, '0')}</span>
                                                     {q.text}
                                                 </h4>
-                                                
-                                                {q.type === 'repeater' ? (
-                                                    <div className="space-y-3">
-                                                        {(Array.isArray(answers[q.id]) ? answers[q.id] : []).map((item: any, i: number) => (
-                                                            <div key={i} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl relative">
-                                                                <button onClick={() => { const current = [...answers[q.id]]; current.splice(i, 1); setAnswers({ ...answers, [q.id]: current }); }} className="absolute top-2 right-2 text-rose-400 hover:text-rose-600"><Trash2 size={12}/></button>
-                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                                    {q.repeater_fields?.map((rf: any) => (
-                                                                        <div key={rf.id} className="space-y-1">
-                                                                            <label className="text-[7px] font-black text-slate-400 uppercase tracking-widest">{rf.text}</label>
-                                                                            <input type={rf.type} className="w-full h-9 bg-white border border-slate-200 rounded-lg px-3 text-[9px] font-bold uppercase focus:border-indigo-500 outline-none" value={item[rf.id] || ''} onChange={e => { const current = [...answers[q.id]]; current[i] = { ...current[i], [rf.id]: e.target.value }; setAnswers({ ...answers, [q.id]: current }); }} />
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                        <button onClick={() => { const current = Array.isArray(answers[q.id]) ? [...answers[q.id]] : []; current.push({}); setAnswers({ ...answers, [q.id]: current }); }} className="w-full py-3 border border-dashed border-slate-300 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all font-black text-[8px] uppercase tracking-widest">+ Adicionar Registro</button>
-                                                    </div>
-                                                ) : q.type === 'select' ? (
-                                                    <div className="flex flex-wrap gap-2">
+                                                {q.type === 'select' ? (
+                                                    <div className="flex flex-wrap gap-3">
                                                         {q.options?.map((opt: string) => (
-                                                            <button key={opt} onClick={() => setAnswers({...answers, [q.id]: opt})} className={`py-2 px-4 rounded-xl text-left font-black text-[8px] uppercase tracking-widest border transition-all ${answers[q.id] === opt ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' : 'bg-white border-slate-200 text-slate-400 hover:border-indigo-400'}`}>{opt}</button>
+                                                            <button key={opt} onClick={() => setAnswers({...answers, [q.id]: opt})} className={`py-4 px-6 rounded-2xl text-left font-black text-[10px] uppercase tracking-widest border-2 transition-all ${answers[q.id] === opt ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl scale-105' : 'bg-white border-slate-100 text-slate-400 hover:border-indigo-400'}`} style={answers[q.id] === opt ? { backgroundColor: primaryColor, borderColor: primaryColor } : {}}>{opt}</button>
                                                         ))}
                                                     </div>
                                                 ) : q.type === 'boolean' ? (
-                                                    <div className="flex gap-2">
+                                                    <div className="flex gap-4 max-w-sm">
                                                         {['SIM', 'NÃO'].map(val => (
-                                                            <button key={val} onClick={() => setAnswers({...answers, [q.id]: val})} className={`flex-1 py-3 rounded-xl font-black text-[9px] uppercase tracking-[0.3em] border transition-all ${answers[q.id] === val ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : 'bg-white border-slate-200 text-slate-400'}`}>{val}</button>
+                                                            <button key={val} onClick={() => setAnswers({...answers, [q.id]: val})} className={`flex-1 py-5 rounded-2xl font-black text-[11px] uppercase tracking-[0.4em] border-2 transition-all ${answers[q.id] === val ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl scale-105' : 'bg-white border-slate-100 text-slate-400'}`} style={answers[q.id] === val ? { backgroundColor: primaryColor, borderColor: primaryColor } : {}}>{val}</button>
                                                         ))}
                                                     </div>
                                                 ) : (
-                                                    <input type={q.type} value={answers[q.id] || ''} onChange={e => setAnswers({...answers, [q.id]: e.target.value})} className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 text-[12px] font-black uppercase focus:bg-white focus:border-indigo-500 outline-none" placeholder="Digite aqui..." />
+                                                    <input type={q.type} value={answers[q.id] || ''} onChange={e => setAnswers({...answers, [q.id]: e.target.value})} className="w-full h-16 bg-slate-50 border border-slate-200 rounded-2xl px-8 text-lg font-black uppercase focus:bg-white focus:border-indigo-500 outline-none shadow-inner" placeholder="Clique para digitar..." />
                                                 )}
                                             </div>
                                         ))}
                                     </div>
                                 )}
 
-                                <div className="flex gap-4 pt-10 border-t">
+                                <div className="flex gap-6 pt-12 border-t border-slate-100">
                                     {currentSection > 0 && (
-                                        <button onClick={() => setCurrentSection(prev => prev - 1)} className="px-6 sm:px-10 py-5 bg-slate-100 text-slate-500 rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-200 flex items-center gap-2">
-                                            <ChevronLeft size={16}/> <span className="hidden sm:inline">Voltar</span>
+                                        <button onClick={() => setCurrentSection(prev => prev - 1)} className="px-12 py-6 bg-slate-100 text-slate-500 rounded-[2rem] font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all flex items-center gap-3">
+                                            <ChevronLeft size={20}/> Voltar
                                         </button>
                                     )}
-                                    <button onClick={handleNext} className="flex-1 py-5 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.4em] hover:bg-indigo-600 flex items-center justify-center gap-4 active:scale-[0.98] transition-all">
-                                        {currentSection === totalSteps - 1 ? (isNewResident ? 'Capturar Avatar' : 'Revisar Protocolo') : 'Avançar Seção'} <ArrowRight size={20} />
+                                    <button onClick={handleNext} className="flex-1 py-6 bg-slate-900 text-white rounded-[2rem] font-black text-[12px] uppercase tracking-[0.4em] hover:bg-indigo-600 transition-all flex items-center justify-center gap-4 active:scale-95 shadow-2xl">
+                                        {currentSection === totalSteps - 1 ? (isNewResident ? 'Handshake Bio-ID' : 'Finalizar Protocolo') : 'Avançar Seção'} <ArrowRight size={24} />
                                     </button>
                                 </div>
                             </div>
@@ -354,126 +274,111 @@ const PublicSenso = () => {
                 )}
 
                 {step === 'PHOTO' && (
-                    <div className="bg-slate-900 w-full flex flex-col flex-1 animate-fade-in relative overflow-hidden h-full">
-                        <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#4f46e5 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
-                        
-                        <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-4 sm:p-10">
-                            <div className="max-w-3xl w-full text-center space-y-8">
-                                <div className="space-y-2">
-                                    <h3 className="text-2xl font-black text-white uppercase tracking-tightest">Identificação Vision</h3>
-                                    <p className="text-indigo-400 text-[9px] font-black uppercase tracking-[0.4em]">Handshake de Identidade Obrigatório</p>
-                                </div>
-
-                                <div className="relative mx-auto">
-                                    <div className="w-72 h-72 sm:w-96 sm:h-96 bg-black rounded-full border-4 border-white/20 overflow-hidden relative shadow-[0_0_80px_rgba(79,70,229,0.3)]">
-                                        {userData.avatar_url ? (
-                                            <img src={userData.avatar_url} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover grayscale brightness-110" />
-                                        )}
-                                        {!userData.avatar_url && (
-                                            <>
-                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                    <ScanLine size={160} className="text-white/20 animate-pulse" />
-                                                    <div className="absolute inset-x-0 h-0.5 bg-indigo-500 shadow-[0_0_20px_#6366f1] animate-[scan_2s_infinite]"></div>
-                                                </div>
-                                                <div className="absolute top-0 left-0 p-4">
-                                                    <span className="bg-rose-600 text-white px-3 py-1 text-[8px] font-black uppercase animate-pulse rounded-full">Live Feed</span>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                    
-                                    {userData.avatar_url && (
-                                        <button onClick={() => { setUserData({...userData, avatar_url: ''}); startCamera(); }} className="absolute -bottom-5 left-1/2 -translate-x-1/2 px-6 py-3 bg-rose-600 text-white text-[9px] font-black uppercase tracking-widest shadow-xl flex items-center gap-2 rounded-full">
-                                            <RotateCcw size={14}/> Refazer
-                                        </button>
-                                    )}
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {!userData.avatar_url ? (
-                                        <>
-                                            {!cameraActive ? (
-                                                <button onClick={startCamera} className="w-full py-5 bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest hover:bg-indigo-50 flex items-center justify-center gap-3 rounded-2xl">
-                                                    <Camera size={20}/> Ativar Lente
-                                                </button>
-                                            ) : (
-                                                <button onClick={capturePhoto} className="w-full py-5 bg-white text-slate-900 font-black text-[10px] uppercase tracking-widest hover:bg-slate-100 flex items-center justify-center gap-3 rounded-2xl">
-                                                    <ScanLine size={20}/> Capturar Face
-                                                </button>
-                                            )}
-                                            <label className="w-full py-5 bg-slate-800 text-white font-black text-[10px] uppercase tracking-widest cursor-pointer hover:bg-slate-700 flex items-center justify-center gap-3 rounded-2xl">
-                                                <Upload size={20}/> Upload Ficha <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
-                                            </label>
-                                        </>
-                                    ) : (
-                                        <button onClick={handleFinalReview} className="col-span-full py-6 bg-emerald-600 text-white font-black text-[11px] uppercase tracking-[0.4em] shadow-2xl hover:bg-emerald-500 transition-all flex items-center justify-center gap-4 rounded-3xl">
-                                            Avançar para Revisão <ArrowRight size={20}/>
-                                        </button>
-                                    )}
-                                </div>
-                                <p className="text-slate-500 text-[8px] font-bold uppercase tracking-widest">Sua foto será utilizada para o crachá digital e portaria Vision.</p>
+                    <div className="bg-slate-950 w-full max-w-4xl min-h-[700px] flex flex-col items-center justify-center text-center p-12 sm:rounded-[5rem] shadow-[0_40px_100px_rgba(0,0,0,0.5)] animate-fade-in relative overflow-hidden">
+                         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#4f46e5 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
+                         <div className="relative z-10 space-y-12 w-full">
+                            <div className="space-y-4">
+                                <h3 className="text-5xl font-black text-white uppercase tracking-tightest leading-none">Vision Identity</h3>
+                                <p className="text-indigo-400 text-xs font-black uppercase tracking-[0.5em] opacity-80">Captura Biométrica Obrigatória</p>
                             </div>
-                        </div>
-                        <canvas ref={canvasRef} className="hidden" />
+
+                            <div className="relative mx-auto">
+                                <div className={`w-80 h-80 sm:w-[400px] sm:h-[400px] bg-black rounded-full border-8 ${userData.avatar_url ? 'border-emerald-500' : 'border-indigo-500/20'} overflow-hidden relative shadow-[0_0_100px_rgba(79,70,229,0.3)] transition-all duration-700`}>
+                                    {userData.avatar_url ? (
+                                        <img src={userData.avatar_url} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover grayscale brightness-125" />
+                                    )}
+                                    {!userData.avatar_url && (
+                                        <div className="absolute inset-0 pointer-events-none">
+                                            <ScanLine size={200} className="text-white/20 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                                            <div className="absolute inset-x-0 h-1 bg-indigo-500 shadow-[0_0_30px_#6366f1] animate-[scan_2.5s_infinite]"></div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-6 justify-center">
+                                {!userData.avatar_url ? (
+                                    <>
+                                        {!cameraActive ? (
+                                            <button onClick={startCamera} className="px-14 py-7 bg-indigo-600 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-indigo-500 transition-all flex items-center justify-center gap-4">
+                                                <Camera size={24}/> Ativar Lente
+                                            </button>
+                                        ) : (
+                                            <button onClick={capturePhoto} className="px-14 py-7 bg-white text-slate-900 rounded-[2.5rem] font-black text-xs uppercase tracking-widest shadow-2xl hover:bg-slate-100 transition-all flex items-center justify-center gap-4 border-4 border-indigo-50">
+                                                <ScanLine size={24}/> Registrar Face
+                                            </button>
+                                        )}
+                                        <label className="px-14 py-7 bg-slate-800 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-widest cursor-pointer hover:bg-slate-700 transition-all flex items-center justify-center gap-4">
+                                            <Upload size={24}/> Carregar Ficha <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                                                const f = e.target.files?.[0];
+                                                if (f) { const r = new FileReader(); r.onloadend = () => setUserData({...userData, avatar_url: r.result as string}); r.readAsDataURL(f); }
+                                            }} />
+                                        </label>
+                                    </>
+                                ) : (
+                                    <button onClick={handleFinalReview} className="px-20 py-8 bg-emerald-600 text-white rounded-[3rem] font-black text-sm uppercase tracking-[0.4em] shadow-2xl hover:bg-emerald-500 transition-all flex items-center justify-center gap-6 active:scale-95 animate-bounce">
+                                        Validar Protocolo <ArrowRight size={28}/>
+                                    </button>
+                                )}
+                            </div>
+                         </div>
                     </div>
                 )}
 
                 {step === 'REVIEW' && (
-                    <div className="bg-white w-full max-w-3xl p-6 sm:p-10 lg:p-14 sm:mt-10 mt-0 sm:border rounded-none sm:rounded-[3rem] h-full sm:h-auto overflow-y-auto">
-                        <div className="flex items-center gap-4 mb-8">
-                            <div className="p-3 bg-indigo-600 rounded-2xl text-white"><Brain size={24}/></div>
+                    <div className="bg-white w-full max-w-4xl p-12 lg:p-20 sm:rounded-[5rem] shadow-2xl border border-slate-100 animate-fade-in relative overflow-hidden">
+                         <div className="absolute top-0 left-0 w-3 h-full bg-indigo-600" style={{ backgroundColor: primaryColor }}></div>
+                         <div className="flex items-center gap-6 mb-12">
+                            <div className="p-5 bg-indigo-600 rounded-[2rem] text-white shadow-xl" style={{ backgroundColor: primaryColor }}><Brain size={32}/></div>
                             <div>
-                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Mapeamento Social</h3>
-                                <p className="text-[7px] text-slate-400 font-black uppercase tracking-widest mt-1">Validação SRE Active Intelligence</p>
+                                <h3 className="text-3xl font-black text-slate-800 uppercase tracking-tightest">Análise de Matriz</h3>
+                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.4em] mt-2">Validação SRE Active Intelligence</p>
                             </div>
                         </div>
 
-                        <div className="space-y-8">
-                            <div className="flex gap-6 items-center p-6 bg-slate-50 border border-slate-100 rounded-3xl">
-                                <div className="w-20 h-20 bg-slate-200 border-2 border-white shadow-lg overflow-hidden rounded-2xl">
-                                    {userData.avatar_url ? <img src={userData.avatar_url} className="w-full h-full object-cover" /> : <User size={40} className="text-slate-400 m-5"/>}
+                        <div className="space-y-12">
+                            <div className="flex gap-8 items-center p-8 bg-slate-50 border border-slate-200 rounded-[3rem] shadow-inner">
+                                <div className="w-28 h-28 bg-slate-200 border-4 border-white shadow-xl overflow-hidden rounded-[2.5rem]">
+                                    {userData.avatar_url ? <img src={userData.avatar_url} className="w-full h-full object-cover" /> : <User size={48} className="text-slate-400 m-8"/>}
                                 </div>
                                 <div>
-                                    <h4 className="text-lg font-black text-slate-800 uppercase leading-none">{userData.name}</h4>
-                                    <p className="text-[9px] font-black text-indigo-500 uppercase mt-2 tracking-widest">Unidade: {userData.unit}</p>
-                                </div>
-                            </div>
-
-                            <div className="p-6 bg-indigo-50 rounded-3xl border border-indigo-100">
-                                <h4 className="text-[8px] font-black text-indigo-600 uppercase tracking-widest mb-4">Diagnóstico IA</h4>
-                                {isGeneratingSummary ? (
-                                    <div className="flex items-center gap-2 animate-pulse">
-                                        <Loader2 className="animate-spin" size={14} />
-                                        <span className="text-[9px] font-black text-indigo-400 uppercase">Processando matriz...</span>
+                                    <h4 className="text-2xl font-black text-slate-900 uppercase leading-none mb-3">{userData.name}</h4>
+                                    <div className="flex gap-4">
+                                        <span className="text-[10px] font-black text-indigo-600 bg-white px-4 py-1.5 rounded-xl border border-indigo-100 uppercase">Unid. {userData.unit}</span>
+                                        <span className="text-[10px] font-black text-slate-400 bg-white px-4 py-1.5 rounded-xl border border-slate-100 uppercase">{formatCPF(cpfIdentifier)}</span>
                                     </div>
-                                ) : <p className="text-indigo-900 text-sm font-medium leading-relaxed uppercase italic">"{aiSummary}"</p>}
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200">
-                                    <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-1">Campos Coletados</p>
-                                    <h4 className="text-xl font-black text-slate-800">{Object.keys(answers).length}</h4>
-                                </div>
-                                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200">
-                                    <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-1">Handshake SRE</p>
-                                    <h4 className="text-xl font-black text-emerald-600 uppercase">AUTENTICADO</h4>
                                 </div>
                             </div>
 
-                            <div className="flex gap-4 pt-6">
-                                <button onClick={() => setStep('FORM')} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-[9px] uppercase tracking-widest hover:bg-slate-200">Corrigir</button>
-                                <button onClick={handleSubmit} disabled={isLoading} className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all flex items-center justify-center gap-3">
-                                    {isLoading ? <Loader2 className="animate-spin" size={14}/> : <><ShieldCheck size={18}/> Protocolar Censo</>}
+                            <div className="p-10 bg-indigo-50 rounded-[3.5rem] border border-indigo-100 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-8 opacity-10"><Sparkles size={120}/></div>
+                                <h4 className="text-[11px] font-black text-indigo-600 uppercase tracking-[0.3em] mb-6 flex items-center gap-3"><Zap size={16}/> Diagnóstico Neural</h4>
+                                {isGeneratingSummary ? (
+                                    <div className="flex items-center gap-4 animate-pulse py-4">
+                                        <Loader2 className="animate-spin text-indigo-600" size={24} />
+                                        <span className="text-sm font-black text-indigo-400 uppercase tracking-widest">Processando Atributos Sociais...</span>
+                                    </div>
+                                ) : <p className="text-indigo-900 text-lg font-medium leading-loose uppercase italic relative z-10">"{aiSummary}"</p>}
+                            </div>
+
+                            <div className="flex gap-6">
+                                <button onClick={() => setStep('FORM')} className="flex-1 py-6 bg-slate-100 text-slate-500 rounded-[2rem] font-black text-[11px] uppercase tracking-widest hover:bg-slate-200 transition-all">Revisar Campos</button>
+                                <button onClick={handleSubmit} disabled={isLoading} className="flex-[2] py-6 bg-slate-950 text-white rounded-[2rem] font-black text-[11px] uppercase tracking-[0.4em] hover:bg-emerald-600 transition-all flex items-center justify-center gap-4 shadow-2xl active:scale-95 disabled:opacity-30">
+                                    {isLoading ? <Loader2 className="animate-spin" size={24}/> : <><ShieldCheck size={24}/> Comitar Censo Digital</>}
                                 </button>
                             </div>
                         </div>
                     </div>
                 )}
             </div>
+            
+            <canvas ref={canvasRef} className="hidden" />
             <style>{`
-                @keyframes scan { 0% { transform: translateY(-40px); } 100% { transform: translateY(400px); } }
+                @keyframes scan { 0% { transform: translateY(-40px); } 100% { transform: translateY(340px); } }
+                @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes scale-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
             `}</style>
         </div>
     );

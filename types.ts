@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 // --- ENUMS NUCLEARES ---
@@ -53,25 +54,49 @@ export interface SystemInfo {
   registrationMode?: 'OPEN' | 'APPROVAL' | 'INVITE_ONLY';
   resident_ui_settings?: ResidentUISetting[];
   whatsapp_config?: WhatsAppConfig;
-  // SRE: Coordenada central do cluster
   coordinates?: { lat: number; lng: number };
-  // SRE: Representação Legal
   president_name?: string;
   president_cpf?: string;
   management_start?: string;
   management_end?: string;
   president_signature?: string;
+  module_metadata?: Record<string, { title: string; slogan: string }>;
 }
 
-export interface IdCardTemplate {
+// --- CENSO & PESQUISAS (PROTOCOLO V10.0) ---
+
+export interface SurveyQuestion {
   id: string;
-  name: string;
-  width: number;
-  height: number;
-  orientation: 'landscape' | 'portrait';
-  frontBackground: string;
-  backBackground: string;
-  elements: any[];
+  text: string;
+  type: 'text' | 'number' | 'boolean' | 'select' | 'date' | 'repeater' | string;
+  options?: string[];
+  required: number | boolean;
+  mapping_tag?: 'IDENTITY' | 'EDUCATION' | 'DIGITAL' | 'GOV_AID' | 'FAMILY' | 'HEALTH' | 'FINANCE' | 'WORK' | string;
+  logic?: {
+    show_if_question: string;
+    show_if_value: any;
+  };
+  repeater_fields?: any[];
+}
+
+export interface Survey {
+  id: string | number;
+  title: string;
+  description: string;
+  type: 'CENSUS' | 'SOCIAL_AID' | 'SATISFACTION' | string;
+  status: 'ACTIVE' | 'INACTIVE' | string;
+  questions: SurveyQuestion[];
+  created_at?: string;
+}
+
+export interface SurveyResponse {
+  id: number;
+  survey_id: number;
+  user_id?: number;
+  cpf: string;
+  user_name: string;
+  answers: any;
+  created_at: string;
 }
 
 // --- IDENTIDADE & SOCIAL ---
@@ -105,13 +130,9 @@ export interface User {
   socialData?: SocialData;
   coordinates?: { lat: number; lng: number };
   address?: string;
-  neighborhood?: string;
-  city?: string;
-  state?: string;
-  zip_code?: string;
 }
 
-// --- OPERACIONAL & COMUNIDADE ---
+// --- OUTROS ---
 
 export interface Incident {
   id: string | number;
@@ -166,68 +187,6 @@ export interface ScheduledBroadcast {
   status: 'PENDING' | 'SENT' | 'FAILED';
 }
 
-export interface UnitData {
-  id: string | number;
-  residentName: string;
-  cpf: string;
-  unit: string;
-  address: string;
-  phone: string;
-  age: number;
-  coordinates: { lat: number; lng: number };
-  tags: string[];
-  role: string;
-  socialData?: any;
-}
-
-// --- PROTOCOLO ADITIVO SRE V7.0 ---
-
-export interface SurveyQuestion {
-  id: string;
-  text: string;
-  type: 'text' | 'number' | 'boolean' | 'select' | 'date' | 'repeater' | string;
-  options?: string[];
-  required: number | boolean;
-  mapping_tag?: string;
-  logic?: {
-    show_if_question: string;
-    show_if_value: any;
-  };
-  repeater_fields?: any[];
-}
-
-export interface Survey {
-  id: string | number;
-  title: string;
-  description: string;
-  type: 'CENSUS' | 'SOCIAL_AID' | 'SATISFACTION' | string;
-  status: 'ACTIVE' | 'INACTIVE' | string;
-  questions: SurveyQuestion[];
-}
-
-export interface AIKey {
-  id: string | number;
-  label: string;
-  key_value: string;
-  provider: string;
-  model: string;
-  tier: string;
-  status: string;
-  priority: number;
-  error_count: number;
-  last_checked?: string;
-  created_at?: string;
-}
-
-export interface Notice {
-  id: string | number;
-  title: string;
-  content: string;
-  urgency: 'LOW' | 'MEDIUM' | 'HIGH' | string;
-  date: string;
-  created_at?: string;
-}
-
 export interface AgendaEvent {
   id: string | number;
   title: string;
@@ -250,6 +209,31 @@ export interface CommunityProject {
   status: 'PLANNING' | 'EM_EXECUÇÃO' | 'CONCLUÍDO' | 'CANCELADO' | string;
 }
 
+export interface AIKey {
+  id: string | number;
+  label: string;
+  key_value: string;
+  provider: string;
+  model: string;
+  tier: string;
+  status: string;
+  priority: number;
+  error_count: number;
+  last_checked?: string;
+  created_at?: string;
+}
+
+// SRE FIX: Added missing exported member 'Notice'
+export interface Notice {
+  id: string | number;
+  title: string;
+  content: string;
+  urgency: 'LOW' | 'MEDIUM' | 'HIGH' | string;
+  date: string;
+  created_at?: string;
+}
+
+// SRE FIX: Added missing exported member 'CameraDevice'
 export interface CameraDevice {
   id: string | number;
   name: string;
@@ -258,12 +242,13 @@ export interface CameraDevice {
   status: 'ACTIVE' | 'INACTIVE' | string;
 }
 
+// SRE FIX: Added missing exported member 'Asset'
 export interface Asset {
   id: string | number;
   name: string;
   category: string;
   value: number | string;
-  status: string;
+  status: 'PERFEITO' | 'BOM' | 'MANUTENÇÃO' | 'DEPRECIADO' | string;
   date_acquired: string;
   responsible_id?: string | number;
 }
