@@ -48,13 +48,15 @@ const UserModal = ({ user, onClose, onSaveSuccess }: UserModalProps) => {
         is_recurring: 0
     });
 
+    const isTempUser = String(user.id).startsWith('temp_');
+
     useEffect(() => { 
         loadCoreData();
-        if (user.id && !String(user.id).startsWith('temp_')) {
+        if (user.id && !isTempUser) {
             loadDependents();
             loadFinancials();
         }
-    }, [user.id]);
+    }, [user.id, isTempUser]);
 
     const loadCoreData = async () => {
         try {
@@ -164,6 +166,7 @@ const UserModal = ({ user, onClose, onSaveSuccess }: UserModalProps) => {
     };
 
     const handleGenerateAiDossier = async () => {
+        if (isTempUser) return alert("SRE: Salve o cadastro antes de gerar o dossiê neural.");
         setIsGeneratingDossier(true);
         try {
             const res = await aiService.generateUserDossier(user.id);
@@ -181,7 +184,7 @@ const UserModal = ({ user, onClose, onSaveSuccess }: UserModalProps) => {
             // Sanitização de CPF antes do envio
             payload.cpf_cnpj = (payload.cpf_cnpj || '').replace(/\D/g, '');
 
-            if (typeof editingUser.id === 'string' && editingUser.id.startsWith('temp_')) {
+            if (isTempUser) {
                 const { id, ...clean } = payload;
                 await userService.create(clean);
             } else {
@@ -214,12 +217,12 @@ const UserModal = ({ user, onClose, onSaveSuccess }: UserModalProps) => {
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 mr-4">
-                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                             <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Cadastro Sincronizado</span>
+                        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border mr-4 ${isTempUser ? 'bg-amber-500/10 border-amber-500/20' : 'bg-emerald-500/10 border-emerald-500/20'}`}>
+                             <div className={`w-2 h-2 rounded-full animate-pulse ${isTempUser ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
+                             <span className={`text-[8px] font-black uppercase tracking-widest ${isTempUser ? 'text-amber-400' : 'text-emerald-400'}`}>{isTempUser ? 'Registro Pendente de Commit' : 'Cadastro Sincronizado'}</span>
                         </div>
                         <button onClick={handleSave} disabled={isSaving} className="px-10 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-4 shadow-2xl active:scale-95 group" style={{ backgroundColor: primaryColor }}>
-                            {isSaving ? <Loader2 className="animate-spin" size={18}/> : <Save size={18} className="group-hover:scale-110 transition-transform" />} Sincronizar Registro
+                            {isSaving ? <Loader2 className="animate-spin" size={18}/> : <Save size={18} className="group-hover:scale-110 transition-transform" />} {isTempUser ? 'Commitar Novo Membro' : 'Sincronizar Registro'}
                         </button>
                         <button onClick={onClose} className="p-4 hover:bg-rose-500 hover:text-white text-slate-400 rounded-2xl transition-all border border-white/5 ml-4"><X size={28}/></button>
                     </div>
@@ -429,9 +432,16 @@ const UserModal = ({ user, onClose, onSaveSuccess }: UserModalProps) => {
                                         <h3 className="text-5xl font-black tracking-tightest uppercase leading-tight">Analista de <br/>Perfil Mentor.</h3>
                                         <p className="text-slate-400 text-sm font-medium leading-relaxed max-w-sm uppercase italic opacity-80">Geração de dossiê preditivo baseado em histórico de participação, adimplência e comportamento social.</p>
                                     </div>
-                                    <button onClick={handleGenerateAiDossier} disabled={isGeneratingDossier} className="relative z-10 px-14 py-8 bg-indigo-600 hover:bg-indigo-500 text-white rounded-[2.5rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl flex items-center gap-6 transition-all active:scale-95 disabled:opacity-50">
-                                        {isGeneratingDossier ? <Loader2 className="animate-spin" size={28}/> : <Brain size={28}/>} {isGeneratingDossier ? 'Processando Matriz...' : 'Gerar Dossiê Neural'}
-                                    </button>
+                                    <div className="relative z-10 group">
+                                        {isTempUser && (
+                                            <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-48 bg-amber-500 text-slate-950 p-2 rounded-lg text-[8px] font-black uppercase text-center shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                                Salve o cadastro antes de prosseguir
+                                            </div>
+                                        )}
+                                        <button onClick={handleGenerateAiDossier} disabled={isGeneratingDossier || isTempUser} className={`px-14 py-8 rounded-[2.5rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl flex items-center gap-6 transition-all active:scale-95 ${isTempUser ? 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50' : 'bg-indigo-600 hover:bg-indigo-500 text-white'}`}>
+                                            {isGeneratingDossier ? <Loader2 className="animate-spin" size={28}/> : <Brain size={28}/>} {isGeneratingDossier ? 'Processando Matriz...' : 'Gerar Dossiê Neural'}
+                                        </button>
+                                    </div>
                                 </div>
                                 
                                 {aiDossier && (

@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 
 const api = axios.create({
@@ -112,6 +111,7 @@ export const communicationService = {
 // SRE FIX: Missing exported services added to resolve frontend errors
 export const operationsService = {
     getIncidents: () => api.get('/incidents'),
+    getHeatmap: () => api.get('/incidents/heatmap'),
     createIncident: (data: any) => api.post('/incidents', data),
     updateIncident: (id: any, data: any) => api.put(`/incidents/${id}`, data),
 };

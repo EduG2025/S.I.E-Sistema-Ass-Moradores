@@ -6,6 +6,7 @@ import https from 'https';
  * SRE Substitution Engine: Resolve variáveis contextuais em templates.
  */
 const resolveTemplate = (content, data) => {
+    if (!content) return "";
     let resolved = content;
     Object.entries(data).forEach(([key, val]) => {
         const regex = new RegExp(`\\{${key}\\}`, 'gi');
@@ -15,7 +16,7 @@ const resolveTemplate = (content, data) => {
 };
 
 /**
- * S.I.E PRO - WHATSAPP BROADCAST ENGINE V6.0 (SRE TEMPLATED)
+ * S.I.E PRO - WHATSAPP BROADCAST ENGINE V6.5 (SRE TAC-COM)
  */
 export const whatsappBroadcast = async (req, res) => {
     const { message, templateId, targetType, targetRole, userId, directNumber, footer, contextData } = req.body;
@@ -29,6 +30,9 @@ export const whatsappBroadcast = async (req, res) => {
         if (config && typeof config === 'string') config = JSON.parse(config);
 
         if (!config || !config.api_key) return res.status(400).json({ error: 'GATEWAY_NOT_CONFIGURED' });
+
+        // URL SOBERANA: Usa a URL do DB ou fallback global
+        const gatewayUrl = config.gateway_url || 'https://jennyai.space/send-message';
 
         let effectiveMessage = message;
         if (templateId) {
@@ -69,7 +73,7 @@ export const whatsappBroadcast = async (req, res) => {
                 
                 await axios({
                     method: 'post',
-                    url: 'https://jennyai.space/send-message',
+                    url: gatewayUrl,
                     params: {
                         api_key: config.api_key,
                         sender: config.sender,
@@ -82,13 +86,13 @@ export const whatsappBroadcast = async (req, res) => {
                 });
                 successCount++;
             } catch (err) { 
-                console.error(`[SRE BROADCAST FAIL] ${contact.phone}:`, err.message); 
+                console.error(`[SRE BROADCAST FAIL] ${contact.phone} via ${gatewayUrl}:`, err.message); 
             }
         }
 
         await pool.query(
             'INSERT INTO audit_logs (user_id, action, table_name, details) VALUES (?, "WHATSAPP_BROADCAST", "communication", ?)',
-            [req.user?.id || 0, `Template: ${templateId || 'RAW'} | Entregues: ${successCount}/${recipients.length}`]
+            [req.user?.id || 0, `Url: ${gatewayUrl} | Entregues: ${successCount}/${recipients.length}`]
         );
 
         res.json({ success: true, summary: { total: recipients.length, delivered: successCount } });
@@ -166,6 +170,7 @@ export const processScheduledMessages = async () => {
         const [[settings]] = await pool.query('SELECT whatsapp_config, shortName FROM settings WHERE id = 1');
         if (!settings?.whatsapp_config) return;
         let config = JSON.parse(settings.whatsapp_config);
+        const gatewayUrl = config.gateway_url || 'https://jennyai.space/send-message';
 
         for (const task of pending) {
             await pool.query('UPDATE scheduled_broadcasts SET status = "SENT" WHERE id = ?', [task.id]);
@@ -196,7 +201,7 @@ export const processScheduledMessages = async () => {
                     });
                     await axios({
                         method: 'post',
-                        url: 'https://jennyai.space/send-message',
+                        url: gatewayUrl,
                         params: {
                             api_key: config.api_key,
                             sender: config.sender,
@@ -207,7 +212,7 @@ export const processScheduledMessages = async () => {
                         timeout: 10000,
                         httpsAgent: agent
                     });
-                } catch (err) { console.error(`[SRE HEARTBEAT FAIL] ${contact.phone}`); }
+                } catch (err) { console.error(`[SRE HEARTBEAT FAIL] ${contact.phone} via ${gatewayUrl}`); }
             }
         }
     } catch (e) { console.error("[SRE HEARTBEAT ERROR]", e.message); }

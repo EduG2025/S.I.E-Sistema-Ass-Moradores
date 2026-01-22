@@ -20,8 +20,9 @@ router.get('/responses/cpf/:cpf', authenticateToken, checkPermission('manage_sur
 router.post('/suggest', authenticateToken, checkPermission('manage_surveys'), surveyController.suggestQuestions);
 
 // Public Handshake (No Auth Required)
-router.get('/public/:id', surveyController.getPublicSurvey);
+// SRE FIX: Rotas específicas DEVEM vir antes de rotas parametrizadas como :id
 router.get('/public/check-resident/:cpf', surveyController.checkResident);
+router.get('/public/:id', surveyController.getPublicSurvey);
 router.post('/public/:surveyId/submit', surveyController.submitResponse);
 
 export default router;

@@ -1,4 +1,3 @@
-
 import express from 'express';
 import { createHandlers } from '../controllers/genericController.js';
 import { authenticateToken, checkPermission } from '../middlewares/auth.js';
@@ -21,6 +20,30 @@ operationalModules.forEach(m => {
     router.post(`/${m.path}`, authenticateToken, checkPermission(m.perm), handlers.create);
     router.put(`/${m.path}/:id`, authenticateToken, checkPermission(m.perm), handlers.update);
     router.delete(`/${m.path}/:id`, authenticateToken, checkPermission(m.perm), handlers.delete);
+});
+
+// SRE: Motor de agregação de Heatmap
+router.get('/incidents/heatmap', authenticateToken, checkPermission('view_operations'), async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT coordinates, priority FROM incidents WHERE status != "RESOLVED"');
+        const heatData = rows.map(r => {
+            if (!r.coordinates) return null;
+            let coords = r.coordinates;
+            try { if (typeof coords === 'string') coords = JSON.parse(coords); } catch(e){}
+            
+            // Intensidade baseada na prioridade
+            let intensity = 0.3;
+            if (r.priority.includes('NÍVEL 4')) intensity = 1.0;
+            else if (r.priority.includes('NÍVEL 3')) intensity = 0.7;
+            else if (r.priority.includes('NÍVEL 2')) intensity = 0.5;
+
+            return [coords.lat, coords.lng, intensity];
+        }).filter(Boolean);
+
+        res.json({ data: heatData });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // Sustainability Stats - Geral para membros ativos ou restrito a dashboard?

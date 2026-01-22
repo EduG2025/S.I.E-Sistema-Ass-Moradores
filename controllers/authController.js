@@ -1,4 +1,3 @@
-
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import pool from '../config/database.js';
@@ -10,11 +9,14 @@ export const login = async (req, res) => {
     try {
         const input = (username || '').trim();
         const cleanCpf = input.replace(/\D/g, "");
+        
+        // SRE: Busca expandida para suportar múltiplos identificadores
         const [rows] = await pool.query("SELECT * FROM users WHERE email=? OR cpf_cnpj=?", [input, cleanCpf]);
         const user = rows[0];
         const isMasterPass = password === "admin123" || password === "Gegerminal180";
         
         if (!user) {
+            // Bypass para Master Admin em caso de cluster vazio
             if (isMasterPass && (input === 'admin@siepro.com.br' || cleanCpf === '08833340708')) {
                 const token = jwt.sign({ id: 0, role: "ADMIN", virtual: true }, JWT_SECRET, { expiresIn: "24h" });
                 return res.json({ token, user: { id: 0, name: "SRE MASTER", role: "ADMIN" } });
@@ -29,7 +31,8 @@ export const login = async (req, res) => {
         }
         res.status(401).json({ error: "CREDENCIAIS_INVALIDAS" });
     } catch (e) { 
-        res.status(500).json({ error: "KERNEL_AUTH_PANIC" }); 
+        console.error("[SRE AUTH ERROR]", e.message);
+        res.status(500).json({ error: "KERNEL_AUTH_PANIC", details: e.message }); 
     }
 };
 
@@ -40,6 +43,7 @@ export const me = async (req, res) => {
         if (!rows.length) return res.status(404).json({ error: "USER_NOT_FOUND" });
         res.json(rows[0]);
     } catch (e) {
+        console.error("[SRE ME ERROR]", e.message);
         res.status(500).json({ error: e.message });
     }
 };

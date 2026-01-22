@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 // --- ENUMS NUCLEARES ---
@@ -17,7 +16,9 @@ export enum UserRole {
 export type UserStatus = 'ACTIVE' | 'PENDING' | 'BANNED' | 'VALIDATION_REQUIRED';
 export type FinancialStatus = 'PAID' | 'PENDING' | 'OVERDUE' | 'CANCELLED' | 'PARTIAL';
 export type ProjectStatus = 'PLANNING' | 'EM_EXECUÇÃO' | 'CONCLUÍDO' | 'CANCELADO';
-export type IncidentPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+// SRE UPDATE: Novos níveis de severidade tática
+export type IncidentPriority = 'INFORMATIVO (NÍVEL 1)' | 'ATENÇÃO (NÍVEL 2)' | 'ALTA (NÍVEL 3 - ALERTA LOCAL)' | 'CRÍTICA (NÍVEL 4 - PÂNICO EM RAIO)';
 export type IncidentStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
 export type DocumentType = 'OFICIO' | 'ATA' | 'EDITAL' | 'CONTRATO' | 'RELATÓRIO';
 
@@ -36,8 +37,11 @@ export interface WhatsAppConfig {
   sender: string;
   footer: string;
   welcome_template?: string;
+  anniversary_template?: string;
+  billing_template?: string;
   default_password?: string;
   webhook_url?: string;
+  gateway_url?: string;
 }
 
 export interface SystemInfo {
@@ -89,16 +93,6 @@ export interface Survey {
   created_at?: string;
 }
 
-export interface SurveyResponse {
-  id: number;
-  survey_id: number;
-  user_id?: number;
-  cpf: string;
-  user_name: string;
-  answers: any;
-  created_at: string;
-}
-
 // --- IDENTIDADE & SOCIAL ---
 
 export interface SocialData {
@@ -141,7 +135,9 @@ export interface Incident {
   priority: IncidentPriority | string;
   status: IncidentStatus | string;
   description: string;
+  radius?: number; // Raio de notificação em KM
   coordinates?: { lat: number; lng: number };
+  reporter_name?: string;
 }
 
 export interface FinancialRecord {
@@ -158,57 +154,6 @@ export interface FinancialRecord {
   is_recurring?: boolean | number;
 }
 
-export interface OfficialDocument {
-  id: string | number;
-  title: string;
-  content: string;
-  type: DocumentType | string;
-  status: 'DRAFT' | 'FINAL' | 'ARCHIVED' | string;
-  updated_at: string;
-}
-
-export interface MarketItem {
-  id: string | number;
-  merchant_id?: string | number;
-  title: string;
-  description: string;
-  category: 'FOOD' | 'SERVICE' | 'GOODS' | string;
-  price: number | string;
-  whatsapp: string;
-}
-
-export interface ScheduledBroadcast {
-  id: string | number;
-  user_id: number;
-  target_type: 'ROLE' | 'USER' | 'DIRECT' | string;
-  target_value: string;
-  message_body: string;
-  scheduled_at: string;
-  status: 'PENDING' | 'SENT' | 'FAILED';
-}
-
-export interface AgendaEvent {
-  id: string | number;
-  title: string;
-  description: string;
-  date: string;
-  type: 'MEETING' | 'MAINTENANCE' | 'DEADLINE' | string;
-  status: 'UPCOMING' | 'FINISHED' | string;
-  location?: string;
-}
-
-export interface CommunityProject {
-  id: string | number;
-  title: string;
-  description: string;
-  budget: number | string;
-  spent: number | string;
-  progress: number;
-  startDate: string;
-  category: 'INFRA' | 'LANDMARK' | string;
-  status: 'PLANNING' | 'EM_EXECUÇÃO' | 'CONCLUÍDO' | 'CANCELADO' | string;
-}
-
 export interface AIKey {
   id: string | number;
   label: string;
@@ -223,7 +168,6 @@ export interface AIKey {
   created_at?: string;
 }
 
-// SRE FIX: Added missing exported member 'Notice'
 export interface Notice {
   id: string | number;
   title: string;
@@ -233,7 +177,6 @@ export interface Notice {
   created_at?: string;
 }
 
-// SRE FIX: Added missing exported member 'CameraDevice'
 export interface CameraDevice {
   id: string | number;
   name: string;
@@ -242,7 +185,6 @@ export interface CameraDevice {
   status: 'ACTIVE' | 'INACTIVE' | string;
 }
 
-// SRE FIX: Added missing exported member 'Asset'
 export interface Asset {
   id: string | number;
   name: string;
@@ -251,4 +193,76 @@ export interface Asset {
   status: 'PERFEITO' | 'BOM' | 'MANUTENÇÃO' | 'DEPRECIADO' | string;
   date_acquired: string;
   responsible_id?: string | number;
+}
+
+// --- SRE FIX: Missing Interfaces for Domain Specific Modules ---
+
+/**
+ * Interface para Agendamentos de Broadcast (WhatsApp/Email)
+ */
+export interface ScheduledBroadcast {
+  id: string | number;
+  user_id?: string | number;
+  target_type: 'ROLE' | 'USER' | 'DIRECT' | string;
+  target_value: string;
+  message_body: string;
+  template_id?: number;
+  scheduled_at: string;
+  status: 'PENDING' | 'SENT' | 'FAILED' | string;
+  created_at?: string;
+}
+
+/**
+ * Interface para Eventos de Agenda/Timeline
+ */
+export interface AgendaEvent {
+  id: string | number;
+  title: string;
+  description: string;
+  date: string;
+  type: 'MEETING' | 'MAINTENANCE' | 'DEADLINE' | string;
+  status: 'UPCOMING' | 'FINISHED' | string;
+  location?: string;
+}
+
+/**
+ * Interface para Gestão de Obras e Projetos Comunitários
+ */
+export interface CommunityProject {
+  id: string | number;
+  title: string;
+  description: string;
+  budget: number | string;
+  spent: number | string;
+  progress: number;
+  startDate: string;
+  category: 'INFRA' | 'SOCIAL' | string;
+  status: ProjectStatus | string;
+}
+
+/**
+ * Interface para Itens de Marketplace Local
+ */
+export interface MarketItem {
+  id: string | number;
+  merchant_id?: string | number;
+  title: string;
+  description: string;
+  category: 'GOODS' | 'FOOD' | 'SERVICE' | string;
+  price: number | string;
+  whatsapp?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+/**
+ * Interface para Documentos Oficiais (Ghostwriter/OCR Hub)
+ */
+export interface OfficialDocument {
+  id: string | number;
+  title: string;
+  content: string;
+  type: DocumentType | string;
+  status: 'DRAFT' | 'SIGNED' | 'ARCHIVED' | string;
+  updated_at: string;
 }

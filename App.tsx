@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { systemService, authService, api } from './services/api';
 
+// --- LAZY LOADING MODULES (SRE OPTIMIZED) ---
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const ResidentDashboard = lazy(() => import('./components/ResidentDashboard'));
 const Settings = lazy(() => import('./components/Settings'));
@@ -25,6 +26,7 @@ const Sustainability = lazy(() => import('./components/Sustainability'));
 const SuggestionBox = lazy(() => import('./components/SuggestionBox'));
 const DigitalWatch = lazy(() => import('./components/DigitalWatch'));
 const PublicSenso = lazy(() => import('./components/PublicSenso'));
+const Surveys = lazy(() => import('./components/Surveys'));
 
 const App = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -125,8 +127,15 @@ const App = () => {
         );
     }
 
-    if (isPublicCensus) return <PublicSenso />;
-    if (!isAuthenticated) return <LoginScreen onLoginSuccess={handleLoginSuccess} systemInfo={systemInfo} />;
+    // SRE FIX: Chaves 'key' forçam o React a remontar completamente a árvore em transições críticas,
+    // resolvendo o erro NotFoundError: removeChild (Reconciliação Corrompida).
+    if (isPublicCensus) return <div key="public-view"><PublicSenso /></div>;
+    
+    if (!isAuthenticated) return (
+        <div key="guest-view">
+            <LoginScreen onLoginSuccess={handleLoginSuccess} systemInfo={systemInfo} />
+        </div>
+    );
 
     const primaryColor = systemInfo.primaryColor || '#4f46e5';
 
@@ -151,12 +160,13 @@ const App = () => {
             case 'sustainability': return <Sustainability systemInfo={systemInfo} />;
             case 'suggestions': return <SuggestionBox systemInfo={systemInfo} />;
             case 'watchdog': return <DigitalWatch systemInfo={systemInfo} />;
+            case 'surveys': return <Surveys systemInfo={systemInfo} />;
             default: return <Dashboard onNavigate={setActiveTab} systemInfo={systemInfo} />;
         }
     };
 
     return (
-        <div className="flex h-screen w-full bg-[#f8fafc] overflow-hidden">
+        <div key="authenticated-layout" className="flex h-screen w-full bg-[#f8fafc] overflow-hidden">
             {/* Sidebar Trigger for Mobile */}
             <button onClick={() => setSidebarOpen(true)} className="lg:hidden fixed top-4 left-4 z-[1100] p-3 bg-slate-900 text-white rounded-xl shadow-2xl">
                 <Menu size={24}/>
@@ -169,7 +179,7 @@ const App = () => {
                         {!sidebarCollapsed && (
                              <div className="flex items-center gap-4 min-w-0">
                                 <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center p-2 shadow-2xl shrink-0">
-                                    {systemInfo.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain" alt="Logo" /> : <Shield size={20} className="text-indigo-600" style={{ color: primaryColor }} />}
+                                    {systemInfo.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain p-4" alt="Logo" /> : <Shield size={20} className="text-indigo-600" style={{ color: primaryColor }} />}
                                 </div>
                                 <div className="min-w-0">
                                     <h1 className="text-sm font-black text-white tracking-tight leading-none truncate uppercase">{systemInfo.shortName}</h1>
