@@ -1,3 +1,12 @@
+# Arquivos e diretórios de ambiente
+.env
+.env-local
+.env.example
+
+# Arquivos de configuração do servidor (AGORA IGNORADOS)
+server.cjs
+setup-sh.sh
+
 # Logs
 logs
 *.log
@@ -7,12 +16,13 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Diretórios de build e dependências
 node_modules
 dist
 dist-ssr
-*.local
 
-# Editor directories and files
+# Arquivos locais e de IDE
+*.local
 .vscode/*
 !.vscode/extensions.json
 .idea
