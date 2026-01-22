@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 
 /**
@@ -33,7 +34,8 @@ export const IAProviderManager = {
 
   async execute(task: 'generateText' | 'analyzeImage' | string, payload: any): Promise<any> {
     // SRE CORE: Inicialização estrita conforme diretrizes do Gemini 3
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    // SRE FIX: Always use process.env.API_KEY string directly when initializing
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
     
     try {
       const modelName = payload.model || 'gemini-3-flash-preview';

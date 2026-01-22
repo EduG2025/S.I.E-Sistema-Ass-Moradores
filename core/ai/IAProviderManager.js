@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import pool from "../../config/database.js";
 
@@ -56,8 +57,8 @@ export const IAProviderManager = {
    * Executa tarefas neurais com soberania de credenciais e seleção de modelo.
    */
   async execute(task, payload) {
-    const { apiKey } = await this.getActiveCredentials();
-    const ai = new GoogleGenAI({ apiKey });
+    // SRE FIX: Guidelines require using process.env.API_KEY directly for initializing the GoogleGenAI instance.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     try {
       // O modelo também pode ser dinâmico vindo da config do usuário futuramente
@@ -83,6 +84,7 @@ export const IAProviderManager = {
         }
       });
 
+      // SRE FIX: Accessing .text property instead of calling it as a function.
       if (!response.text) {
           throw new Error("EMPTY_AI_RESPONSE");
       }

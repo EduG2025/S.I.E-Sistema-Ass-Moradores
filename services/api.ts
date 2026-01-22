@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 
 const api = axios.create({
@@ -76,7 +77,6 @@ export const aiService = {
 
 export const mapService = {
     getUnits: () => api.get('/users'),
-    // SRE: Busca avançada com motor neural DSL
     searchAdvanced: (query: string) => api.post('/users/search-neural', { query }),
 };
 
@@ -84,7 +84,6 @@ export const demographicsService = {
     getStats: () => api.get('/demographics/stats'),
 };
 
-// SRE: Survey and Data Intelligence Service
 export const surveyService = {
     getAll: () => api.get('/surveys'),
     getResponsesByCpf: (cpf: string) => api.get(`/surveys/responses/cpf/${cpf}`),
@@ -94,32 +93,36 @@ export const surveyService = {
     delete: (id: any) => api.delete(`/surveys/${id}`),
 };
 
-// SRE: Operational and Incident Service
+export const communicationService = {
+    getNotices: () => api.get('/communication/notices'),
+    sendNotice: (data: any) => api.post('/communication/notices', data),
+    updateNotice: (id: any, data: any) => api.put(`/communication/notices/${id}`, data),
+    deleteNotice: (id: any) => api.delete(`/communication/notices/${id}`),
+    
+    // TEMPLATES
+    getTemplates: () => api.get('/communication/templates'),
+    saveTemplate: (data: any) => api.post('/communication/templates', data),
+    deleteTemplate: (id: any) => api.delete(`/communication/templates/${id}`),
+
+    getSchedules: () => api.get('/communication/schedules'),
+    createSchedule: (data: any) => api.post('/communication/schedules', data),
+    deleteSchedule: (id: any) => api.delete(`/communication/schedules/${id}`),
+};
+
+// SRE FIX: Missing exported services added to resolve frontend errors
 export const operationsService = {
     getIncidents: () => api.get('/incidents'),
     createIncident: (data: any) => api.post('/incidents', data),
     updateIncident: (id: any, data: any) => api.put(`/incidents/${id}`, data),
 };
 
-// SRE: Multi-channel Communication and WhatsApp Gateway Service
-export const communicationService = {
-    getNotices: () => api.get('/communication/notices'),
-    sendNotice: (data: any) => api.post('/communication/notices', data),
-    updateNotice: (id: any, data: any) => api.put(`/communication/notices/${id}`, data),
-    deleteNotice: (id: any) => api.delete(`/communication/notices/${id}`),
-    getSchedules: () => api.get('/communication/schedules'),
-    createSchedule: (data: any) => api.post('/communication/schedules', data),
-    deleteSchedule: (id: any) => api.delete(`/communication/schedules/${id}`),
-};
-
-// SRE: Timeline and Agenda Management Service
 export const agendaService = {
     getAll: () => api.get('/agenda'),
     create: (data: any) => api.post('/agenda', data),
     update: (id: any, data: any) => api.put(`/agenda/${id}`, data),
+    delete: (id: any) => api.delete(`/agenda/${id}`),
 };
 
-// SRE: Infrastructure and Project Pipeline Service
 export const projectService = {
     getAll: () => api.get('/projects'),
     create: (data: any) => api.post('/projects', data),
@@ -127,27 +130,31 @@ export const projectService = {
     delete: (id: any) => api.delete(`/projects/${id}`),
 };
 
-// SRE: Circular Economy Marketplace Service
 export const marketplaceService = {
     getAll: () => api.get('/community/marketplace'),
     create: (data: any) => api.post('/community/marketplace', data),
     update: (id: any, data: any) => api.put(`/community/marketplace/${id}`, data),
+    delete: (id: any) => api.delete(`/community/marketplace/${id}`),
 };
 
-// SRE: Vision Monitoring and Surveillance Service
 export const cameraService = {
     getAll: () => api.get('/cameras'),
     create: (data: any) => api.post('/cameras', data),
     delete: (id: any) => api.delete(`/cameras/${id}`),
 };
 
-// SRE: Resident Census and Social Mapping Service
-export const censusService = {
-    register: (data: any) => api.post('/census/register', data),
-    createProfile: (registryId: any, data: any) => api.post(`/census/profile/${registryId}`, data),
+export const assetService = {
+    getAll: () => api.get('/assets'),
+    create: (data: any) => api.post('/assets', data),
+    update: (id: any, data: any) => api.put(`/assets/${id}`, data),
+    delete: (id: any) => api.delete(`/assets/${id}`),
 };
 
-// SRE: Legal and Administrative Governance Document Service
+export const censusService = {
+    register: (data: any) => api.post('/census/register', data),
+    createProfile: (registryId: number, data: any) => api.post(`/census/profile/${registryId}`, data),
+};
+
 export const documentService = {
     getAll: () => api.get('/governance/documents'),
     create: (data: any) => api.post('/governance/documents', data),
@@ -155,7 +162,6 @@ export const documentService = {
     delete: (id: any) => api.delete(`/governance/documents/${id}`),
 };
 
-// SRE: Digital Assembly and Voting Service
 export const assemblyService = {
     getAll: () => api.get('/governance/assemblies'),
     create: (data: any) => api.post('/governance/assemblies', data),
@@ -163,7 +169,6 @@ export const assemblyService = {
     delete: (id: any) => api.delete(`/governance/assemblies/${id}`),
 };
 
-// SRE: Digital Suggestion Box and Ombudsman Service
 export const suggestionService = {
     getAll: () => api.get('/community/suggestions'),
     create: (data: any) => api.post('/community/suggestions', data),
@@ -171,19 +176,10 @@ export const suggestionService = {
     delete: (id: any) => api.delete(`/community/suggestions/${id}`),
 };
 
-// SRE: Resource Allocation and Reservation Service
 export const reservationService = {
     getAll: () => api.get('/community/reservations'),
     create: (data: any) => api.post('/community/reservations', data),
     delete: (id: any) => api.delete(`/community/reservations/${id}`),
-};
-
-// SRE: Community Asset and Inventory Service
-export const assetService = {
-    getAll: () => api.get('/assets'),
-    create: (data: any) => api.post('/assets', data),
-    update: (id: any, data: any) => api.put(`/assets/${id}`, data),
-    delete: (id: any) => api.delete(`/assets/${id}`),
 };
 
 export { api };

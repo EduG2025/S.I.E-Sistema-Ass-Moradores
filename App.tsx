@@ -2,11 +2,10 @@ import React, { useState, Suspense, lazy, useEffect, useMemo } from 'react';
 import { MENU_ITEMS, DEFAULT_SYSTEM_INFO } from './constants';
 import { SystemInfo, User } from './types';
 import {
-    LogOut, Menu, Loader2, Shield, PanelLeftClose, PanelLeft, X, ShieldCheck
+    LogOut, Menu, Loader2, Shield, PanelLeftClose, PanelLeft, X, ShieldCheck, Zap
 } from 'lucide-react';
 import { systemService, authService, api } from './services/api';
 
-// Lazy loading de módulos para performance otimizada
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const ResidentDashboard = lazy(() => import('./components/ResidentDashboard'));
 const Settings = lazy(() => import('./components/Settings'));
@@ -70,7 +69,11 @@ const App = () => {
 
     const handleLoginSuccess = async (user: User, token: string) => {
         localStorage.setItem('sie_auth_token', token);
-        const permsRes = await api.get('/settings/permissions/my');
+        const [infoRes, permsRes] = await Promise.all([
+            systemService.getInfo(),
+            api.get('/settings/permissions/my')
+        ]);
+        setSystemInfo(infoRes.data || DEFAULT_SYSTEM_INFO);
         setDynamicPermissions(permsRes.data.data || []);
         setCurrentUser(user);
         setIsAuthenticated(true);
@@ -102,12 +105,21 @@ const App = () => {
         return categories;
     }, [currentUser, dynamicPermissions]);
 
+    const currentModuleInfo = useMemo(() => {
+        const metadata: any = (systemInfo as any).module_metadata || {};
+        const activeItem = MENU_ITEMS.find(i => i.id === activeTab);
+        return {
+            title: metadata[activeTab]?.title || activeItem?.label || "Módulo",
+            slogan: metadata[activeTab]?.slogan || "Gestão Inteligente Ativa"
+        };
+    }, [activeTab, systemInfo]);
+
     if (isLoading) {
         return (
             <div className="h-screen w-screen flex items-center justify-center bg-[#020617]">
                 <div className="text-center space-y-4">
                     <Loader2 className="animate-spin text-indigo-500 mx-auto" size={48} />
-                    <p className="text-indigo-300 font-black uppercase text-[10px] tracking-widest animate-pulse">SRE: BOOTING KERNEL S.I.E PRO...</p>
+                    <p className="text-indigo-300 font-black uppercase text-[10px] tracking-widest animate-pulse">BOOTING S.I.E PRO KERNEL...</p>
                 </div>
             </div>
         );
@@ -116,13 +128,14 @@ const App = () => {
     if (isPublicCensus) return <PublicSenso />;
     if (!isAuthenticated) return <LoginScreen onLoginSuccess={handleLoginSuccess} systemInfo={systemInfo} />;
 
+    const primaryColor = systemInfo.primaryColor || '#4f46e5';
+
     const renderContent = () => {
-        if (activeTab === 'dashboard') {
-            return currentUser?.role === 'RESIDENT' 
-                ? <ResidentDashboard onNavigate={setActiveTab} systemInfo={systemInfo} />
-                : <Dashboard onNavigate={setActiveTab} systemInfo={systemInfo} />;
-        }
         switch (activeTab) {
+            case 'dashboard':
+                return currentUser?.role === 'RESIDENT' 
+                    ? <ResidentDashboard onNavigate={setActiveTab} systemInfo={systemInfo} />
+                    : <Dashboard onNavigate={setActiveTab} systemInfo={systemInfo} />;
             case 'settings': return <Settings systemInfo={systemInfo} onUpdateSystemInfo={setSystemInfo} />;
             case 'users': return <UserManagement systemInfo={systemInfo} />;
             case 'operations': return <Operations systemInfo={systemInfo} />;
@@ -142,16 +155,14 @@ const App = () => {
         }
     };
 
-    const primaryColor = systemInfo.primaryColor || '#4f46e5';
-
     return (
         <div className="flex h-screen w-full bg-[#f8fafc] overflow-hidden">
-            {/* Gatilho Mobile */}
+            {/* Sidebar Trigger for Mobile */}
             <button onClick={() => setSidebarOpen(true)} className="lg:hidden fixed top-4 left-4 z-[1100] p-3 bg-slate-900 text-white rounded-xl shadow-2xl">
                 <Menu size={24}/>
             </button>
 
-            {/* Sidebar SRE */}
+            {/* Sidebar Shell */}
             <aside className={`fixed inset-y-0 left-0 z-[1000] sidebar-glass text-slate-400 flex flex-col transition-all duration-300 lg:static h-screen ${sidebarOpen ? 'translate-x-0 w-[280px]' : '-translate-x-full lg:translate-x-0'} ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-[320px]'}`}>
                 <div className="p-6 flex-none">
                     <div className="flex items-center justify-between gap-4">
@@ -162,7 +173,7 @@ const App = () => {
                                 </div>
                                 <div className="min-w-0">
                                     <h1 className="text-sm font-black text-white tracking-tight leading-none truncate uppercase">{systemInfo.shortName}</h1>
-                                    <p className="text-[7px] font-black uppercase text-indigo-400 mt-1 tracking-[0.4em]" style={{ color: primaryColor }}>Kernel Active</p>
+                                    <p className="text-[7px] font-black uppercase text-indigo-400 mt-1 tracking-[0.4em]" style={{ color: primaryColor }}>Handshake Active</p>
                                 </div>
                              </div>
                         )}
@@ -175,9 +186,7 @@ const App = () => {
                 <nav className="flex-1 overflow-y-auto custom-scrollbar px-3 py-2 space-y-6">
                     {Object.entries(filteredMenuByCategory).map(([category, items]) => (
                         <div key={category} className="space-y-1.5">
-                            {!sidebarCollapsed && (
-                                <h5 className="px-4 mb-2 text-[8px] font-black text-slate-600 uppercase tracking-[0.4em] leading-none">{category}</h5>
-                            )}
+                            {!sidebarCollapsed && <h5 className="px-4 mb-2 text-[8px] font-black text-slate-600 uppercase tracking-[0.4em] leading-none">{category}</h5>}
                             <div className="space-y-0.5">
                                 {items.map(item => {
                                     const isActive = activeTab === item.id;
@@ -208,19 +217,42 @@ const App = () => {
                         </div>
                         <button onClick={handleLogout} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}>
                             <LogOut size={16} className="shrink-0" />
-                            {!sidebarCollapsed && <span className="text-[9px] font-black uppercase tracking-widest">Logout</span>}
+                            {!sidebarCollapsed && <span className="text-[9px] font-black uppercase tracking-widest">Sair do Terminal</span>}
                         </button>
                     </div>
                 </div>
             </aside>
 
-            {/* Main Panel */}
+            {/* Main Application Area */}
             <main className="flex-1 relative overflow-hidden flex flex-col bg-[#f8fafc]">
-                <Suspense fallback={<div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" size={48} /></div>}>
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-8">
-                        {renderContent()}
+                {/* Dynamic Global Header */}
+                <div className="h-16 px-8 flex items-center justify-between border-b bg-white shrink-0 relative z-30 shadow-sm">
+                    <div className="flex items-center gap-4">
+                        <div className="hidden lg:block h-8 w-1 bg-indigo-600 rounded-full" style={{ backgroundColor: primaryColor }} />
+                        <div>
+                            <h2 className="text-xs font-black uppercase tracking-tight text-slate-800 leading-none">{currentModuleInfo.title}</h2>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">{currentModuleInfo.slogan}</p>
+                        </div>
                     </div>
-                </Suspense>
+                    <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">
+                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                             <span className="text-[8px] font-black uppercase tracking-widest">SRE Session OK</span>
+                        </div>
+                        <Zap size={14} className="text-amber-500 animate-pulse" />
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-8">
+                    <Suspense fallback={
+                        <div className="flex-1 flex flex-col items-center justify-center p-20">
+                            <Loader2 className="animate-spin text-indigo-600" size={48} style={{ color: primaryColor }} />
+                            <p className="mt-4 font-black uppercase text-[10px] tracking-widest text-slate-400">Handshaking Module...</p>
+                        </div>
+                    }>
+                        {renderContent()}
+                    </Suspense>
+                </div>
             </main>
         </div>
     );

@@ -1,4 +1,3 @@
-
 import express from 'express';
 import * as commController from '../controllers/communicationController.js';
 import { createHandlers } from '../controllers/genericController.js';
@@ -12,6 +11,11 @@ router.get('/notices', authenticateToken, noticeHandlers.getAll);
 router.post('/notices', authenticateToken, checkPermission('manage_communication'), noticeHandlers.create);
 router.put('/notices/:id', authenticateToken, checkPermission('manage_communication'), noticeHandlers.update);
 router.delete('/notices/:id', authenticateToken, checkPermission('manage_communication'), noticeHandlers.delete);
+
+// Templates (NOVO)
+router.get('/templates', authenticateToken, checkPermission('manage_communication'), commController.getTemplates);
+router.post('/templates', authenticateToken, checkPermission('manage_communication'), commController.saveTemplate);
+router.delete('/templates/:id', authenticateToken, checkPermission('manage_communication'), commController.deleteTemplate);
 
 // WhatsApp Bridge
 router.post('/whatsapp-broadcast', authenticateToken, checkPermission('manage_communication'), commController.whatsappBroadcast);
