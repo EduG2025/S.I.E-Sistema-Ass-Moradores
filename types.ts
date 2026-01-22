@@ -19,8 +19,6 @@ export type ProjectStatus = 'PLANNING' | 'EM_EXECUÇÃO' | 'CONCLUÍDO' | 'CANCE
 export type IncidentPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type IncidentStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
 export type DocumentType = 'OFICIO' | 'ATA' | 'EDITAL' | 'CONTRATO' | 'RELATÓRIO';
-export type AIKeyStatus = 'ACTIVE' | 'ERROR' | 'INVALID';
-export type AITier = 'FREE' | 'PAID';
 
 // --- INTERFACES DE CONFIGURAÇÃO ---
 
@@ -36,8 +34,8 @@ export interface WhatsAppConfig {
   api_key: string;
   sender: string;
   footer: string;
-  welcome_template?: string; // SRE: Modelo de mensagem para novos membros
-  default_password?: string; // SRE: Senha padrão para novos cadastros
+  welcome_template?: string;
+  default_password?: string;
   webhook_url?: string;
 }
 
@@ -55,9 +53,10 @@ export interface SystemInfo {
   registrationMode?: 'OPEN' | 'APPROVAL' | 'INVITE_ONLY';
   resident_ui_settings?: ResidentUISetting[];
   whatsapp_config?: WhatsAppConfig;
+  // SRE: Coordenada central do cluster
+  coordinates?: { lat: number; lng: number };
 }
 
-// SRE: Definindo IdCardTemplate para resolver falha de importação em constants.tsx
 export interface IdCardTemplate {
   id: string;
   name: string;
@@ -69,7 +68,7 @@ export interface IdCardTemplate {
   elements: any[];
 }
 
-// --- INTERFACES DE IDENTIDADE ---
+// --- IDENTIDADE & SOCIAL ---
 
 export interface SocialData {
   risk: number;
@@ -80,8 +79,6 @@ export interface SocialData {
   last_census_date?: string;
   ai_notes?: string;
   nis_number?: string;
-  benefits?: string[];
-  education_level?: string;
 }
 
 export interface User {
@@ -91,103 +88,64 @@ export interface User {
   unit?: string;
   role: UserRole | string;
   status: UserStatus;
-  active: boolean;
+  active: boolean | number;
   cpf_cnpj: string;
-  age?: number; // SRE: Atributo bioestatístico
+  age?: number;
   email?: string;
   phone?: string;
   avatar_url?: string;
-  permissions?: string[];
   socialData?: SocialData;
   coordinates?: { lat: number; lng: number };
-  rg?: string;
-  rg_issuing_body?: string;
-  parent_id?: string | number;
   address?: string;
   neighborhood?: string;
   city?: string;
   state?: string;
   zip_code?: string;
-  profession?: string;
-  last_login?: string;
 }
 
-// --- INTERFACES DE PESQUISA DINÂMICA (SRE V9) ---
+// --- OPERACIONAL & COMUNIDADE ---
 
-export interface QuestionLogic {
-  show_if_question?: string | number;
-  show_if_value?: any;
-}
-
-export interface SurveyQuestion {
-  id: string | number;
-  text: string;
-  type: 'text' | 'number' | 'boolean' | 'select' | 'date' | 'repeater';
-  options?: string[];
-  mapping_tag?: 'IDENTITY' | 'EDUCATION' | 'DIGITAL' | 'GOV_AID' | 'FAMILY' | 'HEALTH' | 'FINANCE' | 'WORK' | 'TALENT' | 'SOCIAL' | string;
-  required: boolean | number;
-  logic?: QuestionLogic;
-  repeater_fields?: Omit<SurveyQuestion, 'repeater_fields' | 'logic'>[];
-}
-
-export interface Survey {
+export interface Incident {
   id: string | number;
   title: string;
+  location: string;
+  priority: IncidentPriority | string;
+  status: IncidentStatus | string;
   description: string;
-  type: 'CENSUS' | 'SOCIAL_AID' | 'SATISFACTION';
-  questions: SurveyQuestion[];
-  status: 'ACTIVE' | 'INACTIVE';
-  created_at?: string;
+  coordinates?: { lat: number; lng: number };
 }
 
-// --- OUTROS ---
-
-export interface Visitor {
-    id: string | number;
-    name: string;
-    document: string;
-    unit: string;
-    phone: string;
-    status: 'IN_CLUSTER' | 'COMPLETED';
-    arrival_time: string;
-    exit_time?: string;
-}
-
-export interface Delivery {
-    id: string | number;
-    courier: string;
-    company: string;
-    unit: string;
-    recipient: string;
-    status: 'PENDING' | 'PICKED_UP';
-    arrival_time: string;
-    pickup_time?: string;
-}
-
-export interface Asset {
+export interface FinancialRecord {
   id: string | number;
-  name: string;
+  user_id?: string | number;
+  userName?: string;
+  description: string;
+  amount: number | string;
+  type: 'INCOME' | 'EXPENSE';
   category: string;
-  value: number | string;
-  status: 'PERFEITO' | 'BOM' | 'MANUTENÇÃO' | 'DEPRECIADO';
-  date_acquired?: string;
-  responsible_id?: string | number;
+  status: FinancialStatus | string;
+  date: string;
+  next_due_date?: string;
+  is_recurring?: boolean | number;
 }
 
-export interface UnitData {
+export interface OfficialDocument {
   id: string | number;
-  residentName: string;
-  cpf: string;
-  unit: string;
-  address: string;
-  coordinates: { lat: number; lng: number };
-  tags: string[];
-  socialData?: any;
-  status?: string;
-  role?: string;
-  // SRE FIX: Added missing properties to fix property access errors in SmartMap.tsx
-  phone: string;
-  age: number;
+  title: string;
+  content: string;
+  type: DocumentType | string;
+  status: 'DRAFT' | 'FINAL' | 'ARCHIVED' | string;
+  updated_at: string;
+}
+
+export interface MarketItem {
+  id: string | number;
+  merchant_id?: string | number;
+  title: string;
+  description: string;
+  category: 'FOOD' | 'SERVICE' | 'GOODS' | string;
+  price: number | string;
+  whatsapp: string;
 }
 
 export interface ScheduledBroadcast {
@@ -198,7 +156,45 @@ export interface ScheduledBroadcast {
   message_body: string;
   scheduled_at: string;
   status: 'PENDING' | 'SENT' | 'FAILED';
-  created_at?: string;
+}
+
+export interface UnitData {
+  id: string | number;
+  residentName: string;
+  cpf: string;
+  unit: string;
+  address: string;
+  phone: string;
+  age: number;
+  coordinates: { lat: number; lng: number };
+  tags: string[];
+  role: string;
+  socialData?: any;
+}
+
+// --- PROTOCOLO ADITIVO SRE V7.0 ---
+
+export interface SurveyQuestion {
+  id: string;
+  text: string;
+  type: 'text' | 'number' | 'boolean' | 'select' | 'date' | 'repeater' | string;
+  options?: string[];
+  required: number | boolean;
+  mapping_tag?: string;
+  logic?: {
+    show_if_question: string;
+    show_if_value: any;
+  };
+  repeater_fields?: any[];
+}
+
+export interface Survey {
+  id: string | number;
+  title: string;
+  description: string;
+  type: 'CENSUS' | 'SOCIAL_AID' | 'SATISFACTION' | string;
+  status: 'ACTIVE' | 'INACTIVE' | string;
+  questions: SurveyQuestion[];
 }
 
 export interface AIKey {
@@ -206,20 +202,7 @@ export interface AIKey {
   label: string;
   key_value: string;
   provider: string;
-  status: AIKeyStatus | string;
-  priority: number;
-  error_count: number;
-  last_checked?: string;
-  created_at?: string;
-}
-
-export interface Incident {
-  id: string | number;
-  title: string;
-  location: string;
-  priority: IncidentPriority | string;
-  status: IncidentStatus | string;
-  description: string;
+  status: string;
   created_at?: string;
 }
 
@@ -232,31 +215,14 @@ export interface Notice {
   created_at?: string;
 }
 
-export interface FinancialRecord {
-  id: string | number;
-  user_id?: string | number;
-  userName?: string;
-  description: string;
-  amount: number | string;
-  type: 'INCOME' | 'EXPENSE';
-  category: string;
-  status: FinancialStatus | string;
-  is_recurring?: boolean | number;
-  billing_cycle?: string;
-  next_due_date?: string;
-  date: string;
-  created_at?: string;
-}
-
 export interface AgendaEvent {
   id: string | number;
   title: string;
   description: string;
   date: string;
-  type: 'MEETING' | 'MAINTENANCE' | 'DEADLINE' | 'EVENT' | string;
-  status: 'UPCOMING' | 'COMPLETED' | 'CANCELLED' | string;
+  type: 'MEETING' | 'MAINTENANCE' | 'DEADLINE' | string;
+  status: 'UPCOMING' | 'FINISHED' | string;
   location?: string;
-  created_at?: string;
 }
 
 export interface CommunityProject {
@@ -267,20 +233,8 @@ export interface CommunityProject {
   spent: number | string;
   progress: number;
   startDate: string;
-  category: string;
-  status: ProjectStatus | string;
-}
-
-export interface MarketItem {
-  id: string | number;
-  merchant_id?: string | number;
-  title: string;
-  description: string;
-  category: 'FOOD' | 'SERVICE' | 'GOODS' | string;
-  price: number | string;
-  whatsapp: string;
-  created_at?: string;
-  updated_at?: string;
+  category: 'INFRA' | 'LANDMARK' | string;
+  status: 'PLANNING' | 'EM_EXECUÇÃO' | 'CONCLUÍDO' | 'CANCELADO' | string;
 }
 
 export interface CameraDevice {
@@ -289,15 +243,14 @@ export interface CameraDevice {
   url: string;
   location: string;
   status: 'ACTIVE' | 'INACTIVE' | string;
-  created_at?: string;
 }
 
-export interface OfficialDocument {
+export interface Asset {
   id: string | number;
-  title: string;
-  content: string;
-  type: DocumentType | string;
-  status: 'DRAFT' | 'FINAL' | 'ARCHIVED' | string;
-  created_at?: string;
-  updated_at: string;
+  name: string;
+  category: string;
+  value: number | string;
+  status: string;
+  date_acquired: string;
+  responsible_id?: string | number;
 }

@@ -1,15 +1,43 @@
-
 import { GoogleGenAI } from "@google/genai";
+import pool from "../../config/database.js";
 
 /**
- * S.I.E IA Cluster Manager - Protocolo SRE v260.0 (STRICT 3.0 STANDARDS)
- * Orquestrador de Inteligência Grounded e Visão Computacional.
+ * S.I.E IA Cluster Manager - Protocolo SRE v400.0
+ * Orquestrador de Inteligência com Soberania de Credenciais via DB.
  */
 export const IAProviderManager = {
   
   /**
-   * Normaliza os conteúdos para o formato exigido pela SDK 3.0.
+   * Obtém a chave de API e modelo ativo do banco de dados.
+   * Prioriza chaves com status 'ACTIVE' e maior prioridade.
    */
+  async getActiveCredentials() {
+    try {
+      const [rows] = await pool.query(
+        "SELECT key_value, provider, label FROM ai_keys WHERE status = 'ACTIVE' ORDER BY priority DESC LIMIT 1"
+      );
+      
+      if (rows.length > 0) {
+        return { 
+          apiKey: rows[0].key_value, 
+          provider: rows[0].provider,
+          label: rows[0].label
+        };
+      }
+      
+      // Fallback para process.env apenas se o DB estiver vazio (Modo Emergência)
+      if (process.env.API_KEY) {
+        console.warn("[SRE WARN] Nenhuma chave no DB. Usando Master Key do Ambiente.");
+        return { apiKey: process.env.API_KEY, provider: 'GOOGLE', label: 'MASTER_ENV' };
+      }
+      
+      throw new Error("SRE_IA_AUTH_CRITICAL: Nenhuma credencial de IA localizada no Kernel.");
+    } catch (e) {
+      console.error("[SRE IA AUTH FAIL]", e.message);
+      throw e;
+    }
+  },
+
   normalizeContents(contents) {
     if (typeof contents === 'string') {
         return [{ role: 'user', parts: [{ text: contents }] }];
@@ -20,46 +48,43 @@ export const IAProviderManager = {
             return c;
         });
     }
-    // Suporte a multi-part (Imagens + Texto)
     if (contents.parts) return [contents];
-    
     return [{ role: 'user', parts: [{ text: JSON.stringify(contents) }] }];
   },
 
   /**
-   * Executa tarefas neurais com suporte a Grounding (Google Search/Maps).
-   * Cria a instância da SDK apenas no momento da execução para garantir validade da API_KEY.
+   * Executa tarefas neurais com soberania de credenciais e seleção de modelo.
    */
   async execute(task, payload) {
-    // SRE: Inicialização em tempo de execução conforme protocolo de segurança
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const { apiKey } = await this.getActiveCredentials();
+    const ai = new GoogleGenAI({ apiKey });
     
     try {
-      // Priorizar gemini-3-flash-preview para velocidade e custo (Free Tier)
+      // O modelo também pode ser dinâmico vindo da config do usuário futuramente
       let modelName = payload.model || 'gemini-3-flash-preview';
       let tools = payload.config?.tools || [];
 
-      // Seleção automática de modelo baseada na ferramenta requerida
+      // Google Maps grounding exige série 2.5
       if (tools.some(t => t.googleMaps)) {
-          modelName = 'gemini-2.5-flash'; // Google Maps Grounding requer série 2.5
+          modelName = 'gemini-2.5-flash';
       }
 
       const response = await ai.models.generateContent({
         model: modelName,
         contents: this.normalizeContents(payload.contents),
         config: {
-          systemInstruction: payload.config?.systemInstruction || "Você é o mentor de governança do S.I.E PRO.",
-          temperature: payload.config?.temperature ?? 0.7,
+          systemInstruction: payload.config?.systemInstruction || "Você é o Kernel Mentor do S.I.E PRO (Sistema Inteligente Ativo).",
+          temperature: payload.config?.temperature ?? 0.5,
           tools: tools,
           toolConfig: payload.config?.toolConfig,
-          // Lógica de Thinking desabilitada por padrão para latência mínima no Advisor
+          responseMimeType: payload.config?.responseMimeType,
+          responseSchema: payload.config?.responseSchema,
           thinkingConfig: { thinkingBudget: 0 }
         }
       });
 
-      // SRE FIX: Acesso direto à propriedade .text da SDK 3.0
       if (!response.text) {
-          throw new Error("EMPTY_RESPONSE_FROM_KERNEL");
+          throw new Error("EMPTY_AI_RESPONSE");
       }
 
       return {
@@ -68,12 +93,7 @@ export const IAProviderManager = {
       };
 
     } catch (error) {
-        console.error(`[SRE AI ERROR] Protocol: ${task}`, error.message);
-        
-        if (error.message.includes("Requested entity was not found") || error.message.includes("API key not valid")) {
-            throw new Error("NEURAL_LINK_INVALID: Verifique as configurações de API no Kernel.");
-        }
-        
+        console.error(`[SRE AI ERROR] Task: ${task}`, error.message);
         throw error;
     }
   }

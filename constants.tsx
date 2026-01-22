@@ -1,93 +1,65 @@
 import { 
   LayoutDashboard, Wallet, Users, Bell, ShieldAlert, CalendarClock, 
-  Settings, ClipboardList, BarChart3, Map as MapIcon, Briefcase, ShoppingBag,
-  Landmark, Shield, FileText, Gavel, MessageSquareText, MessageSquare, 
-  Calendar, Camera, Leaf, Package, Megaphone, HelpCircle, Box, UserPlus, Zap, Monitor
+  Settings, ClipboardList, BarChart3, Shield, FileText, Gavel, 
+  MessageSquareText, Calendar, Camera, Leaf, ShoppingBag, 
+  Megaphone, HelpCircle, Box, Monitor, Brain
 } from 'lucide-react';
-import { SystemInfo, IdCardTemplate } from './types';
+import { SystemInfo } from './types';
 
 export const MENU_ITEMS = [
-  // CORE & INTELIGÊNCIA
+  // ESTRATÉGICO
   { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard, permissionId: 'view_dashboard', category: 'ESTRATÉGICO' },
-  { id: 'neural_chat', label: 'IA Especialista', icon: MessageSquareText, permissionId: 'use_ai_chat', category: 'ESTRATÉGICO' },
+  { id: 'neural_chat', label: 'IA Especialista', icon: Brain, permissionId: 'use_ai_chat', category: 'ESTRATÉGICO' },
   
-  // GESTÃO DE MEMBROS & ACESSO
+  // GOVERNANÇA
   { id: 'users', label: 'Famílias & Membros', icon: Users, permissionId: 'manage_users', category: 'GOVERNANÇA' },
-  { id: 'concierge', label: 'Portaria & Acesso', icon: Shield, permissionId: 'view_operations', category: 'GOVERNANÇA' },
   { id: 'demographics', label: 'Observatório Social', icon: BarChart3, permissionId: 'view_demographics', category: 'GOVERNANÇA' },
   { id: 'documents', label: 'Hub de Documentos', icon: FileText, permissionId: 'view_documents', category: 'GOVERNANÇA' },
   { id: 'assemblies', label: 'Assembleia Digital', icon: Gavel, permissionId: 'manage_assemblies', category: 'GOVERNANÇA' },
   { id: 'surveys', label: 'Censo & Pesquisas', icon: ClipboardList, permissionId: 'manage_surveys', category: 'GOVERNANÇA' },
 
-  // OPERACIONAL & INFRA
-  { id: 'watchdog', label: 'Câmeras & Vigilância', icon: Camera, permissionId: 'view_operations', category: 'OPERACIONAL' },
-  { id: 'finance', label: 'Financeiro', icon: Wallet, permissionId: 'view_finances', category: 'OPERACIONAL' },
+  // OPERACIONAL
+  { id: 'watchdog', label: 'Central de Vigilância', icon: Camera, permissionId: 'view_operations', category: 'OPERACIONAL' },
+  { id: 'finance', label: 'ERP Financeiro', icon: Wallet, permissionId: 'view_finances', category: 'OPERACIONAL' },
   { id: 'operations', label: 'Ocorrências', icon: ShieldAlert, permissionId: 'view_operations', category: 'OPERACIONAL' },
-  { id: 'timeline', label: 'Agenda & Marcos', icon: CalendarClock, permissionId: 'view_timeline', category: 'OPERACIONAL' },
-  { id: 'projects', label: 'Obras & Projetos', icon: Landmark, permissionId: 'view_projects', category: 'OPERACIONAL' },
-  { id: 'assets', label: 'Patrimônio', icon: Box, permissionId: 'manage_users', category: 'OPERACIONAL' },
+  { id: 'projects', label: 'Obras & Projetos', icon: Box, permissionId: 'view_projects', category: 'OPERACIONAL' },
   { id: 'sustainability', label: 'Sustentabilidade', icon: Leaf, permissionId: 'view_dashboard', category: 'OPERACIONAL' },
 
-  // COMUNIDADE & ENGAJAMENTO
+  // COMUNIDADE
   { id: 'communication', label: 'Mural de Avisos', icon: Megaphone, permissionId: 'manage_communication', category: 'COMUNIDADE' },
   { id: 'marketplace', label: 'Marketplace Local', icon: ShoppingBag, permissionId: 'use_marketplace', category: 'COMUNIDADE' },
   { id: 'reservations', label: 'Reservas de Áreas', icon: Calendar, permissionId: 'use_reservations', category: 'COMUNIDADE' },
   { id: 'suggestions', label: 'Ouvidoria Digital', icon: HelpCircle, permissionId: 'send_suggestions', category: 'COMUNIDADE' },
   
-  // CONFIGURAÇÕES
+  // SISTEMA
   { id: 'settings', label: 'Configurações', icon: Settings, permissionId: 'manage_settings', category: 'SISTEMA' },
-];
-
-export const AVAILABLE_ROLES = [
-    'ADMIN', 
-    'PRESIDENT', 
-    'VICE_PRESIDENT', 
-    'SECRETARY', 
-    'TREASURER', 
-    'SERVICE', 
-    'RESIDENT', 
-    'VISITOR'
-];
-
-export const SYSTEM_PERMISSIONS = [
-  { id: 'view_dashboard', label: 'Ver Dashboard', module: 'GERAL' },
-  { id: 'manage_users', label: 'Gerir Membros', module: 'ADMIN' },
-  { id: 'view_finances', label: 'Ver Financeiro', module: 'FINANCEIRO' },
-  { id: 'manage_finances', label: 'Gerir Financeiro', module: 'FINANCEIRO' },
-  { id: 'view_operations', label: 'Ver Ocorrências/Vision', module: 'OPERACIONAL' },
-  { id: 'view_timeline', label: 'Ver Agenda/Timeline', module: 'OPERACIONAL' },
-  { id: 'manage_settings', label: 'Configurações de Kernel', module: 'ADMIN' },
-  { id: 'manage_ai_keys', label: 'Gerir Chaves de IA', module: 'SRE' },
-  { id: 'use_ai_chat', label: 'Acesso ao Advisor IA', module: 'SRE' },
-  { id: 'view_documents', label: 'Gerir Documentos', module: 'GOVERNANÇA' },
-  { id: 'manage_assemblies', label: 'Gerir Assembleias', module: 'GOVERNANÇA' },
-  { id: 'manage_surveys', label: 'Gerir Censos/Pesquisas', module: 'GOVERNANÇA' },
-  { id: 'manage_communication', label: 'Gerir Mural/Broadcast', module: 'COMUNIDADE' },
-  { id: 'view_projects', label: 'Ver Projetos/Obras', module: 'PLANEJAMENTO' },
-  { id: 'use_marketplace', label: 'Usar Marketplace', module: 'COMUNIDADE' },
-  { id: 'use_reservations', label: 'Usar Reservas', module: 'COMUNIDADE' },
-  { id: 'send_suggestions', label: 'Enviar Ouvidoria', module: 'COMUNIDADE' },
-  { id: 'view_demographics', label: 'Ver Observatório Social', module: 'GOVERNANÇA' },
 ];
 
 export const DEFAULT_SYSTEM_INFO: SystemInfo = {
   name: 'S.I.E — Sistema Inteligente Ativo',
   shortName: 'S.I.E PRO',
   cnpj: '00.000.000/0001-00',
-  address: 'Sede Administrativa Central - Cluster 01',
+  address: 'Sede Administrativa Central',
   primaryColor: '#4f46e5',
   registrationMode: 'APPROVAL'
 };
 
-export const DEFAULT_ID_CARD_TEMPLATE: IdCardTemplate = {
-  id: 'tpl_standard',
-  name: 'Padrão S.I.E Oficial',
-  width: 320,
-  height: 200,
-  orientation: 'landscape',
-  frontBackground: '#ffffff',
-  backBackground: '#f8fafc',
-  elements: []
-};
+export const SYSTEM_PERMISSIONS = [
+  { id: 'view_dashboard', label: 'Visualizar Dashboard' },
+  { id: 'manage_users', label: 'Gerenciar Membros' },
+  { id: 'view_finances', label: 'Visualizar Financeiro' },
+  { id: 'view_operations', label: 'Visualizar Operações/Câmeras' },
+  { id: 'use_ai_chat', label: 'Usar IA Advisor' },
+  { id: 'view_documents', label: 'Ver Documentos' },
+  { id: 'manage_assemblies', label: 'Gerenciar Assembleias' },
+  { id: 'manage_surveys', label: 'Gerenciar Pesquisas/Censo' },
+  { id: 'manage_communication', label: 'Gerenciar Comunicados' },
+  { id: 'view_timeline', label: 'Ver Agenda' },
+  { id: 'view_projects', label: 'Ver Projetos' },
+  { id: 'send_suggestions', label: 'Enviar Sugestões' },
+  { id: 'view_demographics', label: 'Ver Observatório Social' },
+  { id: 'manage_settings', label: 'Gerenciar Configurações' },
+  { id: 'manage_ai_keys', label: 'Gerenciar Chaves de IA' },
+];
 
 export const FINANCIAL_CATEGORIES = ['CONDOMÍNIO', 'DOAÇÃO', 'MANUTENÇÃO', 'SEGURANÇA', 'ADMINISTRATIVO', 'EVENTOS', 'OUTROS'];

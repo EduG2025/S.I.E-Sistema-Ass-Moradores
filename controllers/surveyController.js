@@ -1,10 +1,41 @@
-
 import pool from '../config/database.js';
+import axios from 'axios';
+import https from 'https';
 import { IAProviderManager } from '../core/ai/IAProviderManager.js';
 
 /**
- * SRE Utils: Cálculo de idade cronológica
+ * SRE Helper: Protocolo de Boas-vindas WhatsApp (Consistência de Gateway)
  */
+const sendWelcomeProtocol = async (phone, name) => {
+    if (!phone) return;
+    try {
+        const [[settings]] = await pool.query('SELECT whatsapp_config, shortName FROM settings WHERE id = 1');
+        if (!settings?.whatsapp_config) return;
+        let config = settings.whatsapp_config;
+        if (typeof config === 'string') config = JSON.parse(config);
+
+        if (config.api_key && config.sender) {
+            const firstName = (name || 'Membro').split(' ')[0];
+            const msg = (config.welcome_template || "Olá {nome}, seu cadastro via Censo S.I.E foi protocolado com sucesso no cluster residencial.")
+                .replace(/\{nome\}/gi, firstName);
+
+            await axios({
+                method: 'post',
+                url: 'https://jennyai.space/send-message',
+                params: {
+                    api_key: config.api_key,
+                    sender: config.sender,
+                    number: phone.replace(/\D/g, ''),
+                    message: msg,
+                    footer: config.footer || settings.shortName || "S.I.E PRO"
+                },
+                httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+                timeout: 10000
+            });
+        }
+    } catch (e) { console.error("[SRE SURVEY WELCOME FAIL]", e.message); }
+};
+
 const calculateAge = (dob) => {
     if (!dob) return null;
     const birth = new Date(dob);
@@ -39,93 +70,36 @@ export const submitResponse = async (req, res) => {
     try {
         const [existing] = await pool.query('SELECT id, socialData, avatar_url FROM users WHERE cpf_cnpj = ?', [cpf]);
         let userId = existing[0]?.id;
-        
-        // SRE: Cálculo de Idade do Titular
         const titularAge = calculateAge(userData.birthDate);
 
-        // Mapeamento Inteligente de Atributos do Censo para o Core do Usuário
         const socialMapping = {
             risk: existing[0]?.socialData?.risk || 0,
             tags: existing[0]?.socialData?.tags || [],
             last_census_date: new Date().toISOString(),
             education_level: answers['edu_01'],
             nis_number: answers['soc_02'],
-            birth_date: userData.birthDate,
-            benefits: [
-                answers['soc_03'] === 'SIM' ? 'BOLSA_FAMILIA' : null,
-                answers['soc_04'] === 'SIM' ? 'BPC' : null,
-                answers['soc_05'] === 'SIM' ? 'TARIFA_SOCIAL' : null
-            ].filter(Boolean)
+            birth_date: userData.birthDate
         };
 
-        // Salvar avatar_url se fornecido (binário base64 ou link)
         const avatarToSave = userData.avatar_url || existing[0]?.avatar_url || null;
 
         if (!userId) {
             const [result] = await pool.query('INSERT INTO users (name, cpf_cnpj, unit, email, phone, age, role, status, active, socialData, avatar_url) VALUES (?, ?, ?, ?, ?, ?, "RESIDENT", "PENDING", 1, ?, ?)',
                 [userData.name, cpf, userData.unit, userData.email, userData.phone, titularAge, JSON.stringify(socialMapping), avatarToSave]);
             userId = result.insertId;
+            // Welcome para novos residentes vindos do censo
+            await sendWelcomeProtocol(userData.phone, userData.name);
         } else {
             await pool.query('UPDATE users SET unit = ?, email = ?, phone = ?, age = ?, socialData = ?, avatar_url = ? WHERE id = ?', 
                 [userData.unit, userData.email, userData.phone, titularAge, JSON.stringify(socialMapping), avatarToSave, userId]);
-        }
-
-        // SRE: Processamento de Dependentes (Repeater)
-        for (const [qId, responseValue] of Object.entries(answers)) {
-            if (Array.isArray(responseValue)) {
-                for (const member of responseValue) {
-                    const dobField = Object.keys(member).find(k => k.toLowerCase().includes('nasc') || k.toLowerCase().includes('birth'));
-                    if (dobField && member[dobField]) {
-                        member.age = calculateAge(member[dobField]);
-                    }
-                }
-            }
         }
 
         await pool.query('INSERT INTO survey_responses (survey_id, user_id, cpf, user_name, answers) VALUES (?, ?, ?, ?, ?)',
             [surveyId, userId, cpf, userData.name, JSON.stringify(answers)]);
 
         await pool.query('INSERT INTO audit_logs (user_id, action, table_name, record_id, details) VALUES (?, "SUBMIT_CENSUS", "survey_responses", ?, ?)',
-            [userId, surveyId, `Censo S.I.E PRO Protocolado por ${userData.name} com captura Vision.`]);
+            [userId || 0, surveyId, `Censo S.I.E PRO Protocolado por ${userData.name}.`]);
 
         res.json({ success: true, protocolId: Date.now() });
     } catch (e) { res.status(500).json({ error: e.message }); }
-};
-
-export const getResponses = async (req, res) => {
-    try {
-        const [rows] = await pool.query('SELECT * FROM survey_responses WHERE survey_id = ? ORDER BY created_at DESC', [req.params.id]);
-        rows.forEach(r => { if (typeof r.answers === 'string') r.answers = JSON.parse(r.answers); });
-        res.json({ data: rows });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-};
-
-export const getResponsesByCpf = async (req, res) => {
-    try {
-        const [rows] = await pool.query('SELECT * FROM survey_responses WHERE cpf = ? ORDER BY created_at DESC', [req.params.cpf]);
-        rows.forEach(r => { if (typeof r.answers === 'string') r.answers = JSON.parse(r.answers); });
-        res.json({ data: rows });
-    } catch (e) { res.status(500).json({ error: e.message }); }
-};
-
-export const suggestQuestions = async (req, res) => {
-    const { title, description, type } = req.body;
-    try {
-        const prompt = `Crie um conjunto de 5 perguntas avançadas para um formulário de ${type} intitulado "${title}". 
-        Contexto: ${description}. FOCO: Assistência Social, Educação e Vulnerabilidade.
-        Retorne um array JSON com objetos: id, text, type, options (se select), mapping_tag, logic, repeater_fields.`;
-        
-        const responseText = await IAProviderManager.execute('suggest', {
-            contents: prompt,
-            config: { 
-                responseMimeType: "application/json",
-                systemInstruction: "Você é um arquiteto sênior de dados sociais."
-            }
-        });
-
-        let cleanJson = responseText.replace(/```json|```/gi, '').trim();
-        res.json({ data: JSON.parse(cleanJson) });
-    } catch (e) {
-        res.status(500).json({ error: "FALHA_PREDICT_IA: " + e.message });
-    }
 };

@@ -1,4 +1,3 @@
-
 import express from 'express';
 import * as userController from '../controllers/userController.js';
 import { authenticateToken, checkPermission } from '../middlewares/auth.js';
@@ -12,6 +11,9 @@ router.get('/', authenticateToken, checkPermission('manage_users'), userControll
 router.post('/', authenticateToken, checkPermission('manage_users'), userController.createUser); // SRE: Custom Handler
 router.put('/:id', authenticateToken, checkPermission('manage_users'), generic.update);
 router.delete('/:id', authenticateToken, checkPermission('manage_users'), generic.delete);
+
+// SRE: Motor de busca neural georreferenciado
+router.post('/search-neural', authenticateToken, checkPermission('view_demographics'), userController.searchNeural);
 
 router.post('/:id/invite', authenticateToken, checkPermission('manage_users'), userController.generateInvite);
 router.post('/:id/activate', authenticateToken, checkPermission('manage_users'), userController.activateUser);

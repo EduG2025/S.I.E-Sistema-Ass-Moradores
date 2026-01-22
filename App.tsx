@@ -1,13 +1,12 @@
-
 import React, { useState, Suspense, lazy, useEffect, useMemo } from 'react';
 import { MENU_ITEMS, DEFAULT_SYSTEM_INFO } from './constants';
 import { SystemInfo, User } from './types';
 import {
-    LogOut, Menu, Loader2, Shield, Bell, PanelLeftClose, PanelLeft, X, Zap, ChevronRight, Settings as SettingsIcon, Search
+    LogOut, Menu, Loader2, Shield, PanelLeftClose, PanelLeft, X, ShieldCheck
 } from 'lucide-react';
 import { systemService, authService, api } from './services/api';
 
-// SRE TYPE-SAFE LAZY LOADING
+// Lazy loading de módulos para performance otimizada
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const ResidentDashboard = lazy(() => import('./components/ResidentDashboard'));
 const Settings = lazy(() => import('./components/Settings'));
@@ -20,17 +19,13 @@ const DocumentHub = lazy(() => import('./components/DocumentHub'));
 const AssemblyManager = lazy(() => import('./components/AssemblyManager'));
 const ChatAssistant = lazy(() => import('./components/ChatAssistant'));
 const Finance = lazy(() => import('./components/Finance'));
-const PublicSenso = lazy(() => import('./components/PublicSenso'));
 const Communication = lazy(() => import('./components/Communication'));
-const Timeline = lazy(() => import('./components/Timeline'));
 const MarketPlace = lazy(() => import('./components/MarketPlace'));
 const Reservations = lazy(() => import('./components/Reservations'));
 const Sustainability = lazy(() => import('./components/Sustainability'));
 const SuggestionBox = lazy(() => import('./components/SuggestionBox'));
-const Assets = lazy(() => import('./components/Assets'));
-const Surveys = lazy(() => import('./components/Surveys'));
-const Concierge = lazy(() => import('./components/Concierge'));
 const DigitalWatch = lazy(() => import('./components/DigitalWatch'));
+const PublicSenso = lazy(() => import('./components/PublicSenso'));
 
 const App = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -43,22 +38,6 @@ const App = () => {
     const [dynamicPermissions, setDynamicPermissions] = useState<string[]>([]);
     
     const isPublicCensus = window.location.pathname.startsWith('/census/');
-
-    useEffect(() => {
-        if (systemInfo?.name) {
-            document.title = `${systemInfo.shortName} | ${systemInfo.name}`;
-        }
-    }, [systemInfo]);
-
-    useEffect(() => {
-        const handleUnauthorized = () => {
-            setIsAuthenticated(false);
-            setCurrentUser(null);
-            localStorage.removeItem('sie_auth_token');
-        };
-        window.addEventListener('sie_unauthorized', handleUnauthorized);
-        return () => window.removeEventListener('sie_unauthorized', handleUnauthorized);
-    }, []);
 
     useEffect(() => {
         const initKernel = async () => {
@@ -128,7 +107,7 @@ const App = () => {
             <div className="h-screen w-screen flex items-center justify-center bg-[#020617]">
                 <div className="text-center space-y-4">
                     <Loader2 className="animate-spin text-indigo-500 mx-auto" size={48} />
-                    <p className="text-indigo-300 font-black uppercase text-[10px] tracking-widest animate-pulse">SRE: BOOTING KERNEL...</p>
+                    <p className="text-indigo-300 font-black uppercase text-[10px] tracking-widest animate-pulse">SRE: BOOTING KERNEL S.I.E PRO...</p>
                 </div>
             </div>
         );
@@ -154,14 +133,10 @@ const App = () => {
             case 'neural_chat': return <ChatAssistant systemInfo={systemInfo} />;
             case 'finance': return <Finance systemInfo={systemInfo} />;
             case 'communication': return <Communication systemInfo={systemInfo} />;
-            case 'timeline': return <Timeline systemInfo={systemInfo} />;
             case 'marketplace': return <MarketPlace systemInfo={systemInfo} />;
             case 'reservations': return <Reservations systemInfo={systemInfo} />;
             case 'sustainability': return <Sustainability systemInfo={systemInfo} />;
             case 'suggestions': return <SuggestionBox systemInfo={systemInfo} />;
-            case 'assets': return <Assets systemInfo={systemInfo} />;
-            case 'surveys': return <Surveys systemInfo={systemInfo} />;
-            case 'concierge': return <Concierge systemInfo={systemInfo} />;
             case 'watchdog': return <DigitalWatch systemInfo={systemInfo} />;
             default: return <Dashboard onNavigate={setActiveTab} systemInfo={systemInfo} />;
         }
@@ -171,80 +146,45 @@ const App = () => {
 
     return (
         <div className="flex h-screen w-full bg-[#f8fafc] overflow-hidden">
-            
-            {/* MOBILE HAMBURGER TRIGGER */}
-            <button 
-                onClick={() => setSidebarOpen(true)} 
-                className="lg:hidden hamburger-trigger"
-            >
+            {/* Gatilho Mobile */}
+            <button onClick={() => setSidebarOpen(true)} className="lg:hidden fixed top-4 left-4 z-[1100] p-3 bg-slate-900 text-white rounded-xl shadow-2xl">
                 <Menu size={24}/>
             </button>
 
-            {/* MOBILE BACKDROP */}
-            {sidebarOpen && (
-                <div 
-                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] lg:hidden animate-fade-in" 
-                    onClick={() => setSidebarOpen(false)}
-                />
-            )}
-
-            {/* SIDEBAR ARCHITECTURE */}
-            <aside 
-                className={`fixed inset-y-0 left-0 z-[1000] sidebar-glass text-slate-400 flex flex-col transition-all duration-300 
-                lg:static h-screen 
-                ${sidebarOpen ? 'translate-x-0 w-[280px]' : '-translate-x-full lg:translate-x-0'} 
-                ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-[320px]'}`}
-            >
+            {/* Sidebar SRE */}
+            <aside className={`fixed inset-y-0 left-0 z-[1000] sidebar-glass text-slate-400 flex flex-col transition-all duration-300 lg:static h-screen ${sidebarOpen ? 'translate-x-0 w-[280px]' : '-translate-x-full lg:translate-x-0'} ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-[320px]'}`}>
                 <div className="p-6 flex-none">
                     <div className="flex items-center justify-between gap-4">
                         {!sidebarCollapsed && (
-                             <div className="flex items-center gap-4 animate-fade-in min-w-0">
+                             <div className="flex items-center gap-4 min-w-0">
                                 <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center p-2 shadow-2xl shrink-0">
                                     {systemInfo.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain" alt="Logo" /> : <Shield size={20} className="text-indigo-600" style={{ color: primaryColor }} />}
                                 </div>
                                 <div className="min-w-0">
                                     <h1 className="text-sm font-black text-white tracking-tight leading-none truncate uppercase">{systemInfo.shortName}</h1>
-                                    <p className="text-[7px] font-black uppercase text-indigo-400 mt-1 tracking-[0.4em]" style={{ color: primaryColor }}>Handshake Ok</p>
+                                    <p className="text-[7px] font-black uppercase text-indigo-400 mt-1 tracking-[0.4em]" style={{ color: primaryColor }}>Kernel Active</p>
                                 </div>
                              </div>
                         )}
-                        <button onClick={() => {
-                            if (window.innerWidth < 1024) setSidebarOpen(false);
-                            else setSidebarCollapsed(!sidebarCollapsed);
-                        }} className="p-2 text-slate-500 hover:text-white transition-colors bg-white/5 rounded-lg border border-white/10">
+                        <button onClick={() => { if (window.innerWidth < 1024) setSidebarOpen(false); else setSidebarCollapsed(!sidebarCollapsed); }} className="p-2 text-slate-500 hover:text-white transition-colors bg-white/5 rounded-lg border border-white/10">
                             {window.innerWidth < 1024 ? <X size={20}/> : (sidebarCollapsed ? <PanelLeft size={16}/> : <PanelLeftClose size={16}/>)}
                         </button>
                     </div>
                 </div>
 
-                <nav className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar px-3 py-2 space-y-6">
+                <nav className="flex-1 overflow-y-auto custom-scrollbar px-3 py-2 space-y-6">
                     {Object.entries(filteredMenuByCategory).map(([category, items]) => (
                         <div key={category} className="space-y-1.5">
                             {!sidebarCollapsed && (
-                                <h5 className="px-4 mb-2 text-[8px] font-black text-slate-600 uppercase tracking-[0.4em] leading-none">
-                                    {category}
-                                </h5>
+                                <h5 className="px-4 mb-2 text-[8px] font-black text-slate-600 uppercase tracking-[0.4em] leading-none">{category}</h5>
                             )}
                             <div className="space-y-0.5">
                                 {items.map(item => {
                                     const isActive = activeTab === item.id;
                                     return (
-                                        <button 
-                                            key={item.id} 
-                                            onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }} 
-                                            className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all relative group ${isActive ? 'bg-indigo-600/10 text-white border-l-4 border-indigo-600 shadow-lg' : 'hover:bg-white/5 text-slate-400'}`}
-                                            style={isActive ? { borderColor: primaryColor } : {}}
-                                        >
-                                            <item.icon 
-                                                size={18} 
-                                                className={`shrink-0 ${isActive ? '' : 'text-slate-500 group-hover:text-slate-200'}`} 
-                                                style={isActive ? { color: primaryColor } : {}} 
-                                            />
-                                            {!sidebarCollapsed && (
-                                                <span className={`text-[10px] font-black uppercase tracking-widest truncate ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-200'}`}>
-                                                    {item.label}
-                                                </span>
-                                            )}
+                                        <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }} className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all relative group ${isActive ? 'bg-indigo-600/10 text-white border-l-4 border-indigo-600 shadow-lg' : 'hover:bg-white/5 text-slate-400'}`} style={isActive ? { borderColor: primaryColor } : {}}>
+                                            <item.icon size={18} className={`shrink-0 ${isActive ? '' : 'text-slate-500 group-hover:text-slate-200'}`} style={isActive ? { color: primaryColor } : {}} />
+                                            {!sidebarCollapsed && <span className={`text-[10px] font-black uppercase tracking-widest truncate ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-200'}`}>{item.label}</span>}
                                         </button>
                                     );
                                 })}
@@ -274,15 +214,12 @@ const App = () => {
                 </div>
             </aside>
 
-            {/* SRE: DYNAMIC MAIN PANEL */}
-            <main className="main-layout-container bg-[#f8fafc] relative">
-                <Suspense fallback={
-                    <div className="flex-1 flex flex-col items-center justify-center">
-                        <Loader2 className="animate-spin text-indigo-600" size={48} />
-                        <p className="text-slate-400 font-black text-[10px] uppercase tracking-widest mt-4">Sincronizando Módulo...</p>
+            {/* Main Panel */}
+            <main className="flex-1 relative overflow-hidden flex flex-col bg-[#f8fafc]">
+                <Suspense fallback={<div className="flex-1 flex items-center justify-center"><Loader2 className="animate-spin text-indigo-600" size={48} /></div>}>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-8">
+                        {renderContent()}
                     </div>
-                }>
-                    {renderContent()}
                 </Suspense>
             </main>
         </div>

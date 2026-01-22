@@ -1,7 +1,6 @@
-
 import express from 'express';
 import pool from '../config/database.js';
-import { authenticateToken, requireAdmin, checkPermission } from '../middlewares/auth.js';
+import { authenticateToken, checkPermission } from '../middlewares/auth.js';
 
 // Domain Routers
 import authRoutes from './authRoutes.js';

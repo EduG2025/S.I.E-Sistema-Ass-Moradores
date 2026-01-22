@@ -8,7 +8,7 @@ Este documento detalha o mapeamento de arquivos e a evolução do cluster de gov
 - **Kernel**: `App.tsx`, `index.tsx`
 - **Identidade**: `LoginScreen.tsx`, `UserManagement.tsx`, `UserModal.tsx`
 - **Inteligência**: `ChatAssistant.tsx`, `OCRScanner.tsx`
-- **Visualização**: `SmartMap.tsx`, `DemographicAnalysis.tsx`
+- **Visualização**: `SmartMap.tsx` (V3.0), `DemographicAnalysis.tsx`
 - **Operacional**: `Operations.tsx`, `DigitalWatch.tsx`, `Concierge.tsx`
 
 ### Backend (Node.js/MySQL)
@@ -18,23 +18,25 @@ Este documento detalha o mapeamento de arquivos e a evolução do cluster de gov
 
 ## 📅 2. PRÓXIMOS PASSOS (PIPELINE SRE)
 
-### Fase 1: Automação Messenger (Atual)
+### Fase 1: SmartMap V3 (Atual)
+- [x] Integração de Coordenadas HQ via Settings.
+- [x] Motor flyTo de alta fidelidade para navegação suave.
+- [x] Busca Inteligente Correlacionada (IA + Local).
+- [ ] Implementação de Polígonos de Área (Geofencing) para cercas virtuais.
+
+### Fase 2: Automação Messenger
 - [x] Integração JennyAI Bridge.
 - [x] Variáveis dinâmicas `{nome}` em broadcasts.
 - [ ] Automação de envio de boletos PDF via WhatsApp.
 
-### Fase 2: Telemetria IoT (Q3 2025)
+### Fase 3: Telemetria IoT & Vision
 - [ ] Integração de sensores de nível de água (ESG).
-- [ ] Leitura de medidores inteligentes de energia via API.
-
-### Fase 3: Segurança Vision Avançada (Q4 2025)
-- [ ] LPR (Reconhecimento de Placas) via Gemini 3 Vision.
-- [ ] Alertas de intrusão perimetral com análise de sentimento.
+- [ ] LPR (Reconhecimento de Placas) via Gemini 3 Vision no Mapa em tempo real.
 
 ## 🛡️ 3. STATUS DE INTEGRIDADE
 - **Database**: 100% Sincronizado (MySQL 8.0).
-- **Responsividade**: Homologada (360x800 - 4K).
-- **Segurança**: RBAC Ativo & Audit Logs em tempo real.
+- **Experiência de Mapa**: Mobile First (360x800) | Ultra-Fidelidade (4K).
+- **Navegação**: Google Maps Standard (Nativo Web).
 
 ---
 **Responsável:** SRE Master Cluster Alpha

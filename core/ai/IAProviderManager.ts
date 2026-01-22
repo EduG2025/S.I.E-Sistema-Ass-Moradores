@@ -1,9 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
-import pool from "../../config/database.js";
 
 /**
- * S.I.E IA Gateway Manager (Protocolo SRE V23.0)
- * Executor dinâmico utilizando a chave mestre do ambiente.
+ * S.I.E IA Gateway Manager (Protocolo SRE V24.0)
+ * Orquestrador de Inteligência com Soberania de Credenciais.
  */
 export const IAProviderManager = {
 
@@ -32,9 +31,9 @@ export const IAProviderManager = {
     return [{ role: 'user', parts: [{ text: "Comando SRE vázio interceptado." }] }];
   },
 
-  async execute(task: 'generateText' | 'analyzeImage' | string, payload: any): Promise<string> {
-    // SRE FIX: Always use process.env.API_KEY directly for initialization as per Google GenAI guidelines
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  async execute(task: 'generateText' | 'analyzeImage' | string, payload: any): Promise<any> {
+    // SRE CORE: Inicialização estrita conforme diretrizes do Gemini 3
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
     
     try {
       const modelName = payload.model || 'gemini-3-flash-preview';
@@ -44,15 +43,21 @@ export const IAProviderManager = {
         model: modelName,
         contents: normalizedContents,
         config: {
-          systemInstruction: payload.config?.systemInstruction || "Você é o assistente oficial do S.I.E PRO.",
-          temperature: payload.config?.temperature ?? 0.7
+          systemInstruction: payload.config?.systemInstruction || "Você é o Kernel Mentor do S.I.E PRO (Sistema Inteligente Ativo).",
+          temperature: payload.config?.temperature ?? 0.7,
+          tools: payload.config?.tools || [],
+          responseMimeType: payload.config?.responseMimeType,
+          responseSchema: payload.config?.responseSchema
         }
       });
 
-      // SRE FIX: Accessing .text property directly from GenerateContentResponse
-      return response.text || "";
+      // SRE FIX: Acesso direto à propriedade .text conforme nova SDK
+      return {
+          text: response.text || "",
+          groundingChunks: response.candidates?.[0]?.groundingMetadata?.groundingChunks || []
+      };
     } catch (error: any) {
-      console.error("[SRE IA TS ERROR]", error);
+      console.error("[SRE IA CRITICAL ERROR]", error.message);
       throw error;
     }
   }
