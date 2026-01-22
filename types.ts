@@ -55,6 +55,12 @@ export interface SystemInfo {
   whatsapp_config?: WhatsAppConfig;
   // SRE: Coordenada central do cluster
   coordinates?: { lat: number; lng: number };
+  // SRE: Representação Legal
+  president_name?: string;
+  president_cpf?: string;
+  management_start?: string;
+  management_end?: string;
+  president_signature?: string;
 }
 
 export interface IdCardTemplate {
@@ -90,6 +96,8 @@ export interface User {
   status: UserStatus;
   active: boolean | number;
   cpf_cnpj: string;
+  rg?: string;
+  issuing_authority?: string;
   age?: number;
   email?: string;
   phone?: string;
@@ -202,7 +210,12 @@ export interface AIKey {
   label: string;
   key_value: string;
   provider: string;
+  model: string;
+  tier: string;
   status: string;
+  priority: number;
+  error_count: number;
+  last_checked?: string;
   created_at?: string;
 }
 

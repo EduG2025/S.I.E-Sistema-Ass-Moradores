@@ -1,4 +1,3 @@
-
 import pool from '../config/database.js';
 
 /**
@@ -44,7 +43,7 @@ export const createHandlers = (table) => ({
             
             // Lista de campos permitidos por tabela (Segurança Aditiva)
             const allowedFieldsMap = {
-                'users': ['name', 'username', 'email', 'role', 'status', 'active', 'unit', 'age', 'phone', 'avatar_url', 'socialData', 'coordinates', 'address', 'neighborhood', 'city', 'state', 'zip_code', 'profession', 'password_hash'],
+                'users': ['name', 'username', 'email', 'role', 'status', 'active', 'unit', 'age', 'phone', 'avatar_url', 'socialData', 'coordinates', 'address', 'neighborhood', 'city', 'state', 'zip_code', 'profession', 'password_hash', 'rg', 'issuing_authority'],
                 'financials': ['user_id', 'description', 'amount', 'type', 'category', 'status', 'is_recurring', 'billing_cycle', 'date'],
                 'incidents': ['title', 'location', 'priority', 'status', 'description'],
                 'ai_keys': ['label', 'key_value', 'provider', 'status', 'priority', 'error_count'],

@@ -6,8 +6,9 @@ import { IAProviderManager } from '../core/ai/IAProviderManager.js';
 
 /**
  * SRE Helper: Protocolo de Boas-vindas WhatsApp (Soberania via DB)
+ * Resolve variáveis dinâmicas: {nome}, {unidade}, {sigla}, {senha}
  */
-const sendWelcomeProtocol = async (phone, name) => {
+const sendWelcomeProtocol = async (phone, name, unit) => {
     if (!phone) return;
     try {
         const [[settings]] = await pool.query('SELECT whatsapp_config, shortName FROM settings WHERE id = 1');
@@ -18,8 +19,20 @@ const sendWelcomeProtocol = async (phone, name) => {
 
         if (config.api_key && config.sender) {
             const firstName = (name || 'Membro').split(' ')[0];
-            const msg = (config.welcome_template || "Olá {nome}, seja bem-vindo ao S.I.E PRO. Seu cadastro foi ativado com sucesso no cluster.")
-                .replace(/\{nome\}/gi, firstName);
+            const substitutionData = {
+                nome: firstName,
+                unidade: unit || 'HUB-SRE',
+                sigla: settings.shortName || 'S.I.E PRO',
+                senha: config.default_password || 'mudar123'
+            };
+
+            let msg = (config.welcome_template || "Olá {nome}, bem-vindo ao S.I.E PRO. Seu cadastro foi ativado com sucesso na unidade {unidade}. Sua senha de acesso é: {senha}");
+
+            // Motor de substituição Regex
+            Object.entries(substitutionData).forEach(([key, val]) => {
+                const regex = new RegExp(`\\{${key}\\}`, 'gi');
+                msg = msg.replace(regex, val);
+            });
 
             await axios({
                 method: 'post',
@@ -34,7 +47,7 @@ const sendWelcomeProtocol = async (phone, name) => {
                 httpsAgent: new https.Agent({ rejectUnauthorized: false }),
                 timeout: 10000
             });
-            console.log(`[SRE] Welcome Message Processed for: ${phone}`);
+            console.log(`[SRE] Welcome Message Processed for: ${phone} (Handshake OK)`);
         }
     } catch (e) {
         console.error("[SRE WELCOME MSG FAIL]", e.message);
@@ -115,7 +128,12 @@ export const getAllUsers = async (req, res) => {
 };
 
 export const createUser = async (req, res) => {
-    const { name, cpf_cnpj, phone, email, role, unit, status, address, neighborhood, city, state, zip_code, avatar_url, socialData, age } = req.body;
+    const { 
+        name, cpf_cnpj, phone, email, role, unit, status, 
+        address, neighborhood, city, state, zip_code, 
+        avatar_url, socialData, age, rg, issuing_authority 
+    } = req.body;
+    
     try {
         const cleanCPF = cpf_cnpj.replace(/\D/g, '');
         if (cleanCPF.length < 11) return res.status(400).json({ error: "CPF_INVALIDO" });
@@ -124,27 +142,38 @@ export const createUser = async (req, res) => {
         if (existing.length > 0) return res.status(400).json({ error: "CONFLITO_IDENTIDADE" });
         
         const passwordHash = await bcrypt.hash("mudar123", 10);
-        const [result] = await pool.query(
-            "INSERT INTO users (name, cpf_cnpj, phone, email, role, unit, status, address, neighborhood, city, state, zip_code, avatar_url, socialData, age, password_hash, active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)",
-            [name, cleanCPF, phone, email, role || 'RESIDENT', unit, status || 'ACTIVE', address, neighborhood, city, state, zip_code, avatar_url, JSON.stringify(socialData || {}), age, passwordHash]
-        );
+        
+        const sql = `INSERT INTO users (
+            name, cpf_cnpj, phone, email, role, unit, status, address, 
+            neighborhood, city, state, zip_code, avatar_url, socialData, 
+            age, rg, issuing_authority, password_hash, active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`;
 
-        // Gatilho de Boas-vindas para novos membros ativos
-        if ((status || 'ACTIVE') === 'ACTIVE') {
-            await sendWelcomeProtocol(phone, name);
+        const [result] = await pool.query(sql, [
+            name, cleanCPF, phone, email, role || 'RESIDENT', unit, status || 'ACTIVE', 
+            address, neighborhood, city, state, zip_code, avatar_url, 
+            JSON.stringify(socialData || {}), age, rg, issuing_authority, passwordHash
+        ]);
+
+        // Gatilho SRE: Disparo de Boas-vindas para novos membros ativos
+        if ((status || 'ACTIVE') === 'ACTIVE' && phone) {
+            await sendWelcomeProtocol(phone, name, unit);
         }
 
         res.json({ id: result.insertId, success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { 
+        console.error("[SRE CREATE USER FAIL]", e.message);
+        res.status(500).json({ error: e.message }); 
+    }
 };
 
 export const activateUser = async (req, res) => {
     try {
-        const [user] = await pool.query("SELECT name, phone FROM users WHERE id = ?", [req.params.id]);
+        const [user] = await pool.query("SELECT name, phone, unit FROM users WHERE id = ?", [req.params.id]);
         await pool.query('UPDATE users SET status="ACTIVE", active=1 WHERE id=?', [req.params.id]);
         
-        if (user[0]) {
-            await sendWelcomeProtocol(user[0].phone, user[0].name);
+        if (user[0] && user[0].phone) {
+            await sendWelcomeProtocol(user[0].phone, user[0].name, user[0].unit);
         }
         
         res.json({ success: true });

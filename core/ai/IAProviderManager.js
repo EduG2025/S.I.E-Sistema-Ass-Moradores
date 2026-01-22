@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import pool from "../../config/database.js";
 
@@ -9,36 +8,8 @@ import pool from "../../config/database.js";
 export const IAProviderManager = {
   
   /**
-   * Obtém a chave de API e modelo ativo do banco de dados.
-   * Prioriza chaves com status 'ACTIVE' e maior prioridade.
+   * Normaliza os conteúdos para o formato exigido pela SDK.
    */
-  async getActiveCredentials() {
-    try {
-      const [rows] = await pool.query(
-        "SELECT key_value, provider, label FROM ai_keys WHERE status = 'ACTIVE' ORDER BY priority DESC LIMIT 1"
-      );
-      
-      if (rows.length > 0) {
-        return { 
-          apiKey: rows[0].key_value, 
-          provider: rows[0].provider,
-          label: rows[0].label
-        };
-      }
-      
-      // Fallback para process.env apenas se o DB estiver vazio (Modo Emergência)
-      if (process.env.API_KEY) {
-        console.warn("[SRE WARN] Nenhuma chave no DB. Usando Master Key do Ambiente.");
-        return { apiKey: process.env.API_KEY, provider: 'GOOGLE', label: 'MASTER_ENV' };
-      }
-      
-      throw new Error("SRE_IA_AUTH_CRITICAL: Nenhuma credencial de IA localizada no Kernel.");
-    } catch (e) {
-      console.error("[SRE IA AUTH FAIL]", e.message);
-      throw e;
-    }
-  },
-
   normalizeContents(contents) {
     if (typeof contents === 'string') {
         return [{ role: 'user', parts: [{ text: contents }] }];
@@ -49,19 +20,19 @@ export const IAProviderManager = {
             return c;
         });
     }
-    if (contents.parts) return [contents];
+    if (contents && contents.parts) return [contents];
     return [{ role: 'user', parts: [{ text: JSON.stringify(contents) }] }];
   },
 
   /**
-   * Executa tarefas neurais com soberania de credenciais e seleção de modelo.
+   * Executa tarefas neurais com soberania de credenciais.
+   * Utiliza estritamente process.env.API_KEY conforme diretrizes de segurança.
    */
   async execute(task, payload) {
-    // SRE FIX: Guidelines require using process.env.API_KEY directly for initializing the GoogleGenAI instance.
+    // SRE CORE: Inicialização estrita com named parameter apiKey
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
     try {
-      // O modelo também pode ser dinâmico vindo da config do usuário futuramente
       let modelName = payload.model || 'gemini-3-flash-preview';
       let tools = payload.config?.tools || [];
 
@@ -79,12 +50,11 @@ export const IAProviderManager = {
           tools: tools,
           toolConfig: payload.config?.toolConfig,
           responseMimeType: payload.config?.responseMimeType,
-          responseSchema: payload.config?.responseSchema,
-          thinkingConfig: { thinkingBudget: 0 }
+          responseSchema: payload.config?.responseSchema
         }
       });
 
-      // SRE FIX: Accessing .text property instead of calling it as a function.
+      // SRE SDK FIX: Acesso direto à propriedade .text (não é um método)
       if (!response.text) {
           throw new Error("EMPTY_AI_RESPONSE");
       }

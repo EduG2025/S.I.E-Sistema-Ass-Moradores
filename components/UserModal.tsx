@@ -148,8 +148,6 @@ const UserModal = ({ user, onClose, onSaveSuccess }: UserModalProps) => {
         } catch (e) { alert("Erro ao remover registro financeiro."); }
     };
 
-    // SRE FIX: Added missing handleSendReminder function to resolve the reference error on line 370.
-    // Dispatches a personalized debt reminder via the WhatsApp Bridge using the system's broadcast endpoint.
     const handleSendReminder = async (rec: FinancialRecord) => {
         try {
             await api.post('/communication/whatsapp-broadcast', {
@@ -216,6 +214,10 @@ const UserModal = ({ user, onClose, onSaveSuccess }: UserModalProps) => {
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 mr-4">
+                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                             <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Cadastro Sincronizado</span>
+                        </div>
                         <button onClick={handleSave} disabled={isSaving} className="px-10 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center gap-4 shadow-2xl active:scale-95 group" style={{ backgroundColor: primaryColor }}>
                             {isSaving ? <Loader2 className="animate-spin" size={18}/> : <Save size={18} className="group-hover:scale-110 transition-transform" />} Sincronizar Registro
                         </button>
@@ -301,32 +303,45 @@ const UserModal = ({ user, onClose, onSaveSuccess }: UserModalProps) => {
                                         <input className="w-full font-mono font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-8 text-xl shadow-inner outline-none focus:bg-white focus:border-indigo-500 transition-all" value={editingUser.cpf_cnpj} onChange={e => setEditingUser({...editingUser, cpf_cnpj: formatCPF(e.target.value)})} maxLength={14} />
                                     </div>
                                     <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">RG (Registro Geral)</label>
+                                        <input className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-8 text-xl shadow-inner outline-none focus:bg-white focus:border-indigo-500 transition-all" value={editingUser.rg || ''} onChange={e => setEditingUser({...editingUser, rg: e.target.value})} />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Órgão Emissor</label>
+                                        <input className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-8 text-xl shadow-inner outline-none focus:bg-white focus:border-indigo-500 transition-all uppercase" value={editingUser.issuing_authority || ''} onChange={e => setEditingUser({...editingUser, issuing_authority: e.target.value})} />
+                                    </div>
+                                    <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidade Habitacional / Cluster</label>
                                         <input className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-8 text-xl uppercase shadow-inner outline-none focus:bg-white focus:border-indigo-500 transition-all" value={editingUser.unit} onChange={e => setEditingUser({...editingUser, unit: e.target.value})} />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Canal WhatsApp Bridge</label>
-                                        <input className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-8 text-lg shadow-inner outline-none focus:bg-white focus:border-indigo-500 transition-all" value={editingUser.phone} onChange={e => setEditingUser({...editingUser, phone: e.target.value})} placeholder="Ex: 11999998888" />
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Idade Cronológica</label>
+                                        <input type="number" className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-8 text-xl shadow-inner outline-none focus:bg-white focus:border-indigo-500 transition-all" value={editingUser.age || ''} onChange={e => setEditingUser({...editingUser, age: parseInt(e.target.value)})} />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Estado na Rede</label>
-                                        <div className="flex gap-3 h-16">
-                                            {['ACTIVE', 'PENDING', 'VALIDATION_REQUIRED'].map(st => (
-                                                <button key={st} onClick={() => setEditingUser({...editingUser, status: st as any})} className={`flex-1 rounded-2xl text-[9px] font-black uppercase tracking-widest border-2 transition-all ${editingUser.status === st ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl scale-[1.02]' : 'bg-white border-slate-100 text-slate-300 hover:bg-slate-50'}`} style={editingUser.status === st ? { backgroundColor: primaryColor, borderColor: primaryColor } : {}}>{st.replace('_', ' ')}</button>
-                                            ))}
-                                        </div>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Canal WhatsApp Bridge</label>
+                                        <input className="w-full font-black h-16 bg-slate-50 border border-slate-200 rounded-2xl px-8 text-lg shadow-inner outline-none focus:bg-white focus:border-indigo-500 transition-all" value={editingUser.phone} onChange={e => setEditingUser({...editingUser, phone: e.target.value})} placeholder="Ex: 11999998888" />
                                     </div>
                                 </div>
                             </div>
                         )}
 
                         {activeTab === 'SOCIAL' && (
-                            <div className="animate-fade-in space-y-8">
-                                <div className="p-8 bg-indigo-50 border border-indigo-100 rounded-[2.5rem] flex items-center gap-6 shadow-sm">
-                                    <div className="p-4 bg-white text-indigo-600 rounded-2xl shadow-md" style={{ color: primaryColor }}><Heart size={28}/></div>
-                                    <div>
-                                        <h4 className="text-lg font-black text-indigo-900 uppercase tracking-tight">Atributos Biopsicossociais</h4>
-                                        <p className="text-[9px] text-indigo-700 font-bold uppercase mt-1 tracking-widest leading-relaxed">Estes dados alimentam o Observatório Social do cluster para políticas ESG.</p>
+                            <div className="animate-fade-in space-y-12">
+                                <div className="p-10 bg-indigo-50 border border-indigo-100 rounded-[3.5rem] flex flex-col md:flex-row items-center justify-between gap-8 shadow-sm">
+                                    <div className="flex items-center gap-6">
+                                        <div className="p-5 bg-white text-indigo-600 rounded-[2rem] shadow-md" style={{ color: primaryColor }}><Heart size={32}/></div>
+                                        <div>
+                                            <h4 className="text-2xl font-black text-indigo-950 uppercase tracking-tight">Handshake Social SRE</h4>
+                                            <p className="text-[10px] text-indigo-700 font-bold uppercase mt-1 tracking-widest leading-relaxed">
+                                                Sincronização reativa com o Ledger de Censos. <br/> 
+                                                Dados extraídos via motor de Inteligência Territorial.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 px-6 py-3 bg-white/50 border border-indigo-200 rounded-2xl">
+                                        <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]"></div>
+                                        <span className="text-[9px] font-black text-indigo-900 uppercase tracking-widest">Ledger Sync: Active</span>
                                     </div>
                                 </div>
                                 <SocialQuestionnaire user={editingUser} onSave={(data) => setEditingUser({...editingUser, socialData: data})} onCancel={() => setActiveTab('PERSONAL')} />

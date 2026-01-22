@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Survey, SurveyQuestion, SystemInfo } from '../types';
 import { api } from '../services/api';
@@ -77,10 +76,16 @@ const PublicSenso = () => {
 
     const handleIdentify = async () => {
         const cleanCPF = normalizeCPF(cpfIdentifier);
-        if (!validateCPF(cleanCPF)) { setError('Assinatura de CPF inválida.'); return; }
+        
+        if (!validateCPF(cleanCPF)) { 
+            setError('Falha de Protocolo: CPF Inválido.'); 
+            return; 
+        }
 
-        setIsLoading(true); setError('');
+        setIsLoading(true); 
+        setError('');
         try {
+            // SRE FIX: Envia CPF purificado para evitar erros de encode de caracteres especiais
             const res = await api.get(`/surveys/public/check-resident/${cleanCPF}`);
             if (res.data && res.data.found) {
                 setUserData({ 
@@ -96,8 +101,11 @@ const PublicSenso = () => {
                 setIsNewResident(true);
             }
             setStep('FORM');
-        } catch (e) { setError('Falha no Kernel de identificação.'); } 
-        finally { setIsLoading(false); }
+        } catch (e) { 
+            setError('Falha no Kernel de identificação. Verifique a conexão.'); 
+        } finally { 
+            setIsLoading(false); 
+        }
     };
 
     const startCamera = async () => {
@@ -387,7 +395,7 @@ const PublicSenso = () => {
                                     {!userData.avatar_url ? (
                                         <>
                                             {!cameraActive ? (
-                                                <button onClick={startCamera} className="w-full py-5 bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest hover:bg-indigo-500 flex items-center justify-center gap-3 rounded-2xl">
+                                                <button onClick={startCamera} className="w-full py-5 bg-indigo-600 text-white font-black text-[10px] uppercase tracking-widest hover:bg-indigo-50 flex items-center justify-center gap-3 rounded-2xl">
                                                     <Camera size={20}/> Ativar Lente
                                                 </button>
                                             ) : (
