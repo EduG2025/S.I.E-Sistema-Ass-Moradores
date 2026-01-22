@@ -1,4 +1,3 @@
-
 import express from 'express';
 import * as surveyController from '../controllers/surveyController.js';
 import { createHandlers } from '../controllers/genericController.js';
@@ -8,13 +7,13 @@ const router = express.Router();
 const generic = createHandlers('surveys');
 
 // Admin CRUD - Protegido por permissão granular manage_surveys
-router.get('/', authenticateToken, checkPermission('manage_surveys'), generic.getAll);
+router.get('/', authenticateToken, checkPermission('manage_surveys'), surveyController.getAllSurveys);
 router.post('/', authenticateToken, checkPermission('manage_surveys'), generic.create);
 router.put('/:id', authenticateToken, checkPermission('manage_surveys'), generic.update);
 router.delete('/:id', authenticateToken, checkPermission('manage_surveys'), generic.delete);
-router.get('/:id/responses', authenticateToken, checkPermission('manage_surveys'), surveyController.getResponses);
 
-// Missing Route: Get Responses by CPF for Dossier
+// Auditoria de Respostas
+router.get('/:id/responses', authenticateToken, checkPermission('manage_surveys'), surveyController.getResponses);
 router.get('/responses/cpf/:cpf', authenticateToken, checkPermission('manage_surveys'), surveyController.getResponsesByCpf);
 
 // IA Question Suggestion

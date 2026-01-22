@@ -17,7 +17,7 @@ app.use(cors());
 app.use(express.json({ limit: '100mb' }));
 
 /**
- * S.I.E MASTER KERNEL SCHEMA - PROTOCOLO SRE V10.0 (EXPANSÃO DE IDENTIDADE & GOVERNANÇA)
+ * S.I.E MASTER KERNEL SCHEMA - PROTOCOLO SRE V11.0 (RESTAURAÇÃO & GOVERNANÇA)
  */
 const ensureSchema = async () => {
     try {
@@ -36,9 +36,10 @@ const ensureSchema = async () => {
         
         for (const sql of sqls) { await pool.query(sql); }
 
-        // Migração de colunas faltantes em settings (Adição de Presidência)
+        // Mapeamento de migrações aditivas para settings
         const settingsMigrations = [
-            { col: 'president_name', sql: "ALTER TABLE settings ADD COLUMN president_name VARCHAR(255) AFTER logoUrl" },
+            { col: 'module_metadata', sql: "ALTER TABLE settings ADD COLUMN module_metadata JSON AFTER whatsapp_config" },
+            { col: 'president_name', sql: "ALTER TABLE settings ADD COLUMN president_name VARCHAR(255) AFTER module_metadata" },
             { col: 'president_cpf', sql: "ALTER TABLE settings ADD COLUMN president_cpf VARCHAR(20) AFTER president_name" },
             { col: 'management_start', sql: "ALTER TABLE settings ADD COLUMN management_start DATE AFTER president_cpf" },
             { col: 'management_end', sql: "ALTER TABLE settings ADD COLUMN management_end DATE AFTER management_start" },
@@ -52,23 +53,8 @@ const ensureSchema = async () => {
             } catch (err) {}
         }
 
-        // Migração de colunas faltantes em ai_keys
-        const aiKeysMigrations = [
-            { col: 'model', sql: "ALTER TABLE ai_keys ADD COLUMN model VARCHAR(100) DEFAULT 'gemini-3-flash-preview' AFTER provider" },
-            { col: 'tier', sql: "ALTER TABLE ai_keys ADD COLUMN tier VARCHAR(20) DEFAULT 'FREE' AFTER model" },
-            { col: 'error_count', sql: "ALTER TABLE ai_keys ADD COLUMN error_count INT DEFAULT 0 AFTER priority" },
-            { col: 'last_checked', sql: "ALTER TABLE ai_keys ADD COLUMN last_checked DATETIME AFTER error_count" }
-        ];
-
-        for (const m of aiKeysMigrations) {
-            try {
-                const [cols] = await pool.query(`SHOW COLUMNS FROM ai_keys LIKE '${m.col}'`);
-                if (cols.length === 0) await pool.query(m.sql);
-            } catch (err) {}
-        }
-
-        console.log("✅ KERNEL SRE: Schema Consolidado V10.0.");
-    } catch (e) { console.error("❌ Schema Error:", e.message); }
+        console.log("✅ KERNEL SRE: Schema Consolidado & Blindado V11.0.");
+    } catch (e) { console.error("❌ Schema Panic:", e.message); }
 };
 
 app.use('/api', apiRoutes);

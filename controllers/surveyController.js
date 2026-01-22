@@ -17,37 +17,49 @@ const calculateAge = (dob) => {
 };
 
 /**
- * SRE Protocol: Envio de Mensagem de Boas-vindas/Confirmação (Bridge JennyAI).
+ * Recupera todas as pesquisas (Censos).
  */
-const sendConfirmationProtocol = async (phone, name, unit) => {
-    if (!phone) return;
+export const getAllSurveys = async (req, res) => {
     try {
-        const [[settings]] = await pool.query('SELECT whatsapp_config, shortName FROM settings WHERE id = 1');
-        if (!settings?.whatsapp_config) return;
-        
-        let config = settings.whatsapp_config;
-        if (typeof config === 'string') config = JSON.parse(config);
+        const [rows] = await pool.query("SELECT * FROM surveys ORDER BY created_at DESC");
+        rows.forEach(r => {
+            if (r.questions && typeof r.questions === 'string') r.questions = JSON.parse(r.questions);
+        });
+        res.json({ data: rows });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+};
 
-        if (config.api_key && config.sender) {
-            const firstName = (name || 'Membro').split(' ')[0];
-            const msg = `Olá ${firstName}, seus dados foram protocolados com sucesso via Censo Digital ${settings.shortName}. Sua participação é fundamental para nossa co-gestão ativa!`;
+/**
+ * Recupera respostas de uma pesquisa específica.
+ */
+export const getResponses = async (req, res) => {
+    try {
+        const [rows] = await pool.query(
+            "SELECT * FROM survey_responses WHERE survey_id = ? ORDER BY created_at DESC", 
+            [req.params.id]
+        );
+        rows.forEach(r => {
+            if (r.answers && typeof r.answers === 'string') r.answers = JSON.parse(r.answers);
+        });
+        res.json({ data: rows });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+};
 
-            await axios({
-                method: 'post',
-                url: 'https://jennyai.space/send-message',
-                params: {
-                    api_key: config.api_key,
-                    sender: config.sender,
-                    number: phone.replace(/\D/g, ''),
-                    message: msg,
-                    footer: config.footer || settings.shortName
-                },
-                httpsAgent: new https.Agent({ rejectUnauthorized: false }),
-                timeout: 8000
-            });
-            console.log(`[SRE CENSO] Confirmation dispatched to: ${phone}`);
-        }
-    } catch (e) { console.error("[SRE ALERT] Notification failed:", e.message); }
+/**
+ * Recupera histórico de respostas de um morador via CPF.
+ */
+export const getResponsesByCpf = async (req, res) => {
+    try {
+        const cleanCPF = req.params.cpf.replace(/\D/g, '');
+        const [rows] = await pool.query(
+            "SELECT * FROM survey_responses WHERE cpf = ? ORDER BY created_at DESC", 
+            [cleanCPF]
+        );
+        rows.forEach(r => {
+            if (r.answers && typeof r.answers === 'string') r.answers = JSON.parse(r.answers);
+        });
+        res.json({ data: rows });
+    } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
 /**
@@ -86,12 +98,10 @@ export const submitResponse = async (req, res) => {
     const cleanCPF = String(cpf).replace(/\D/g, '');
 
     try {
-        // 1. Busca por identidade existente no cluster
         const [existing] = await pool.query('SELECT id, socialData, avatar_url FROM users WHERE cpf_cnpj = ?', [cleanCPF]);
         let userId = existing[0]?.id;
         const currentAge = calculateAge(userData.birthDate);
 
-        // 2. Compor Matriz de Inteligência Social
         const socialMapping = {
             risk: existing[0]?.socialData?.risk || 0,
             tags: existing[0]?.socialData?.tags || ["AUTO_CENSO_2025"],
@@ -101,7 +111,6 @@ export const submitResponse = async (req, res) => {
 
         const avatarToSave = userData.avatar_url || existing[0]?.avatar_url || null;
 
-        // 3. UPSERT LOGIC: Garantir integridade do cadastro core
         if (!userId) {
             const [result] = await pool.query(
                 'INSERT INTO users (name, cpf_cnpj, unit, email, phone, age, role, status, active, socialData, avatar_url) VALUES (?, ?, ?, ?, ?, ?, "RESIDENT", "ACTIVE", 1, ?, ?)',
@@ -115,20 +124,10 @@ export const submitResponse = async (req, res) => {
             );
         }
 
-        // 4. Registro no Ledger de Respostas
         await pool.query(
             'INSERT INTO survey_responses (survey_id, user_id, cpf, user_name, answers) VALUES (?, ?, ?, ?, ?)',
             [surveyId, userId, cleanCPF, userData.name, JSON.stringify(answers)]
         );
-
-        // 5. Auditoria SRE
-        await pool.query(
-            'INSERT INTO audit_logs (user_id, action, table_name, record_id, details) VALUES (?, "SYNC_CENSUS", "survey_responses", ?, ?)',
-            [userId, surveyId, `Sincronização dinâmica de perfil: ${userData.name}. Bio-ID Ativo.`]
-        );
-
-        // 6. Notificação via Bridge (Async)
-        sendConfirmationProtocol(userData.phone, userData.name, userData.unit);
 
         res.json({ success: true, protocol: Date.now(), sync: 'OK' });
     } catch (e) {
