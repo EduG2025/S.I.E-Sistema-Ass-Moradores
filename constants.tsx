@@ -1,4 +1,3 @@
-
 import { 
   LayoutDashboard, Wallet, Users, Bell, ShieldAlert, CalendarClock, 
   Settings, ClipboardList, BarChart3, Map as MapIcon, Briefcase, ShoppingBag,
@@ -39,12 +38,22 @@ export const MENU_ITEMS = [
   { id: 'settings', label: 'Configurações', icon: Settings, permissionId: 'manage_settings', category: 'SISTEMA' },
 ];
 
-export const AVAILABLE_ROLES = ['ADMIN', 'PRESIDENT', 'VICE_PRESIDENT', 'SINDIC', 'RESIDENT', 'CONCIERGE', 'MERCHANT', 'COUNCIL'];
+export const AVAILABLE_ROLES = [
+    'ADMIN', 
+    'PRESIDENT', 
+    'VICE_PRESIDENT', 
+    'SECRETARY', 
+    'TREASURER', 
+    'SERVICE', 
+    'RESIDENT', 
+    'VISITOR'
+];
 
 export const SYSTEM_PERMISSIONS = [
   { id: 'view_dashboard', label: 'Ver Dashboard', module: 'GERAL' },
   { id: 'manage_users', label: 'Gerir Membros', module: 'ADMIN' },
   { id: 'view_finances', label: 'Ver Financeiro', module: 'FINANCEIRO' },
+  { id: 'manage_finances', label: 'Gerir Financeiro', module: 'FINANCEIRO' },
   { id: 'view_operations', label: 'Ver Ocorrências/Vision', module: 'OPERACIONAL' },
   { id: 'view_timeline', label: 'Ver Agenda/Timeline', module: 'OPERACIONAL' },
   { id: 'manage_settings', label: 'Configurações de Kernel', module: 'ADMIN' },
@@ -58,6 +67,7 @@ export const SYSTEM_PERMISSIONS = [
   { id: 'use_marketplace', label: 'Usar Marketplace', module: 'COMUNIDADE' },
   { id: 'use_reservations', label: 'Usar Reservas', module: 'COMUNIDADE' },
   { id: 'send_suggestions', label: 'Enviar Ouvidoria', module: 'COMUNIDADE' },
+  { id: 'view_demographics', label: 'Ver Observatório Social', module: 'GOVERNANÇA' },
 ];
 
 export const DEFAULT_SYSTEM_INFO: SystemInfo = {

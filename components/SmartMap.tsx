@@ -1,13 +1,12 @@
-
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { UnitData, SystemInfo, SocialData } from '../types';
-import { mapService, aiService } from '../services/api';
+import { UnitData, SystemInfo } from '../types';
+import { mapService } from '../services/api';
 import { 
   Loader2, X, Map as MapIcon, Layers, Flame, User as UserIcon, 
-  MapPin, Search, Plus, Sparkles, Brain, LayoutGrid,
-  ZoomIn, ZoomOut, Navigation2, Phone, Calendar, Heart,
-  Fingerprint, Briefcase, GraduationCap, ShieldCheck, Sun, Moon,
-  Home, Building2, MapPinned, AlertCircle
+  MapPin, Search, Plus, Brain, LayoutGrid,
+  ZoomIn, ZoomOut, Navigation2, Phone, Calendar,
+  Fingerprint, ShieldCheck, Sun, Moon,
+  Home, Radio, Zap
 } from 'lucide-react';
 import * as L from 'leaflet';
 
@@ -19,7 +18,7 @@ const SmartMap = ({ systemInfo }: SmartMapProps) => {
   const [allUnits, setAllUnits] = useState<UnitData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUnit, setSelectedUnit] = useState<UnitData | null>(null);
-  const [mapMode, setMapMode] = useState<'MARKERS' | 'HEATMAP'>('MARKERS');
+  const [mapMode, setMapMode] = useState<'MARKERS' | 'HEATMAP' | 'PATROL'>('MARKERS');
   const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [layersPanelOpen, setLayersPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,6 +28,7 @@ const SmartMap = ({ systemInfo }: SmartMapProps) => {
   const markersGroupRef = useRef<any | null>(null);
   const tileLayerRef = useRef<any | null>(null);
   const heatLayerRef = useRef<any | null>(null);
+  const patrolLayerRef = useRef<any | null>(null);
 
   useEffect(() => {
     loadUnits();
@@ -91,7 +91,6 @@ const SmartMap = ({ systemInfo }: SmartMapProps) => {
       updateTiles();
   }, [theme]);
 
-  // MOTOR DE BUSCA EM TEMPO REAL
   const searchResults = useMemo(() => {
       if (!searchQuery.trim() || searchQuery.length < 2) return [];
       const q = searchQuery.toLowerCase();
@@ -121,73 +120,85 @@ const SmartMap = ({ systemInfo }: SmartMapProps) => {
     if (!mapInstanceRef.current || !markersGroupRef.current) return;
     markersGroupRef.current.clearLayers();
     if (heatLayerRef.current) { mapInstanceRef.current.removeLayer(heatLayerRef.current); heatLayerRef.current = null; }
+    if (patrolLayerRef.current) { mapInstanceRef.current.removeLayer(patrolLayerRef.current); patrolLayerRef.current = null; }
 
-    allUnits.forEach(unit => {
-      const riskColor = (unit.socialData?.risk || 0) > 70 ? '#ef4444' : (unit.socialData?.risk || 0) > 40 ? '#f59e0b' : '#4f46e5';
-      const isActive = selectedUnit?.id === unit.id;
+    if (mapMode === 'MARKERS' || mapMode === 'PATROL') {
+      allUnits.forEach(unit => {
+        const riskColor = (unit.socialData?.risk || 0) > 70 ? '#ef4444' : (unit.socialData?.risk || 0) > 40 ? '#f59e0b' : '#4f46e5';
+        const isActive = selectedUnit?.id === unit.id;
 
-      if (mapMode === 'MARKERS') {
         L.marker([unit.coordinates.lat, unit.coordinates.lng] as any, {
           icon: L.divIcon({ 
             className: 'custom-marker', 
             html: `
               <div class="relative group">
-                <div class="w-10 h-10 rounded-full border-4 ${isActive ? 'border-white scale-125 shadow-[0_0_30px_rgba(79,70,229,0.8)]' : 'border-white shadow-xl'} transition-all flex items-center justify-center" style="background-color: ${riskColor}">
-                  <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+                <div class="w-8 h-8 rounded-full border-2 ${isActive ? 'border-white scale-125 shadow-lg' : 'border-white/50 shadow-md'} transition-all flex items-center justify-center" style="background-color: ${riskColor}">
+                  <div class="w-1 h-1 bg-white rounded-full"></div>
                 </div>
               </div>`
           })
         }).on('click', () => focusOnUnit(unit)).addTo(markersGroupRef.current);
-      }
-    });
+      });
+    }
 
     if (mapMode === 'HEATMAP' && (window as any).L.heatLayer) {
         const heatPoints = allUnits.map(u => [u.coordinates.lat, u.coordinates.lng, (u.socialData?.risk || 50) / 100]);
         heatLayerRef.current = (window as any).L.heatLayer(heatPoints, { radius: 35, blur: 15 }).addTo(mapInstanceRef.current);
     }
+
+    if (mapMode === 'PATROL') {
+        const routeCoords = allUnits.map(u => [u.coordinates.lat, u.coordinates.lng]);
+        if (routeCoords.length > 1) {
+            patrolLayerRef.current = L.polyline(routeCoords as any, { 
+                color: '#4f46e5', 
+                weight: 2, 
+                dashArray: '10, 10', 
+                opacity: 0.6,
+                className: 'patrol-animate'
+            }).addTo(mapInstanceRef.current);
+        }
+    }
   }, [allUnits, mapMode, selectedUnit, theme]);
 
   return (
-    <div className={`h-screen w-full flex flex-col relative overflow-hidden transition-all duration-700 ${theme === 'dark' ? 'bg-slate-950' : 'bg-slate-50'}`}>
-      <div ref={mapContainerRef} className={`absolute inset-0 z-0 ${theme === 'dark' ? 'brightness-[0.7] contrast-[1.2]' : ''}`}></div>
+    <div className={`h-full w-full flex flex-col relative overflow-hidden transition-all duration-700 ${theme === 'dark' ? 'bg-slate-950' : 'bg-slate-50'}`}>
+      <div ref={mapContainerRef} className={`absolute inset-0 z-0 ${theme === 'dark' ? 'brightness-[0.7] contrast-[1.1]' : ''}`}></div>
 
-      {/* FLOATING SEARCH HUD (GOOGLE MAPS STYLE) */}
-      <div className="absolute top-10 left-10 z-[2000] w-full max-w-[500px] px-6 lg:px-0">
-          <div className={`backdrop-blur-3xl p-3 rounded-[2.5rem] shadow-[0_40px_100px_rgba(0,0,0,0.3)] border transition-all ${theme === 'dark' ? 'bg-slate-900/95 border-white/10' : 'bg-white/95 border-slate-200'}`}>
-              <div className="flex items-center gap-4">
-                  <div className="pl-6 text-indigo-500"><Search size={22} className="animate-pulse" /></div>
+      {/* TOP SEARCH BAR */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[2000] w-[92%] max-w-2xl px-4 lg:px-0">
+          <div className={`backdrop-blur-3xl p-2 rounded-3xl shadow-2xl border transition-all ${theme === 'dark' ? 'bg-slate-900/90 border-white/10' : 'bg-white/95 border-slate-200'}`}>
+              <div className="flex items-center gap-3">
+                  <div className="pl-4 text-indigo-500"><Search size={20} /></div>
                   <input 
                       type="text" 
-                      placeholder="Pesquisar Membro, Unid, CPF..." 
+                      placeholder="Identidade, Unidade, Perfil..." 
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className={`flex-1 bg-transparent border-none outline-none font-black text-sm py-4 uppercase tracking-widest placeholder:text-slate-300 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}
+                      className={`flex-1 bg-transparent border-none outline-none font-bold text-[11px] py-3 uppercase tracking-widest placeholder:text-slate-400 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}
                   />
-                  <div className="flex items-center gap-2 pr-4">
-                    <button onClick={() => setLayersPanelOpen(!layersPanelOpen)} title="Camadas" className={`p-4 rounded-2xl transition-all ${layersPanelOpen ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
-                        <Layers size={20}/>
+                  <div className="flex items-center gap-1 pr-2">
+                    <button onClick={() => setLayersPanelOpen(!layersPanelOpen)} className={`p-3 rounded-2xl transition-all ${layersPanelOpen ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-100'}`}>
+                        <Layers size={18}/>
                     </button>
-                    <div className="w-px h-8 bg-slate-200 mx-2"></div>
-                    <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-4 text-slate-400 hover:text-indigo-600 rounded-2xl transition-all">
-                        {theme === 'dark' ? <Sun size={20}/> : <Moon size={20}/>}
+                    <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-3 text-slate-400 hover:text-indigo-600 rounded-2xl transition-all">
+                        {theme === 'dark' ? <Sun size={18}/> : <Moon size={18}/>}
                     </button>
                   </div>
               </div>
 
-              {/* SEARCH RESULTS DINÂMICOS */}
               {searchResults.length > 0 && (
-                  <div className={`mt-4 py-3 border-t overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar ${theme === 'dark' ? 'border-white/5' : 'border-slate-100'}`}>
+                  <div className={`mt-2 py-2 border-t overflow-hidden max-h-[300px] overflow-y-auto custom-scrollbar ${theme === 'dark' ? 'border-white/5' : 'border-slate-100'}`}>
                       {searchResults.map(res => (
-                          <button key={res.id} onClick={() => handleSelectFromSearch(res)} className={`w-full flex items-center gap-5 px-6 py-5 text-left transition-all border-b last:border-0 ${theme === 'dark' ? 'hover:bg-white/5 border-white/5' : 'hover:bg-slate-50 border-slate-50'}`}>
-                              <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-500 shrink-0">
-                                  <UserIcon size={20}/>
+                          <button key={res.id} onClick={() => handleSelectFromSearch(res)} className={`w-full flex items-center gap-4 px-5 py-4 text-left transition-all border-b last:border-0 ${theme === 'dark' ? 'hover:bg-white/5 border-white/5' : 'hover:bg-slate-50 border-slate-50'}`}>
+                              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500 shrink-0">
+                                  <UserIcon size={16}/>
                               </div>
                               <div className="min-w-0 flex-1">
-                                  <div className="flex justify-between items-center mb-1">
-                                      <p className={`text-sm font-black uppercase truncate ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{res.residentName}</p>
-                                      <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-2 py-1 rounded uppercase border border-slate-200">Unid {res.unit}</span>
+                                  <div className="flex justify-between items-center">
+                                      <p className={`text-[10px] font-black uppercase truncate ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{res.residentName}</p>
+                                      <span className="text-[7px] font-black bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded uppercase border border-slate-200">Unid {res.unit}</span>
                                   </div>
-                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">Documento: {res.cpf}</p>
+                                  <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest truncate">{res.cpf}</p>
                               </div>
                           </button>
                       ))}
@@ -196,93 +207,97 @@ const SmartMap = ({ systemInfo }: SmartMapProps) => {
           </div>
       </div>
 
-      {/* MODAL DE CAMADAS (HUD) */}
+      {/* LAYER SELECTOR HUD */}
       {layersPanelOpen && (
-          <div className={`absolute top-40 left-10 z-[2000] w-[340px] backdrop-blur-3xl rounded-[3rem] border shadow-2xl animate-slide-up p-10 ${theme === 'dark' ? 'bg-slate-900/95 border-white/10' : 'bg-white/95 border-slate-200'}`}>
-              <div className="flex justify-between items-center mb-8 px-2">
-                <h5 className="text-[11px] font-black text-indigo-500 uppercase tracking-[0.2em]">Malha Territorial</h5>
-                <button onClick={() => setLayersPanelOpen(false)} className="text-slate-400 hover:text-rose-500 transition-colors"><X size={18}/></button>
+          <div className={`absolute top-24 left-6 z-[2000] w-64 backdrop-blur-3xl rounded-[2.5rem] border shadow-2xl animate-fade-in p-6 ${theme === 'dark' ? 'bg-slate-900/95 border-white/10' : 'bg-white/95 border-slate-200'}`}>
+              <div className="flex justify-between items-center mb-6">
+                <h5 className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Protocolos de Visão</h5>
+                <button onClick={() => setLayersPanelOpen(false)} className="text-slate-400 hover:text-rose-500"><X size={16}/></button>
               </div>
-              <div className="space-y-4">
-                  <button onClick={() => setMapMode('MARKERS')} className={`w-full flex items-center justify-between p-6 rounded-[2rem] transition-all border ${mapMode === 'MARKERS' ? 'bg-indigo-600 text-white border-indigo-500 shadow-xl' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'}`}>
-                    <div className="flex items-center gap-4">
-                        <LayoutGrid size={20}/>
-                        <span className="text-[11px] font-black uppercase tracking-widest">Registros Ativos</span>
-                    </div>
-                    {mapMode === 'MARKERS' && <ShieldCheck size={18}/>}
+              <div className="space-y-3">
+                  <button onClick={() => setMapMode('MARKERS')} className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all border ${mapMode === 'MARKERS' ? 'bg-indigo-600 text-white border-indigo-500' : 'bg-slate-50 border-transparent text-slate-500'}`}>
+                    <LayoutGrid size={18}/>
+                    <span className="text-[9px] font-black uppercase tracking-widest">Unidades</span>
                   </button>
-                  <button onClick={() => setMapMode('HEATMAP')} className={`w-full flex items-center justify-between p-6 rounded-[2rem] transition-all border ${mapMode === 'HEATMAP' ? 'bg-rose-600 text-white border-rose-500 shadow-xl' : 'bg-slate-50 border-transparent text-slate-500 hover:bg-slate-100'}`}>
-                    <div className="flex items-center gap-4">
-                        <Flame size={20}/>
-                        <span className="text-[11px] font-black uppercase tracking-widest">Calor Social</span>
-                    </div>
-                    {mapMode === 'HEATMAP' && <ShieldCheck size={18}/>}
+                  <button onClick={() => setMapMode('HEATMAP')} className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all border ${mapMode === 'HEATMAP' ? 'bg-rose-600 text-white border-rose-500' : 'bg-slate-50 border-transparent text-slate-500'}`}>
+                    <Flame size={18}/>
+                    <span className="text-[9px] font-black uppercase tracking-widest">Calor Social</span>
+                  </button>
+                  <button onClick={() => setMapMode('PATROL')} className={`w-full flex items-center gap-3 p-4 rounded-2xl transition-all border ${mapMode === 'PATROL' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-slate-50 border-transparent text-slate-500'}`}>
+                    <Radio size={18} className="animate-pulse" />
+                    <span className="text-[9px] font-black uppercase tracking-widest">Patrulha Drone</span>
                   </button>
               </div>
           </div>
       )}
 
-      {/* DOSSIÊ DO MORADOR (HUD INFERIOR) */}
+      {/* UNIT DOSSIER FLOATING FOOTER */}
       {selectedUnit && (
-          <div className="absolute bottom-10 right-10 left-10 lg:left-auto lg:w-[500px] z-[2000] animate-slide-up">
-              <div className={`backdrop-blur-3xl rounded-[4rem] shadow-[0_50px_100px_rgba(0,0,0,0.4)] border overflow-hidden flex flex-col ${theme === 'dark' ? 'bg-slate-900/95 border-white/10' : 'bg-white/95 border-slate-200'}`}>
-                  <div className="p-10 pb-6 flex justify-between items-start">
-                      <div className="flex items-center gap-8">
-                          <div className="w-24 h-24 rounded-[2.5rem] bg-indigo-600 text-white flex items-center justify-center shadow-2xl border-4 border-white/10 transition-transform hover:rotate-3">
-                              <UserIcon size={40}/>
+          <div className="absolute bottom-6 left-6 right-6 lg:left-auto lg:w-[450px] z-[2000] animate-scale-in">
+              <div className={`backdrop-blur-3xl rounded-[3rem] shadow-2xl border overflow-hidden ${theme === 'dark' ? 'bg-slate-900/95 border-white/10' : 'bg-white/95 border-slate-200'}`}>
+                  <div className="p-8 pb-4 flex justify-between items-start">
+                      <div className="flex items-center gap-6">
+                          <div className="w-16 h-16 rounded-3xl bg-indigo-600 text-white flex items-center justify-center shadow-xl border-2 border-white/10">
+                              <UserIcon size={28}/>
                           </div>
                           <div>
-                              <h4 className={`text-3xl font-black uppercase leading-none tracking-tight mb-3 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{selectedUnit.residentName}</h4>
-                              <div className="flex gap-3">
-                                  <span className="px-4 py-1.5 bg-indigo-500/10 text-indigo-500 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-indigo-500/20"><MapPin size={12}/> Unid {selectedUnit.unit}</span>
-                                  <span className="px-4 py-1.5 bg-slate-500/10 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-500/20">{selectedUnit.role}</span>
+                              <h4 className={`text-xl font-black uppercase leading-none tracking-tight mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{selectedUnit.residentName}</h4>
+                              <div className="flex gap-2">
+                                  <span className="px-3 py-1 bg-indigo-500/10 text-indigo-500 rounded-lg text-[8px] font-black uppercase tracking-widest border border-indigo-500/20">Unid {selectedUnit.unit}</span>
+                                  <span className="px-3 py-1 bg-slate-500/10 text-slate-400 rounded-lg text-[8px] font-black uppercase tracking-widest">{selectedUnit.role}</span>
                               </div>
                           </div>
                       </div>
-                      <button onClick={() => setSelectedUnit(null)} className="p-4 text-slate-400 hover:bg-rose-500 hover:text-white rounded-2xl transition-all border border-transparent shadow-inner"><X size={24}/></button>
+                      <button onClick={() => setSelectedUnit(null)} className="p-3 text-slate-400 hover:bg-rose-500 hover:text-white rounded-2xl transition-all"><X size={20}/></button>
                   </div>
 
-                  <div className="px-10 pb-10 space-y-8">
-                      <div className="grid grid-cols-2 gap-6">
-                          <div className={`p-6 rounded-[2rem] border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-100'}`}>
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Fingerprint size={14} className="text-indigo-500"/> Documento</p>
-                              <p className={`text-sm font-black uppercase ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{selectedUnit.cpf}</p>
+                  <div className="px-8 pb-8 space-y-6">
+                      <div className="grid grid-cols-2 gap-4">
+                          <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-100'}`}>
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1.5"><Fingerprint size={12} className="text-indigo-500"/> Documento</p>
+                              <p className={`text-[10px] font-black uppercase ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{selectedUnit.cpf}</p>
                           </div>
-                          <div className={`p-6 rounded-[2rem] border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-100'}`}>
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2"><Calendar size={14} className="text-indigo-500"/> Idade</p>
-                              <p className={`text-sm font-black uppercase ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{selectedUnit.age} Anos</p>
+                          <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-slate-50 border-slate-100'}`}>
+                              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1.5"><Calendar size={12} className="text-indigo-500"/> Idade</p>
+                              <p className={`text-[10px] font-black uppercase ${theme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{selectedUnit.age} Anos</p>
                           </div>
                       </div>
 
-                      <div className="flex gap-4">
-                          <button className="flex-1 py-6 bg-slate-950 text-white rounded-[2rem] font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl hover:bg-indigo-600 transition-all flex items-center justify-center gap-3"><Brain size={18}/> Dossiê Master</button>
-                          <a href={`https://wa.me/${selectedUnit.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="p-6 bg-emerald-600 text-white rounded-[2rem] shadow-2xl hover:bg-emerald-500 transition-all active:scale-95 flex items-center justify-center"><Phone size={24}/></a>
+                      <div className="flex gap-3">
+                          <button className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black text-[9px] uppercase tracking-widest shadow-xl hover:bg-indigo-600 transition-all flex items-center justify-center gap-2"><Brain size={14}/> Dossiê</button>
+                          <a href={`https://wa.me/${selectedUnit.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="p-4 bg-emerald-600 text-white rounded-2xl shadow-xl hover:bg-emerald-500 active:scale-95 flex items-center justify-center transition-all"><Phone size={20}/></a>
                       </div>
                   </div>
               </div>
           </div>
       )}
 
-      {/* MAP TOOLS FLOATING (RIGHT) */}
-      <div className="absolute top-1/2 -translate-y-1/2 right-10 z-[2000] flex flex-col gap-6">
-          <div className={`backdrop-blur-3xl p-2 rounded-[2rem] border shadow-2xl flex flex-col gap-2 ${theme === 'dark' ? 'bg-slate-900/80 border-white/10' : 'bg-white/80 border-slate-200'}`}>
-              <button onClick={() => mapInstanceRef.current?.zoomIn()} className="p-5 text-slate-400 hover:text-indigo-600 transition-all hover:bg-slate-50 rounded-2xl"><Plus size={28}/></button>
-              <div className="h-px bg-slate-200 mx-4"></div>
-              <button onClick={() => mapInstanceRef.current?.zoomOut()} className="p-5 text-slate-400 hover:text-indigo-600 transition-all hover:bg-slate-50 rounded-2xl"><ZoomOut size={28}/></button>
+      {/* MAP CONTROLS FLOATING */}
+      <div className="absolute top-1/2 -translate-y-1/2 right-6 z-[2000] flex flex-col gap-4">
+          <div className={`backdrop-blur-3xl p-1.5 rounded-2xl border shadow-xl flex flex-col gap-1 ${theme === 'dark' ? 'bg-slate-900/80 border-white/10' : 'bg-white/80 border-slate-200'}`}>
+              <button onClick={() => mapInstanceRef.current?.zoomIn()} className="p-3 text-slate-400 hover:text-indigo-600 transition-all hover:bg-slate-50 rounded-xl"><Plus size={20}/></button>
+              <div className="h-px bg-slate-200 mx-2"></div>
+              <button onClick={() => mapInstanceRef.current?.zoomOut()} className="p-3 text-slate-400 hover:text-indigo-600 transition-all hover:bg-slate-50 rounded-xl"><ZoomOut size={20}/></button>
           </div>
-          <button className={`p-8 backdrop-blur-3xl rounded-[2.5rem] border shadow-2xl transition-all ${theme === 'dark' ? 'bg-slate-900/80 border-white/10 text-indigo-400' : 'bg-white/80 border-slate-200 text-indigo-600'}`}>
-              <Home size={28} />
+          <button className={`p-4 backdrop-blur-3xl rounded-3xl border shadow-xl transition-all ${theme === 'dark' ? 'bg-slate-900/80 border-white/10 text-indigo-400' : 'bg-white/80 border-slate-200 text-indigo-600'}`}>
+              <Home size={22} />
           </button>
-          <button onClick={() => { if(selectedUnit) focusOnUnit(selectedUnit); }} className={`p-8 backdrop-blur-3xl rounded-[2.5rem] border shadow-2xl transition-all ${theme === 'dark' ? 'bg-slate-900/80 border-white/10 text-indigo-400' : 'bg-white/80 border-slate-200 text-indigo-600'}`}>
-              <Navigation2 size={28} className="animate-pulse" />
+          <button onClick={() => { if(selectedUnit) focusOnUnit(selectedUnit); }} className={`p-4 backdrop-blur-3xl rounded-3xl border shadow-xl transition-all ${theme === 'dark' ? 'bg-slate-900/80 border-white/10 text-indigo-400' : 'bg-white/80 border-slate-200 text-indigo-600'}`}>
+              <Navigation2 size={22} className="animate-pulse" />
           </button>
       </div>
 
       <style>{`
-        .leaflet-container { background: ${theme === 'dark' ? '#020617' : '#f1f5f9'} !important; cursor: crosshair !important; }
+        .leaflet-container { background: ${theme === 'dark' ? '#020617' : '#f1f5f9'} !important; }
         .custom-marker { background: none !important; border: none !important; }
-        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(79, 70, 229, 0.4); border-radius: 20px; }
+        .patrol-animate { 
+            stroke-dasharray: 10, 10;
+            animation: dash 20s linear infinite; 
+        }
+        @keyframes dash {
+            from { stroke-dashoffset: 200; }
+            to { stroke-dashoffset: 0; }
+        }
       `}</style>
     </div>
   );

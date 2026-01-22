@@ -1,4 +1,3 @@
-
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
@@ -18,8 +17,8 @@ app.use(cors());
 app.use(express.json({ limit: '100mb' }));
 
 /**
- * SRE SCHEMA ENFORCEMENT - PROTOCOLO TOTAL V530.1
- * Inclusão de campo age para bioestatística de membros.
+ * S.I.E SCHEMA ENFORCEMENT - PROTOCOLO TOTAL V535.0
+ * Atualização da matriz RBAC conforme solicitação de cargos hierárquicos.
  */
 const ensureSchema = async () => {
     try {
@@ -29,7 +28,7 @@ const ensureSchema = async () => {
             'CREATE TABLE IF NOT EXISTS roles (id VARCHAR(50) PRIMARY KEY, label VARCHAR(100) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)',
             'CREATE TABLE IF NOT EXISTS role_permissions (role VARCHAR(50) NOT NULL, permission_id VARCHAR(100) NOT NULL, PRIMARY KEY (role, permission_id))',
             
-            // USERS & IDENTITY (SRE UPDATE: Added age field)
+            // USERS & IDENTITY
             'CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255) NOT NULL, cpf_cnpj VARCHAR(20) NOT NULL UNIQUE, email VARCHAR(255), password_hash VARCHAR(255), role VARCHAR(50) DEFAULT "RESIDENT", status VARCHAR(20) DEFAULT "PENDING", active TINYINT(1) DEFAULT 0, unit VARCHAR(50), age INT, phone VARCHAR(50), avatar_url LONGTEXT, socialData JSON, coordinates JSON, parent_id INT, last_login DATETIME, address TEXT, neighborhood VARCHAR(100), city VARCHAR(100), state VARCHAR(50), zip_code VARCHAR(20), profession VARCHAR(255), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)',
             
             // FINANCE & ASSETS
@@ -69,37 +68,64 @@ const ensureSchema = async () => {
         // Garante Registro de Configuração ID 1
         await pool.query('INSERT IGNORE INTO settings (id, name, shortName) VALUES (1, "Associação Residencial S.I.E", "S.I.E PRO")');
 
-        // SEEDING DE PERMISSÕES
+        // SEEDING DE CARGOS ATUALIZADOS (SRE V535)
         const initialRoles = [
             ['ADMIN', 'Administrador Master'],
-            ['PRESIDENT', 'Presidente / Diretor'],
-            ['SINDIC', 'Síndico Profissional'],
-            ['COUNCIL', 'Conselheiro'],
+            ['PRESIDENT', 'Presidente'],
+            ['VICE_PRESIDENT', 'Vice-Presidente'],
+            ['SECRETARY', 'Secretário(a)'],
+            ['TREASURER', 'Tesoureiro(a)'],
+            ['SERVICE', 'Atendimento / Recepção'],
             ['RESIDENT', 'Morador Titular'],
-            ['CONCIERGE', 'Portaria / Vigilância'],
-            ['MERCHANT', 'Parceiro Local']
+            ['VISITOR', 'Visitante Externo']
         ];
         for (const [id, label] of initialRoles) {
             await pool.query('INSERT IGNORE INTO roles (id, label) VALUES (?, ?)', [id, label]);
         }
 
-        const criticalPermissions = [
-            'view_dashboard', 'manage_users', 'view_finances', 'view_operations', 
-            'manage_settings', 'manage_ai_keys', 'use_ai_chat', 'view_documents', 
-            'manage_assemblies', 'view_projects', 'use_marketplace', 'use_reservations',
-            'manage_surveys', 'manage_communication', 'view_timeline', 'send_suggestions',
-            'view_demographics'
-        ];
-        for (const perm of criticalPermissions) {
-            await pool.query('INSERT IGNORE INTO role_permissions (role, permission_id) VALUES ("ADMIN", ?)', [perm]);
+        /**
+         * MATRIZ DE PERMISSÕES SUGESTIVAS (AUDITÁVEL)
+         */
+        const permissionMap = {
+            'ADMIN': ['*'], // Acesso Total Garantido
+            'PRESIDENT': [
+                'view_dashboard', 'manage_users', 'view_finances', 'manage_finances', 'view_operations', 
+                'use_ai_chat', 'view_documents', 'manage_assemblies', 'view_projects', 
+                'use_marketplace', 'use_reservations', 'manage_surveys', 
+                'manage_communication', 'view_timeline', 'send_suggestions', 'view_demographics'
+                // Omitido manage_settings e manage_ai_keys conforme regra de negócio (Acesso Negado a Configurações)
+            ],
+            'VICE_PRESIDENT': [
+                'view_dashboard', 'view_operations', 'view_timeline', 'view_documents', 
+                'manage_assemblies', 'use_ai_chat', 'use_marketplace', 'use_reservations',
+                'manage_communication', 'send_suggestions'
+            ],
+            'SECRETARY': [
+                'view_dashboard', 'view_documents', 'manage_assemblies', 
+                'manage_surveys', 'manage_communication', 'use_ai_chat', 'send_suggestions'
+            ],
+            'TREASURER': [
+                'view_dashboard', 'view_finances', 'manage_finances', 'view_projects'
+            ],
+            'SERVICE': [
+                'view_dashboard', 'view_operations', 'manage_communication', 
+                'send_suggestions', 'use_marketplace', 'use_reservations'
+            ],
+            'RESIDENT': [
+                'view_dashboard', 'use_marketplace', 'use_reservations', 'send_suggestions', 'view_timeline'
+            ],
+            'VISITOR': [
+                'use_marketplace' // Acesso apenas visual a vitrine comunitária
+            ]
+        };
+
+        for (const [role, perms] of Object.entries(permissionMap)) {
+            for (const perm of perms) {
+                await pool.query('INSERT IGNORE INTO role_permissions (role, permission_id) VALUES (?, ?)', [role, perm]);
+            }
         }
 
-        // SRE HOTFIX: Ensure age column exists on existing installations
-        try {
-            await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS age INT AFTER unit');
-        } catch (e) { /* Coluna pode já existir */ }
-
-        console.log("✅ SRE KERNEL: Integridade Operacional V530.1 Homologada.");
+        console.log("✅ SRE KERNEL: Matriz de Governança V535.0 Homologada.");
     } catch (e) { 
         console.error("❌ Schema Panic:", e.message); 
     }
@@ -125,9 +151,6 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist/index.html'));
 });
 
-/**
- * SRE HEARTBEAT CRON (MESSENGER AUTOMATION)
- */
 setInterval(() => {
     processScheduledMessages().catch(err => console.error("[SRE HEARTBEAT FAIL]", err));
 }, 60000);
