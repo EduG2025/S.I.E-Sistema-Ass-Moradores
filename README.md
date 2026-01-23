@@ -4,8 +4,6 @@
 
 O **S.I.E PRO** (Sistema Inteligente Ativo) é uma plataforma de governança de missão crítica desenvolvida sob o protocolo SRE (Site Reliability Engineering), integrando Inteligência Artificial (Gemini 3 Pro), análise demográfica em tempo real e economia circular.
 
-🔗 **Repositório Oficial:** [https://github.com/EduG2025/S.I.E-Sistema-Ass-Moradores.git](https://github.com/EduG2025/S.I.E-Sistema-Ass-Moradores.git)
-
 ---
 
 ## 🚀 Módulos Nucleares
@@ -36,22 +34,5 @@ O **S.I.E PRO** (Sistema Inteligente Ativo) é uma plataforma de governança de 
 
 ---
 
-## 🛠️ Stack Técnica
-- **Frontend:** React 19 + Tailwind CSS + Lucide Icons + Recharts
-- **Backend:** Node.js (Express) + JWT Auth
-- **Database:** MySQL 8.0 (SRE Optimized)
-- **IA:** Google Gemini 3 API (Flash & Pro)
-- **Infra:** Nginx Reverse Proxy + PM2 + SSL (Let's Encrypt)
-
----
-
-## 🌐 Informações de Deploy (VPS)
-- **Ambiente:** Ubuntu Server 22.04 LTS
-- **Domínio:** `admcacaria.jennyai.space`
-- **Diretório Raiz:** `/home/jennyai-admcacaria/htdocs/admcacaria.jennyai.space`
-- **Porta API:** `3001` (Node.js)
-- **Porta Frontend:** `80 / 443` (Nginx Static)
-
----
 **S.I.E PRO — Desenvolvido para a Excelência em Governança.**
 V22.0 SRE Standardized.
