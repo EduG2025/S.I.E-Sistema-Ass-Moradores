@@ -1,21 +1,32 @@
-# 🚀 GUIA DE DEPLOY S.I.E PRO - PROTOCOLO SRE V45.0
+# 🚀 S.I.E PRO - VPS READINESS GUIDE V240.2
 
-Este documento descreve as etapas para instalar o Kernel S.I.E na VPS Linux (Ubuntu Server) configurada.
+Este guia detalha os requisitos para hospedar o Kernel S.I.E PRO em servidores VPS Linux.
 
-## 1. REQUISITOS DE HARDWARE (MÍNIMO)
-- 2 vCPU
-- 4GB RAM
-- 40GB SSD
-- Ubuntu 22.04 LTS
+## 🏗️ 1. REQUISITOS MÍNIMOS
+- **SO**: Ubuntu 22.04 LTS ou Debian 12.
+- **Hardware**: 2 vCPU / 4GB RAM (Recomendado para motor Recharts/Gemini).
+- **Banco de Dados**: MySQL 8.0+.
+- **Ambiente**: Node.js 20+ / PM2.
 
-## 2. PREPARAÇÃO DO SISTEMA (ONE-LINER)
-Execute como root/sudo para instalar o stack base:
+## 🛡️ 2. PREPARAÇÃO DO SISTEMA
+Execute os comandos abaixo para preparar o cluster:
+
 ```bash
-sudo apt update && sudo apt install -y curl git nginx mysql-server && curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt install -y nodejs && sudo npm install -g pm2
+# Instalar Stack Base
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y curl git nginx mysql-server build-essential
+
+# Instalar Node.js 20
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Instalar PM2 Global
+sudo npm install -g pm2
 ```
 
-## 3. CONFIGURAÇÃO DO BANCO DE DADOS
-Acesse o MySQL e crie a base do sistema:
+## 🏛️ 3. BANCO DE DADOS (CONTRATO V240.2)
+Crie a base com suporte a UTF8MB4 para emojis e caracteres especiais:
+
 ```sql
 CREATE DATABASE siecacaria CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER 'siecacaria'@'localhost' IDENTIFIED BY 'Gegerminal180';
@@ -23,86 +34,41 @@ GRANT ALL PRIVILEGES ON siecacaria.* TO 'siecacaria'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-## 4. INSTALAÇÃO DA APLICAÇÃO
+## 🚀 4. DEPLOY EXPRESSO
+Use o script de automação incluído:
+
 ```bash
-cd /home/jennyai-admcacaria/htdocs/admcacaria.jennyai.space
-git clone https://github.com/EduG2025/S.I.E-Sistema-Ass-Moradores.git .
-npm install
-npm run build
+cd /diretorio/do/projeto
+npm run vps-deploy
 ```
 
-## 5. INICIALIZAÇÃO DO KERNEL (PM2)
-```bash
-pm2 start server.js --name "sie-kernel"
-pm2 save
-pm2 startup
-```
-## - 5.1 Atualizar do Ghithub
-```bash
-
-git pull origin main
-npm install
-npm run build
-pm2 restart all
-pm2 log
-
-```
-
-## 6. CONFIGURAÇÃO NGINX & SSL (VHOST)
-Arquivo: `/etc/nginx/sites-available/admcacaria.jennyai.space`
+## 📄 5. CONFIGURAÇÃO NGINX (SPA READY)
+Crie o arquivo em `/etc/nginx/sites-available/sie-pro`:
 
 ```nginx
 server {
     listen 80;
-    listen [::]:80;
-    server_name admcacaria.jennyai.space;
+    server_name seu-dominio.com;
 
-    location /.well-known/acme-challenge/ {
-        root /var/www/html;
-    }
-
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
-
-server {
-    listen 443 ssl http2;
-    server_name admcacaria.jennyai.space;
-
-    root /home/jennyai-admcacaria/htdocs/admcacaria.jennyai.space/dist;
+    root /home/usuario/sie-pro/dist;
     index index.html;
 
-    ssl_certificate /etc/letsencrypt/live/admcacaria.jennyai.space/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/admcacaria.jennyai.space/privkey.pem;
-
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-
-    # API (PRIORIDADE)
-    location ^~ /api/ {
+    location /api/ {
         proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # Frontend SPA
     location / {
         try_files $uri $uri/ /index.html;
     }
 }
 ```
 
-Ative o site e reinicie o Nginx:
-```bash
-ln -s /etc/nginx/sites-available/admcacaria.jennyai.space /etc/nginx/sites-enabled/
-nginx -t && systemctl restart nginx
-```
+## 🔍 6. MONITORAMENTO SRE
+- **Logs do Kernel**: `pm2 logs sie-kernel`
+- **Dashboard PM2**: `pm2 monit`
+- **Saúde do MySQL**: `systemctl status mysql`
 
-## 7. MONITORAMENTO
-```bash
-pm2 logs sie-kernel
-```
+---
+**Status do Cluster:** 🟢 READY FOR V240.2

@@ -1,8 +1,7 @@
 import pool from '../config/database.js';
 
 /**
- * S.I.E PRO - Generic CRUD Factory v2.8.1
- * SRE Sanitization: Normalização de tipos JSON e proteção de integridade SQL.
+ * S.I.E PRO - Generic CRUD Factory v2.8.2
  */
 export const createHandlers = (table) => ({
     getAll: async (req, res) => {
@@ -21,7 +20,6 @@ export const createHandlers = (table) => ({
     create: async (req, res) => {
         try {
             const payload = { ...req.body };
-            // Auto-stringify para colunas JSON
             for (const key in payload) {
                 if (payload[key] !== null && typeof payload[key] === 'object') {
                     payload[key] = JSON.stringify(payload[key]);
@@ -37,16 +35,21 @@ export const createHandlers = (table) => ({
     },
     update: async (req, res) => {
         try {
-            // SRE PROTECT: Extrair campos permitidos conforme a tabela
             const { id, created_at, updated_at, ...rawPayload } = req.body;
             const payload = {};
             
-            // Lista de campos permitidos por tabela (Segurança Aditiva)
             const allowedFieldsMap = {
-                'users': ['name', 'username', 'email', 'role', 'status', 'active', 'unit', 'age', 'phone', 'avatar_url', 'socialData', 'coordinates', 'address', 'neighborhood', 'city', 'state', 'zip_code', 'profession', 'password_hash', 'rg', 'issuing_authority'],
+                'users': [
+                    'name', 'username', 'email', 'role', 'status', 'active', 'unit', 'age', 'phone', 
+                    'avatar_url', 'socialData', 'coordinates', 'address', 'neighborhood', 'city', 
+                    'state', 'zip_code', 'profession', 'password_hash', 'rg', 'issuing_authority',
+                    'birth_date', 'gender', 'nationality', 'whatsapp', 'preferred_channel',
+                    'document_front_url', 'document_back_url', 'ocr_payload', 'voting_rights',
+                    'resident_type', 'created_by'
+                ],
                 'financials': ['user_id', 'description', 'amount', 'type', 'category', 'status', 'is_recurring', 'billing_cycle', 'date'],
-                'incidents': ['title', 'location', 'priority', 'status', 'description'],
-                'ai_keys': ['label', 'key_value', 'provider', 'status', 'priority', 'error_count'],
+                'incidents': ['title', 'location', 'priority', 'status', 'description', 'radius', 'coordinates', 'reporter_name'],
+                'ai_keys': ['label', 'key_value', 'provider', 'status', 'priority', 'error_count', 'model', 'tier'],
                 'marketplace_items': ['title', 'description', 'category', 'price', 'whatsapp', 'merchant_id']
             };
 
@@ -54,7 +57,6 @@ export const createHandlers = (table) => ({
 
             for (const key of allowed) {
                 if (rawPayload[key] !== undefined) {
-                    // SRE FIX: Serialização JSON obrigatória para compatibilidade com MySQL JSON Column
                     if (rawPayload[key] !== null && typeof rawPayload[key] === 'object') {
                         payload[key] = JSON.stringify(rawPayload[key]);
                     } else {
@@ -73,7 +75,6 @@ export const createHandlers = (table) => ({
             }
             res.json({ success: true });
         } catch (e) { 
-            console.error(`[SRE UPDATE ERROR] Table: ${table}`, e);
             res.status(500).json({ error: e.message }); 
         }
     },

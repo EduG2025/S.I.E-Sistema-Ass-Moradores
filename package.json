@@ -1,4 +1,3 @@
-
 {
   "name": "sie-pro-master",
   "version": "6.0.0",
@@ -6,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "rm -rf dist",
+    "prebuild": "rm -rf dist/",
     "build": "vite build --emptyOutDir",
     "preview": "vite preview",
     "start": "NODE_ENV=production node server.js",
-    "vps-deploy": "npm install && npm run build && pm2 restart sie-kernel || pm2 start server.js --name sie-kernel",
+    "vps-deploy": "chmod +x deploy.sh && ./deploy.sh",
     "fix-perms": "sudo chown -R $(whoami):$(whoami) . && sudo chmod -R 755 . && rm -rf dist/"
   },
   "dependencies": {

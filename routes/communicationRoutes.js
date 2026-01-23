@@ -12,13 +12,16 @@ router.post('/notices', authenticateToken, checkPermission('manage_communication
 router.put('/notices/:id', authenticateToken, checkPermission('manage_communication'), noticeHandlers.update);
 router.delete('/notices/:id', authenticateToken, checkPermission('manage_communication'), noticeHandlers.delete);
 
-// Templates (NOVO)
+// Templates
 router.get('/templates', authenticateToken, checkPermission('manage_communication'), commController.getTemplates);
 router.post('/templates', authenticateToken, checkPermission('manage_communication'), commController.saveTemplate);
 router.delete('/templates/:id', authenticateToken, checkPermission('manage_communication'), commController.deleteTemplate);
 
-// WhatsApp Bridge
+// WhatsApp Bridge (Outbound)
 router.post('/whatsapp-broadcast', authenticateToken, checkPermission('manage_communication'), commController.whatsappBroadcast);
+
+// WhatsApp Webhook (Inbound - Publico para o Gateway)
+router.post('/whatsapp-webhook', commController.receiveWebhook);
 
 // SRE Scheduler / Cron
 router.get('/schedules', authenticateToken, checkPermission('manage_communication'), commController.getSchedules);

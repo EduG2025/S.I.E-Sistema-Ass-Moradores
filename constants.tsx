@@ -2,7 +2,7 @@ import {
   LayoutDashboard, Wallet, Users, Bell, ShieldAlert, CalendarClock, 
   Settings, ClipboardList, BarChart3, Shield, FileText, Gavel, 
   MessageSquareText, Calendar, Camera, Leaf, ShoppingBag, 
-  Megaphone, HelpCircle, Box, Monitor, Brain
+  Megaphone, HelpCircle, Box, Monitor, Brain, Fingerprint
 } from 'lucide-react';
 import { SystemInfo } from './types';
 
@@ -10,6 +10,7 @@ export const MENU_ITEMS = [
   // ESTRATÉGICO
   { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard, permissionId: 'view_dashboard', category: 'ESTRATÉGICO' },
   { id: 'neural_chat', label: 'IA Especialista', icon: Brain, permissionId: 'use_ai_chat', category: 'ESTRATÉGICO' },
+  { id: 'id_system', label: 'Módulo ID (Bridge)', icon: Fingerprint, permissionId: 'manage_users', category: 'ESTRATÉGICO' },
   
   // GOVERNANÇA
   { id: 'users', label: 'Famílias & Membros', icon: Users, permissionId: 'manage_users', category: 'GOVERNANÇA' },

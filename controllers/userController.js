@@ -1,5 +1,6 @@
 import pool from '../config/database.js';
 import { IAProviderManager } from '../core/ai/IAProviderManager.js';
+import bcrypt from 'bcryptjs';
 
 /**
  * S.I.E GLOBAL DISCOVERY ENGINE (SRE V9.0)
@@ -105,16 +106,73 @@ export const getAllUsers = async (req, res) => {
     try {
         const { page = 1, limit = 50, search = '' } = req.query;
         const offset = (page - 1) * limit;
-        const [rows] = await pool.query("SELECT id, name, cpf_cnpj, unit, role, status, email, avatar_url, active FROM users ORDER BY id DESC LIMIT ? OFFSET ?", [parseInt(limit), offset]);
-        res.json({ data: rows });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+        
+        // SRE FIX: Recuperando TODAS as colunas para preenchimento de formulários completos no frontend
+        let query = "SELECT * FROM users";
+        let params = [];
+
+        if (search) {
+            const cleanSearch = search.replace(/\D/g, '');
+            query += " WHERE name LIKE ? OR cpf_cnpj LIKE ? OR unit LIKE ?";
+            params = [`%${search}%`, `%${cleanSearch || search}%`, `%${search}%`];
+        }
+
+        query += " ORDER BY id DESC LIMIT ? OFFSET ?";
+        params.push(parseInt(limit), offset);
+
+        const [rows] = await pool.query(query, params);
+        
+        const [[{ total }]] = await pool.query("SELECT COUNT(*) as total FROM users" + (search ? " WHERE name LIKE ? OR cpf_cnpj LIKE ? OR unit LIKE ?" : ""), search ? params.slice(0, 3) : []);
+
+        res.json({ 
+            data: rows,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total: total,
+                pages: Math.ceil(total / limit)
+            }
+        });
+    } catch (e) { 
+        console.error("[SRE GET ALL USERS FAIL]", e.message);
+        res.status(500).json({ error: e.message }); 
+    }
 };
 
+/**
+ * CREATE USER (MASTER HANDSHAKE V240.2)
+ * Suporte a todos os campos biográficos e hashing de senha.
+ */
 export const createUser = async (req, res) => {
     try {
-        const [result] = await pool.query("INSERT INTO users SET ?", [req.body]);
+        const { password, ...userData } = req.body;
+        const payload = { ...userData };
+        
+        // Hashing de segurança para novas senhas
+        if (password) {
+            payload.password_hash = await bcrypt.hash(password, 10);
+        }
+
+        // Conversão de objetos JSON para Strings (MySQL 8 Compat)
+        for (const key in payload) {
+            if (payload[key] !== null && typeof payload[key] === 'object') {
+                payload[key] = JSON.stringify(payload[key]);
+            }
+        }
+
+        const [result] = await pool.query("INSERT INTO users SET ?", [payload]);
+        
+        // Auditoria
+        await pool.query(
+            'INSERT INTO audit_logs (user_id, action, table_name, record_id, details) VALUES (?, "CREATE_IDENTITY", "users", ?, ?)',
+            [req.user?.id || 0, result.insertId, `Nova Identidade: ${payload.name}`]
+        );
+
         res.json({ id: result.insertId, success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { 
+        console.error("[SRE USER CREATE FAIL]", e);
+        res.status(500).json({ error: "FALHA_AO_CRIAR_IDENTIDADE: " + e.message }); 
+    }
 };
 
 export const activateUser = async (req, res) => {

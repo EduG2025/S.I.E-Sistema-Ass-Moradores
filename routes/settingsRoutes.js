@@ -1,4 +1,3 @@
-
 import express from 'express';
 import pool from '../config/database.js';
 import { authenticateToken, checkPermission } from '../middlewares/auth.js';
@@ -89,6 +88,8 @@ router.get('/system', async (req, res) => {
         if (s) {
             if (s.resident_ui_settings && typeof s.resident_ui_settings === 'string') s.resident_ui_settings = JSON.parse(s.resident_ui_settings);
             if (s.whatsapp_config && typeof s.whatsapp_config === 'string') s.whatsapp_config = JSON.parse(s.whatsapp_config);
+            if (s.coordinates && typeof s.coordinates === 'string') s.coordinates = JSON.parse(s.coordinates);
+            if (s.module_metadata && typeof s.module_metadata === 'string') s.module_metadata = JSON.parse(s.module_metadata);
         }
         res.json(s || {});
     } catch (e) { res.status(500).json({ error: e.message }); }
@@ -96,17 +97,33 @@ router.get('/system', async (req, res) => {
 
 router.put('/system', authenticateToken, checkPermission('manage_settings'), async (req, res) => {
     try {
-        const allowed = ['name', 'shortName', 'cnpj', 'address', 'email', 'phone', 'website', 'primaryColor', 'registrationMode', 'logoUrl', 'resident_ui_settings', 'whatsapp_config'];
+        // SRE: Expansão da whitelist de campos permitidos para incluir dossiê da presidência e metadados dinâmicos
+        const allowed = [
+            'name', 'shortName', 'cnpj', 'address', 'email', 'phone', 'website', 
+            'primaryColor', 'registrationMode', 'logoUrl', 'resident_ui_settings', 
+            'whatsapp_config', 'module_metadata', 'president_name', 'president_cpf', 
+            'management_start', 'management_end', 'president_signature', 'coordinates'
+        ];
+        
         const payload = {};
         allowed.forEach(f => {
             if (req.body[f] !== undefined) {
                 payload[f] = (typeof req.body[f] === 'object' && req.body[f] !== null) ? JSON.stringify(req.body[f]) : req.body[f];
             }
         });
+        
         if (Object.keys(payload).length === 0) return res.json({ success: true });
+        
         await pool.query('UPDATE settings SET ? WHERE id=1', [payload]);
+        
+        // Log de Auditoria SRE
+        await pool.query('INSERT INTO audit_logs (user_id, action, table_name, record_id, details) VALUES (?, "UPDATE_SYSTEM_INFO", "settings", 1, "Sincronização Master do Kernel")', [req.user?.id || 0]);
+        
         res.json({ success: true });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { 
+        console.error("[SRE SETTINGS FAIL]", e.message);
+        res.status(500).json({ error: e.message }); 
+    }
 });
 
 export default router;

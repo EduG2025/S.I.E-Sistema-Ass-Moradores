@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Upload, X, Loader2, ShieldCheck, Zap, ScanLine, AlertCircle, CheckCircle2, ChevronRight } from 'lucide-react';
 import api from '../services/api';
@@ -73,6 +72,22 @@ const OCRScanner = ({ onResult, onClose, context, title }: OCRScannerProps) => {
             };
             reader.readAsDataURL(file);
         }
+    };
+
+    /**
+     * SRE UTILS: Formata valores complexos para exibição limpa
+     * Resolve o bug de [object Object] em campos aninhados.
+     */
+    const formatOcrValue = (val: any): string => {
+        if (val === null || val === undefined) return 'NÃO DETECTADO';
+        if (Array.isArray(val)) return `${val.length} ENTIDADES LOCALIZADAS`;
+        if (typeof val === 'object') {
+            // Tenta achatar o objeto ou formatar propriedades chave
+            return Object.entries(val)
+                .map(([k, v]) => `${k.toUpperCase()}: ${String(v).toUpperCase()}`)
+                .join(' • ') || 'ESTRUTURA COMPLEXA';
+        }
+        return String(val).toUpperCase();
     };
 
     return (
@@ -159,7 +174,7 @@ const OCRScanner = ({ onResult, onClose, context, title }: OCRScannerProps) => {
                                     {Object.entries(result).map(([key, val]: any) => (
                                         <div key={key} className="space-y-1.5 p-5 bg-slate-50 rounded-3xl border border-slate-100 group hover:border-indigo-200 transition-all hover:bg-white hover:shadow-sm">
                                             <label className="text-[9px] font-black text-indigo-400 uppercase tracking-widest ml-1">{key.replace(/_/g, ' ')}</label>
-                                            <p className="text-base font-black text-slate-800 leading-none">{Array.isArray(val) ? `${val.length} entidades localizadas` : String(val || 'NÃO DETECTADO')}</p>
+                                            <p className="text-base font-black text-slate-800 leading-normal">{formatOcrValue(val)}</p>
                                         </div>
                                     ))}
                                 </div>

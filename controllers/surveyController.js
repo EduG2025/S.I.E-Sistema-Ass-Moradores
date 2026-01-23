@@ -1,5 +1,6 @@
 import pool from '../config/database.js';
 import { IAProviderManager } from '../core/ai/IAProviderManager.js';
+import bcrypt from 'bcryptjs';
 
 const calculateAge = (dob) => {
     if (!dob) return null;
@@ -47,7 +48,8 @@ export const suggestQuestions = async (req, res) => {
 };
 
 /**
- * PUBLIC HANDSHAKE SUBMISSION
+ * PUBLIC HANDSHAKE SUBMISSION (V240.2 Master)
+ * Persistência unificada com a tabela users.
  */
 export const submitResponse = async (req, res) => {
     const { cpf, userData, answers } = req.body;
@@ -55,31 +57,67 @@ export const submitResponse = async (req, res) => {
     const cleanCPF = String(cpf).replace(/\D/g, '');
     
     try {
-        const [existing] = await pool.query('SELECT id FROM users WHERE cpf_cnpj = ?', [cleanCPF]);
+        const [existing] = await pool.query('SELECT id, status FROM users WHERE cpf_cnpj = ?', [cleanCPF]);
         let userId = existing[0]?.id;
 
-        if (!userId && userData.name) {
-            const [result] = await pool.query(
-                'INSERT INTO users (name, cpf_cnpj, unit, email, phone, age, role, status, active) VALUES (?, ?, ?, ?, ?, ?, "RESIDENT", "PENDING", 1)',
-                [userData.name, cleanCPF, userData.unit, userData.email, userData.phone, calculateAge(userData.birthDate)]
-            );
-            userId = result.insertId;
-        } else if (userId) {
-            await pool.query(
-                'UPDATE users SET age = ?, unit = ?, email = ?, phone = ? WHERE id = ?',
-                [calculateAge(userData.birthDate), userData.unit, userData.email, userData.phone, userId]
-            );
+        // Hash de senha se fornecida
+        let passwordHash = null;
+        if (userData.password) {
+            passwordHash = await bcrypt.hash(userData.password, 10);
         }
 
+        const userPayload = {
+            name: userData.name,
+            unit: userData.unit,
+            email: userData.email,
+            phone: userData.phone,
+            whatsapp: userData.whatsapp,
+            address: userData.address,
+            profession: userData.profession,
+            age: calculateAge(userData.birth_date),
+            birth_date: userData.birth_date,
+            rg: userData.rg,
+            issuing_authority: userData.issuing_authority,
+            gender: userData.gender,
+            resident_type: userData.resident_type,
+            voting_rights: userData.voting_rights,
+            role: userData.role || 'RESIDENT',
+            preferred_channel: userData.preferred_channel || 'WHATSAPP',
+            avatar_url: userData.avatar_url,
+            active: 1
+        };
+
+        if (passwordHash) {
+            userPayload.password_hash = passwordHash;
+        }
+
+        if (!userId) {
+            // Novo Registro via Censo
+            userPayload.cpf_cnpj = cleanCPF;
+            userPayload.status = 'PENDING';
+            const [result] = await pool.query('INSERT INTO users SET ?', [userPayload]);
+            userId = result.insertId;
+        } else {
+            // Atualização de Membro Existente
+            await pool.query('UPDATE users SET ? WHERE id = ?', [userPayload, userId]);
+        }
+
+        // Grava as respostas do censo para BI histórico
         await pool.query(
             'INSERT INTO survey_responses (survey_id, user_id, cpf, user_name, answers) VALUES (?, ?, ?, ?, ?)',
-            [surveyId, userId || null, cleanCPF, userData.name || 'Membro Externo', JSON.stringify(answers)]
+            [surveyId, userId, cleanCPF, userData.name || 'Membro Externo', JSON.stringify(answers)]
+        );
+
+        // Registro de Auditoria SRE
+        await pool.query(
+            'INSERT INTO audit_logs (user_id, action, table_name, record_id, details) VALUES (?, ?, "users", ?, ?)',
+            [userId, existing.length > 0 ? "UPDATE_VIA_PUBLIC_CENSUS" : "REGISTER_VIA_PUBLIC_CENSUS", userId, `Protocolo Censo #${surveyId}`]
         );
 
         res.json({ success: true, protocol: Date.now() });
     } catch (e) { 
         console.error("[SRE CENSO FAIL]", e);
-        res.status(500).json({ error: "FALHA_AO_GRAVAR_RESPOSTA" }); 
+        res.status(500).json({ error: "FALHA_AO_GRAVAR_RESPOSTA: " + e.message }); 
     }
 };
 
@@ -103,7 +141,6 @@ export const getPublicSurvey = async (req, res) => {
 
 /**
  * CHECK RESIDENT HANDSHAKE
- * SRE FIX: Log detalhado para identificar falhas de identificação perimetral.
  */
 export const checkResident = async (req, res) => {
     try {
@@ -111,7 +148,7 @@ export const checkResident = async (req, res) => {
         console.log(`[SRE AUTH HANDSHAKE] Verificando: ${cleanCPF}`);
         
         const [rows] = await pool.query(
-            'SELECT name, unit, email, phone, age, avatar_url FROM users WHERE cpf_cnpj = ?', 
+            'SELECT name, unit, email, phone, age, avatar_url, rg, issuing_authority, gender, birth_date, resident_type, voting_rights, role, status, whatsapp, preferred_channel, address, profession FROM users WHERE cpf_cnpj = ?', 
             [cleanCPF]
         );
         

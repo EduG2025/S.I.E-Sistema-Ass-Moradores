@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { systemService, authService, api } from './services/api';
 
-// --- LAZY LOADING MODULES (SRE OPTIMIZED) ---
+// --- LAZY LOADING MODULES ---
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const ResidentDashboard = lazy(() => import('./components/ResidentDashboard'));
 const Settings = lazy(() => import('./components/Settings'));
@@ -27,6 +27,7 @@ const SuggestionBox = lazy(() => import('./components/SuggestionBox'));
 const DigitalWatch = lazy(() => import('./components/DigitalWatch'));
 const PublicSenso = lazy(() => import('./components/PublicSenso'));
 const Surveys = lazy(() => import('./components/Surveys'));
+const InternalIDSystem = lazy(() => import('./components/InternalIDSystem'));
 
 const App = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -107,15 +108,6 @@ const App = () => {
         return categories;
     }, [currentUser, dynamicPermissions]);
 
-    const currentModuleInfo = useMemo(() => {
-        const metadata: any = (systemInfo as any).module_metadata || {};
-        const activeItem = MENU_ITEMS.find(i => i.id === activeTab);
-        return {
-            title: metadata[activeTab]?.title || activeItem?.label || "Módulo",
-            slogan: metadata[activeTab]?.slogan || "Gestão Inteligente Ativa"
-        };
-    }, [activeTab, systemInfo]);
-
     if (isLoading) {
         return (
             <div className="h-screen w-screen flex items-center justify-center bg-[#020617]">
@@ -127,8 +119,6 @@ const App = () => {
         );
     }
 
-    // SRE FIX: Chaves 'key' forçam o React a remontar completamente a árvore em transições críticas,
-    // resolvendo o erro NotFoundError: removeChild (Reconciliação Corrompida).
     if (isPublicCensus) return <div key="public-view"><PublicSenso /></div>;
     
     if (!isAuthenticated) return (
@@ -161,28 +151,29 @@ const App = () => {
             case 'suggestions': return <SuggestionBox systemInfo={systemInfo} />;
             case 'watchdog': return <DigitalWatch systemInfo={systemInfo} />;
             case 'surveys': return <Surveys systemInfo={systemInfo} />;
+            case 'id_system': return <InternalIDSystem systemInfo={systemInfo} />;
             default: return <Dashboard onNavigate={setActiveTab} systemInfo={systemInfo} />;
         }
     };
 
     return (
         <div key="authenticated-layout" className="flex h-screen w-full bg-[#f8fafc] overflow-hidden">
-            {/* Sidebar Trigger for Mobile */}
+            {/* Sidebar Trigger */}
             <button onClick={() => setSidebarOpen(true)} className="lg:hidden fixed top-4 left-4 z-[1100] p-3 bg-slate-900 text-white rounded-xl shadow-2xl">
                 <Menu size={24}/>
             </button>
 
             {/* Sidebar Shell */}
-            <aside className={`fixed inset-y-0 left-0 z-[1000] sidebar-glass text-slate-400 flex flex-col transition-all duration-300 lg:static h-screen ${sidebarOpen ? 'translate-x-0 w-[280px]' : '-translate-x-full lg:translate-x-0'} ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-[320px]'}`}>
+            <aside className={`fixed inset-y-0 left-0 z-[1000] sidebar-glass text-slate-400 flex flex-col transition-all duration-300 lg:static h-screen ${sidebarOpen ? 'translate-x-0 w-[280px]' : '-translate-x-full lg:translate-x-0'} ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-[300px]'}`}>
                 <div className="p-6 flex-none">
                     <div className="flex items-center justify-between gap-4">
                         {!sidebarCollapsed && (
                              <div className="flex items-center gap-4 min-w-0">
                                 <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center p-2 shadow-2xl shrink-0">
-                                    {systemInfo.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain p-4" alt="Logo" /> : <Shield size={20} className="text-indigo-600" style={{ color: primaryColor }} />}
+                                    {systemInfo.logoUrl ? <img src={systemInfo.logoUrl} className="w-full h-full object-contain" alt="Logo" /> : <Shield size={20} className="text-indigo-600" style={{ color: primaryColor }} />}
                                 </div>
                                 <div className="min-w-0">
-                                    <h1 className="text-sm font-black text-white tracking-tight leading-none truncate uppercase">{systemInfo.shortName}</h1>
+                                    <h1 className="text-xs font-black text-white tracking-tight leading-none truncate uppercase">{systemInfo.shortName}</h1>
                                     <p className="text-[7px] font-black uppercase text-indigo-400 mt-1 tracking-[0.4em]" style={{ color: primaryColor }}>Handshake Active</p>
                                 </div>
                              </div>
@@ -195,14 +186,14 @@ const App = () => {
 
                 <nav className="flex-1 overflow-y-auto custom-scrollbar px-3 py-2 space-y-6">
                     {Object.entries(filteredMenuByCategory).map(([category, items]) => (
-                        <div key={category} className="space-y-1.5">
+                        <div key={category} className="space-y-1">
                             {!sidebarCollapsed && <h5 className="px-4 mb-2 text-[8px] font-black text-slate-600 uppercase tracking-[0.4em] leading-none">{category}</h5>}
                             <div className="space-y-0.5">
                                 {items.map(item => {
                                     const isActive = activeTab === item.id;
                                     return (
-                                        <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }} className={`w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all relative group ${isActive ? 'bg-indigo-600/10 text-white border-l-4 border-indigo-600 shadow-lg' : 'hover:bg-white/5 text-slate-400'}`} style={isActive ? { borderColor: primaryColor } : {}}>
-                                            <item.icon size={18} className={`shrink-0 ${isActive ? '' : 'text-slate-500 group-hover:text-slate-200'}`} style={isActive ? { color: primaryColor } : {}} />
+                                        <button key={item.id} onClick={() => { setActiveTab(item.id); setSidebarOpen(false); }} className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-xl transition-all relative group ${isActive ? 'bg-indigo-600/10 text-white border-l-4 border-indigo-600 shadow-sm' : 'hover:bg-white/5 text-slate-400'}`} style={isActive ? { borderColor: primaryColor } : {}}>
+                                            <item.icon size={16} className={`shrink-0 ${isActive ? '' : 'text-slate-500 group-hover:text-slate-200'}`} style={isActive ? { color: primaryColor } : {}} />
                                             {!sidebarCollapsed && <span className={`text-[10px] font-black uppercase tracking-widest truncate ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-200'}`}>{item.label}</span>}
                                         </button>
                                     );
@@ -212,10 +203,10 @@ const App = () => {
                     ))}
                 </nav>
 
-                <div className="p-4 flex-none border-t border-white/5 bg-black/20">
+                <div className="p-4 flex-none border-t border-white/5 bg-black/10">
                     <div className={`flex flex-col gap-3 ${sidebarCollapsed ? 'items-center' : ''}`}>
                         <div className={`flex items-center gap-3 ${sidebarCollapsed ? 'flex-col' : ''}`}>
-                            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-[10px] shrink-0 shadow-2xl border border-white/10" style={{ backgroundColor: primaryColor }}>
+                            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-[10px] shrink-0 shadow-2xl" style={{ backgroundColor: primaryColor }}>
                                 {currentUser?.name?.charAt(0) || 'U'}
                             </div>
                             {!sidebarCollapsed && (
@@ -227,40 +218,24 @@ const App = () => {
                         </div>
                         <button onClick={handleLogout} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}>
                             <LogOut size={16} className="shrink-0" />
-                            {!sidebarCollapsed && <span className="text-[9px] font-black uppercase tracking-widest">Sair do Terminal</span>}
+                            {!sidebarCollapsed && <span className="text-[9px] font-black uppercase tracking-widest">Sair</span>}
                         </button>
                     </div>
                 </div>
             </aside>
 
-            {/* Main Application Area */}
+            {/* Main Content Area */}
             <main className="flex-1 relative overflow-hidden flex flex-col bg-[#f8fafc]">
-                {/* Dynamic Global Header */}
-                <div className="h-16 px-8 flex items-center justify-between border-b bg-white shrink-0 relative z-30 shadow-sm">
-                    <div className="flex items-center gap-4">
-                        <div className="hidden lg:block h-8 w-1 bg-indigo-600 rounded-full" style={{ backgroundColor: primaryColor }} />
-                        <div>
-                            <h2 className="text-xs font-black uppercase tracking-tight text-slate-800 leading-none">{currentModuleInfo.title}</h2>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">{currentModuleInfo.slogan}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">
-                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                             <span className="text-[8px] font-black uppercase tracking-widest">SRE Session OK</span>
-                        </div>
-                        <Zap size={14} className="text-amber-500 animate-pulse" />
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-8">
+                <div className="flex-1 overflow-y-auto custom-scrollbar px-4 lg:px-10 py-10">
                     <Suspense fallback={
-                        <div className="flex-1 flex flex-col items-center justify-center p-20">
+                        <div className="flex-1 flex flex-col items-center justify-center p-20 h-full">
                             <Loader2 className="animate-spin text-indigo-600" size={48} style={{ color: primaryColor }} />
-                            <p className="mt-4 font-black uppercase text-[10px] tracking-widest text-slate-400">Handshaking Module...</p>
+                            <p className="mt-4 font-black uppercase text-[10px] tracking-widest text-slate-400 animate-pulse">Syncing Kernel...</p>
                         </div>
                     }>
-                        {renderContent()}
+                        <div className="max-w-[1600px] mx-auto w-full min-h-full">
+                            {renderContent()}
+                        </div>
                     </Suspense>
                 </div>
             </main>

@@ -1,89 +1,66 @@
-# 🏛️ ESQUEMA DE DADOS S.I.E PRO (V240.0)
+# 🏛️ DICIONÁRIO DE DADOS MESTRE S.I.E PRO (V240.2 - AUDITED)
 
-Documentação oficial da arquitetura de persistência do Kernel S.I.E PRO, otimizada para MySQL 8.0+.
-
-## 🏗️ 1. CONFIGURAÇÕES & CORE (Singleton & RBAC)
-
-### `settings`
-Registro único (ID: 1) que governa a identidade e o comportamento global do cluster.
-- `id`: INT (PK)
-- `name`: VARCHAR(255) - Razão Social da Entidade.
-- `shortName`: VARCHAR(50) - Nome fantasia/Sigla.
-- `cnpj`: VARCHAR(50) - Documento fiscal.
-- `address`, `email`, `phone`, `website`: Dados de contato.
-- `primaryColor`: VARCHAR(20) - Hexadecimal da identidade visual (ex: #4f46e5).
-- `registrationMode`: ENUM('OPEN', 'APPROVAL', 'INVITE_ONLY') - Política de novos membros.
-- `logoUrl`: LONGTEXT - Armazenamento soberano de imagem em Base64.
-- `resident_ui_settings`: JSON - Toggles de módulos para a visão do morador (On/Off).
-- `whatsapp_config`: JSON - Credenciais do Messenger Gateway (api_key, sender, footer).
-- `module_metadata`: JSON - Títulos e slogans dinâmicos para os Headers do sistema.
-- `coordinates`: JSON - {lat, lng} do epicentro tático da sede.
-
-### `roles` & `role_permissions`
-- `roles`: `id` (VARCHAR), `label` (VARCHAR).
-- `role_permissions`: `role` (FK), `permission_id` (VARCHAR).
+Este documento representa o **Contrato de Persistência Soberana** do cluster S.I.E. Todas as colunas listadas abaixo foram auditadas e estão sincronizadas entre o Frontend (Registro Público/Admin) e o Banco de Dados MySQL.
 
 ---
 
-## 👤 2. IDENTIDADE & BI (Dossiê de Membros)
+## 👤 1. IDENTIDADE DIGITAL & SOCIAL (Dossiê Master)
 
-### `users`
-- `id`: INT (PK AUTO_INCREMENT)
-- `name`: VARCHAR(255) - Nome completo.
-- `cpf_cnpj`: VARCHAR(20) (UNIQUE) - Identificador soberano normalizado.
-- `email`: VARCHAR(255) (UNIQUE).
-- `password_hash`: VARCHAR(255).
-- `role`: VARCHAR(50) (FK -> roles).
-- `status`: VARCHAR(20) - ACTIVE, PENDING, BANNED.
-- `unit`: VARCHAR(50) - Identificação da unidade/cluster.
-- `age`: INT - Idade biográfica calculada.
-- `birthDate`: DATE - Data de nascimento original.
-- `rg`, `issuing_authority`: Documentação complementar.
-- `socialData`: JSON - Metadados demográficos (risco, tags, vulnerabilidades).
-- `coordinates`: JSON - Localização {lat, lng} para plotagem no SmartMap.
-- `address`, `number`, `neighborhood`, `city`, `state`, `zip_code`: Endereço estruturado.
+### Tabela: `users`
+Armazena o dossiê biométrico e civil de todos os membros do cluster.
 
----
-
-## 💳 3. OPERAÇÕES & GOVERNANÇA
-
-### `financials` (ERP de Tesouraria)
-- `user_id`: INT (FK -> users).
-- `description`: VARCHAR(255).
-- `amount`: DECIMAL(15,2).
-- `type`: ENUM('INCOME', 'EXPENSE').
-- `status`: ENUM('PAID', 'PENDING', 'OVERDUE', 'CANCELLED').
-- `is_recurring`: TINYINT(1) - Controle de recorrência mensal.
-- `next_due_date`: DATE.
-- `date`: DATE - Data de emissão.
-
-### `surveys` & `survey_responses` (Censo Neural)
-- `surveys`: `title`, `description`, `questions` (JSON Schema), `status`.
-- `survey_responses`: `survey_id`, `user_id`, `cpf`, `answers` (JSON Data).
-
-### `incidents` (Watchdog)
-- `title`, `location`, `priority` (LEVEL 1-4), `status`.
-- `coordinates`: JSON - Ponto tático no mapa.
-- `radius`: INT - Raio de notificação em KM.
+| Coluna | Tipo | Origem UI | Descrição |
+| :--- | :--- | :--- | :--- |
+| `id` | INT (AI) | Sistema | Identificador único. |
+| `name` | VARCHAR(255) | **Nome Completo** | Nome civil em caixa alta. |
+| `cpf_cnpj` | VARCHAR(20) (U)| **CPF (Único)** | Chave única de identificação (apenas números). |
+| `birth_date` | DATE | **Data Nascimento** | Data original para cálculo de BI. |
+| `rg` | VARCHAR(50) | **RG** | Registro Geral Civil. |
+| `issuing_authority` | VARCHAR(100) | **Emissor** | Órgão emissor do documento (SSP/UF). |
+| `gender` | VARCHAR(20) | **Gênero** | Identidade de gênero. |
+| `unit` | VARCHAR(50) | **Unidade / Cluster** | Localização habitacional do membro. |
+| `resident_type` | VARCHAR(50) | **Tipo Residente** | TITULAR, DEPENDENTE, INQUILINO, etc. |
+| `voting_rights` | TINYINT(1) | **Direito a Voto** | Elegibilidade em assembleias (1=Sim, 0=Não). |
+| `role` | VARCHAR(50) | **Cargo / Papel** | Nível de acesso RBAC. |
+| `status` | VARCHAR(20) | **Estado de Conta** | ACTIVE, PENDING, SUSPENDED, BLOCKED. |
+| `password_hash` | VARCHAR(255) | **Nova Chave** | Hash Bcrypt da senha de acesso. |
+| `email` | VARCHAR(255) | **E-mail** | Endereço eletrônico principal. |
+| `phone` | VARCHAR(50) | **Telefone / Fixo** | Contato telefônico voz. |
+| `whatsapp` | VARCHAR(50) | **WhatsApp Bridge**| Número para mensageria ativa JennyAI. |
+| `preferred_channel` | VARCHAR(20) | **Canal Preferido**| WHATSAPP, EMAIL ou APP. |
+| `avatar_url` | LONGTEXT | **Foto ID** | Biometria facial em Base64/URI. |
+| `active` | TINYINT(1) | Sistema | Exclusão lógica (1=Ativo). |
+| `created_at` | TIMESTAMP | Sistema | Timestamp de entrada no cluster. |
+| `updated_at` | TIMESTAMP | Sistema | Última mutação de registro. |
 
 ---
 
-## 🤖 4. INFRAESTRUTURA & IA
+## 🏗️ 2. CORE & CONFIGURAÇÕES
 
-### `ai_keys` (Pool Neural)
-- `key_value`: VARCHAR(255) - Chave de API secreta.
-- `provider`: VARCHAR(50) - GOOGLE, OPENAI, etc.
-- `model`: VARCHAR(100) - Modelo preferencial (ex: gemini-3-flash).
-- `tier`: VARCHAR(20) - FREE, PAID.
-- `priority`: INT - Ordem de uso no failover.
-- `error_count`: INT - Monitor de saúde do token.
+### Tabela: `settings`
+Governa a marca e o comportamento global.
 
-### `audit_logs` (Compliance)
-- `user_id`: INT (FK).
-- `action`: CREATE, UPDATE, DELETE, SECURITY_BREACH.
-- `table_name`: Alvo da ação.
-- `record_id`: ID do registro afetado.
-- `details`: TEXT - Payload JSON do estado anterior/atual.
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `id` | INT (PK) | Singleton ID 1. |
+| `whatsapp_config` | JSON | Credenciais do Bridge JennyAI (api_key, sender). |
+| `module_metadata`| JSON | Títulos e slogans dinâmicos dos Headers. |
+| `primaryColor` | VARCHAR(20) | Hexadecimal da identidade visual. |
 
 ---
-**Status:** 🟢 SCHEMA HOMOLOGADO V24.0
+
+## 📊 3. CENSO & RESPOSTAS
+
+### Tabela: `survey_responses`
+Log histórico de participações socioeconômicas.
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `id` | INT (AI) | Protocolo de resposta. |
+| `survey_id` | INT | Vínculo com o formulário. |
+| `user_id` | INT | Vínculo com a tabela `users`. |
+| `cpf` | VARCHAR(20) | CPF do respondente para vinculação rápida. |
+| `answers` | JSON | Payload das perguntas do censo. |
+
+---
+**Status da Auditoria:** 🟢 APROVADO PARA PRODUÇÃO (V240.2)

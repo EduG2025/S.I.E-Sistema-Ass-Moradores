@@ -3,7 +3,7 @@ import axios from 'axios';
 import https from 'https';
 
 /**
- * SRE Substitution Engine: Resolve variáveis contextuais em templates.
+ * SRE Personalization Engine: Resolve variáveis contextuais em templates.
  */
 const resolveTemplate = (content, data) => {
     if (!content) return "";
@@ -16,7 +16,7 @@ const resolveTemplate = (content, data) => {
 };
 
 /**
- * S.I.E PRO - WHATSAPP BROADCAST ENGINE V6.5 (SRE TAC-COM)
+ * S.I.E PRO - WHATSAPP BROADCAST ENGINE V8.0 (SRE BRIDGE)
  */
 export const whatsappBroadcast = async (req, res) => {
     const { message, templateId, targetType, targetRole, userId, directNumber, footer, contextData } = req.body;
@@ -29,9 +29,11 @@ export const whatsappBroadcast = async (req, res) => {
         let config = settings.whatsapp_config;
         if (config && typeof config === 'string') config = JSON.parse(config);
 
-        if (!config || !config.api_key) return res.status(400).json({ error: 'GATEWAY_NOT_CONFIGURED' });
+        if (!config || !config.api_key) {
+            return res.status(400).json({ error: 'MESSENGER_NOT_CONFIGURED_ON_SETTINGS' });
+        }
 
-        // URL SOBERANA: Usa a URL do DB ou fallback global
+        // URL SOBERANA: Usa o endpoint definido no Dashboard de Configurações
         const gatewayUrl = config.gateway_url || 'https://jennyai.space/send-message';
 
         let effectiveMessage = message;
@@ -42,7 +44,7 @@ export const whatsappBroadcast = async (req, res) => {
 
         let recipients = [];
         if (targetType === 'DIRECT') {
-            recipients = [{ phone: directNumber, name: 'Membro' }];
+            recipients = [{ phone: directNumber, name: 'Membro Externo' }];
         } else if (targetType === 'USER') {
             const [[user]] = await pool.query('SELECT phone, name, unit FROM users WHERE id = ?', [userId]);
             if (user && user.phone) recipients = [user];
@@ -54,7 +56,7 @@ export const whatsappBroadcast = async (req, res) => {
             recipients = rows;
         }
 
-        if (recipients.length === 0) return res.status(404).json({ error: 'NO_RECIPIENTS_VALIDATED' });
+        if (recipients.length === 0) return res.status(404).json({ error: 'NO_VALID_RECIPIENTS_FOUND' });
 
         const effectiveFooter = footer || config.footer || settings.shortName || 'S.I.E PRO';
         let successCount = 0;
@@ -62,14 +64,12 @@ export const whatsappBroadcast = async (req, res) => {
         for (const contact of recipients) {
             try {
                 const firstName = (contact.name || 'Membro').split(' ')[0];
-                const substitutionData = {
+                const personalizedMessage = resolveTemplate(effectiveMessage, {
                     nome: firstName,
                     unidade: contact.unit || 'HUB',
                     sigla: settings.shortName,
                     ...(contextData || {})
-                };
-
-                const personalizedMessage = resolveTemplate(effectiveMessage, substitutionData);
+                });
                 
                 await axios({
                     method: 'post',
@@ -81,29 +81,49 @@ export const whatsappBroadcast = async (req, res) => {
                         message: personalizedMessage,
                         footer: effectiveFooter
                     },
-                    timeout: 15000,
+                    timeout: 12000,
                     httpsAgent: agent
                 });
                 successCount++;
             } catch (err) { 
-                console.error(`[SRE BROADCAST FAIL] ${contact.phone} via ${gatewayUrl}:`, err.message); 
+                console.error(`[SRE BROADCAST FAIL] Recipient: ${contact.phone} | Endpoint: ${gatewayUrl} | Error: ${err.message}`); 
             }
         }
 
+        // Auditoria SRE
         await pool.query(
-            'INSERT INTO audit_logs (user_id, action, table_name, details) VALUES (?, "WHATSAPP_BROADCAST", "communication", ?)',
-            [req.user?.id || 0, `Url: ${gatewayUrl} | Entregues: ${successCount}/${recipients.length}`]
+            'INSERT INTO audit_logs (user_id, action, table_name, details) VALUES (?, "WHATSAPP_BROADCAST_COMPLETED", "communication", ?)',
+            [req.user?.id || 0, `Entregues: ${successCount}/${recipients.length} via Gateway: ${gatewayUrl}`]
         );
 
         res.json({ success: true, summary: { total: recipients.length, delivered: successCount } });
 
     } catch (e) {
-        res.status(500).json({ error: `INTERNAL_GATEWAY_ERROR: ${e.message}` });
+        res.status(500).json({ error: `GATEWAY_DISPATCH_FAILURE: ${e.message}` });
     }
 };
 
 /**
- * TEMPLATE MANAGEMENT ENDPOINTS
+ * JENNYAI WEBHOOK RECEIVER (INBOUND)
+ */
+export const receiveWebhook = async (req, res) => {
+    try {
+        const payload = req.body;
+        console.log(`[SRE INBOUND] Mensagem recebida via JennyAI:`, payload);
+        
+        await pool.query(
+            'INSERT INTO audit_logs (user_id, action, table_name, details) VALUES (0, "WHATSAPP_INBOUND_MSG", "communication", ?)',
+            [`De: ${payload.sender} | Msg: ${payload.message}`]
+        );
+
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+};
+
+/**
+ * TEMPLATE MANAGEMENT
  */
 export const getTemplates = async (req, res) => {
     try {
@@ -134,7 +154,7 @@ export const deleteTemplate = async (req, res) => {
 };
 
 /**
- * FILA & AGENDAMENTOS
+ * SCHEDULER: PROCESSAMENTO DE FILA DE MENSAGENS
  */
 export const getSchedules = async (req, res) => {
     try {
@@ -164,7 +184,7 @@ export const deleteSchedule = async (req, res) => {
 export const processScheduledMessages = async () => {
     const agent = new https.Agent({ rejectUnauthorized: false });
     try {
-        const [pending] = await pool.query('SELECT * FROM scheduled_broadcasts WHERE status = "PENDING" AND scheduled_at <= NOW() LIMIT 5');
+        const [pending] = await pool.query('SELECT * FROM scheduled_broadcasts WHERE status = "PENDING" AND scheduled_at <= NOW() LIMIT 10');
         if (pending.length === 0) return;
 
         const [[settings]] = await pool.query('SELECT whatsapp_config, shortName FROM settings WHERE id = 1');
@@ -183,7 +203,7 @@ export const processScheduledMessages = async () => {
 
             let recipients = [];
             if (task.target_type === 'DIRECT') {
-                recipients = [{ phone: task.target_value, name: 'Membro' }];
+                recipients = [{ phone: task.target_value, name: 'Membro Externo' }];
             } else if (task.target_type === 'USER') {
                 const [[user]] = await pool.query('SELECT phone, name, unit FROM users WHERE id = ?', [task.target_value]);
                 if (user?.phone) recipients = [user];
@@ -212,8 +232,8 @@ export const processScheduledMessages = async () => {
                         timeout: 10000,
                         httpsAgent: agent
                     });
-                } catch (err) { console.error(`[SRE HEARTBEAT FAIL] ${contact.phone} via ${gatewayUrl}`); }
+                } catch (err) { console.error(`[SRE HEARTBEAT FAIL] Dispatch via ${gatewayUrl}: ${err.message}`); }
             }
         }
-    } catch (e) { console.error("[SRE HEARTBEAT ERROR]", e.message); }
+    } catch (e) { console.error("[SRE SCHEDULER ERROR]", e.message); }
 };

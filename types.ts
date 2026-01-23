@@ -10,14 +10,16 @@ export enum UserRole {
   TREASURER = 'TREASURER',
   SERVICE = 'SERVICE',
   RESIDENT = 'RESIDENT',
-  VISITOR = 'VISITOR'
+  VISITOR = 'VISITOR',
+  COUNCIL = 'COUNCIL'
 }
 
-export type UserStatus = 'ACTIVE' | 'PENDING' | 'BANNED' | 'VALIDATION_REQUIRED';
+export type UserStatus = 'ACTIVE' | 'PENDING' | 'SUSPENDED' | 'BLOCKED' | 'ARCHIVED';
+export type ResidentType = 'TITULAR' | 'DEPENDENTE' | 'INQUILINO' | 'RESPONSAVEL' | 'OCUPANTE';
+export type PreferredChannel = 'WHATSAPP' | 'EMAIL' | 'APP' | 'SMS';
 export type FinancialStatus = 'PAID' | 'PENDING' | 'OVERDUE' | 'CANCELLED' | 'PARTIAL';
 export type ProjectStatus = 'PLANNING' | 'EM_EXECUÇÃO' | 'CONCLUÍDO' | 'CANCELADO';
 
-// SRE UPDATE: Novos níveis de severidade tática
 export type IncidentPriority = 'INFORMATIVO (NÍVEL 1)' | 'ATENÇÃO (NÍVEL 2)' | 'ALTA (NÍVEL 3 - ALERTA LOCAL)' | 'CRÍTICA (NÍVEL 4 - PÂNICO EM RAIO)';
 export type IncidentStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
 export type DocumentType = 'OFICIO' | 'ATA' | 'EDITAL' | 'CONTRATO' | 'RELATÓRIO';
@@ -36,12 +38,12 @@ export interface WhatsAppConfig {
   api_key: string;
   sender: string;
   footer: string;
-  welcome_template?: string;
-  anniversary_template?: string;
-  billing_template?: string;
-  default_password?: string;
-  webhook_url?: string;
   gateway_url?: string;
+  webhook_url?: string;
+  billing_reminder_2d?: boolean;
+  billing_reminder_1d?: boolean;
+  late_reminder?: boolean;
+  welcome_msg?: boolean;
 }
 
 export interface SystemInfo {
@@ -67,32 +69,6 @@ export interface SystemInfo {
   module_metadata?: Record<string, { title: string; slogan: string }>;
 }
 
-// --- CENSO & PESQUISAS (PROTOCOLO V10.0) ---
-
-export interface SurveyQuestion {
-  id: string;
-  text: string;
-  type: 'text' | 'number' | 'boolean' | 'select' | 'date' | 'repeater' | string;
-  options?: string[];
-  required: number | boolean;
-  mapping_tag?: 'IDENTITY' | 'EDUCATION' | 'DIGITAL' | 'GOV_AID' | 'FAMILY' | 'HEALTH' | 'FINANCE' | 'WORK' | string;
-  logic?: {
-    show_if_question: string;
-    show_if_value: any;
-  };
-  repeater_fields?: any[];
-}
-
-export interface Survey {
-  id: string | number;
-  title: string;
-  description: string;
-  type: 'CENSUS' | 'SOCIAL_AID' | 'SATISFACTION' | string;
-  status: 'ACTIVE' | 'INACTIVE' | string;
-  questions: SurveyQuestion[];
-  created_at?: string;
-}
-
 // --- IDENTIDADE & SOCIAL ---
 
 export interface SocialData {
@@ -101,58 +77,39 @@ export interface SocialData {
   income_range?: string;
   household_size?: number;
   vulnerabilities?: string[];
-  last_census_date?: string;
-  ai_notes?: string;
-  nis_number?: string;
 }
 
 export interface User {
   id: string | number;
-  name: string;
-  username: string;
-  unit?: string;
-  role: UserRole | string;
-  status: UserStatus;
-  active: boolean | number;
+  name: string; 
   cpf_cnpj: string;
   rg?: string;
   issuing_authority?: string;
+  birth_date?: string;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
+  nationality?: string;
   age?: number;
+  avatar_url?: string; 
+  unit?: string; 
+  resident_type?: ResidentType;
+  role: UserRole | string; 
+  voting_rights?: boolean | number;
+  status: UserStatus;
+  active: boolean | number;
+  socialData?: SocialData;
+  username: string;
   email?: string;
   phone?: string;
-  avatar_url?: string;
-  socialData?: SocialData;
+  whatsapp?: string;
+  preferred_channel?: PreferredChannel;
   coordinates?: { lat: number; lng: number };
   address?: string;
+  profession?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
-// --- OUTROS ---
-
-export interface Incident {
-  id: string | number;
-  title: string;
-  location: string;
-  priority: IncidentPriority | string;
-  status: IncidentStatus | string;
-  description: string;
-  radius?: number; // Raio de notificação em KM
-  coordinates?: { lat: number; lng: number };
-  reporter_name?: string;
-}
-
-export interface FinancialRecord {
-  id: string | number;
-  user_id?: string | number;
-  userName?: string;
-  description: string;
-  amount: number | string;
-  type: 'INCOME' | 'EXPENSE';
-  category: string;
-  status: FinancialStatus | string;
-  date: string;
-  next_due_date?: string;
-  is_recurring?: boolean | number;
-}
+// --- IA & AUDITORIA ---
 
 export interface AIKey {
   id: string | number;
@@ -165,6 +122,60 @@ export interface AIKey {
   priority: number;
   error_count: number;
   last_checked?: string;
+}
+
+export interface OfficialDocument {
+  id: string | number;
+  title: string;
+  content: string;
+  type: DocumentType | string;
+  status: 'DRAFT' | 'SIGNED' | 'ARCHIVED' | string;
+  updated_at: string;
+}
+
+export interface FinancialRecord {
+  id: string | number;
+  user_id?: string | number;
+  description: string;
+  amount: number | string;
+  type: 'INCOME' | 'EXPENSE';
+  category: string;
+  status: FinancialStatus | string;
+  date: string;
+  next_due_date?: string;
+  is_recurring?: number | boolean;
+  billing_cycle?: string;
+}
+
+export interface SurveyQuestion {
+  id: string;
+  text: string;
+  type: 'text' | 'number' | 'boolean' | 'select' | 'date' | 'repeater' | string;
+  options?: string[];
+  required: number | boolean;
+  mapping_tag: string;
+}
+
+export interface Survey {
+  id: string | number;
+  title: string;
+  description: string;
+  type: 'CENSUS' | 'SOCIAL_AID' | 'SATISFACTION' | string;
+  status: 'ACTIVE' | 'INACTIVE' | string;
+  questions: SurveyQuestion[];
+  created_at?: string;
+}
+
+export interface Incident {
+  id: string | number;
+  title: string;
+  location: string;
+  priority: string;
+  status: IncidentStatus | string;
+  description: string;
+  radius: number;
+  coordinates?: { lat: number; lng: number };
+  reporter_name?: string;
   created_at?: string;
 }
 
@@ -177,29 +188,6 @@ export interface Notice {
   created_at?: string;
 }
 
-export interface CameraDevice {
-  id: string | number;
-  name: string;
-  url: string;
-  location: string;
-  status: 'ACTIVE' | 'INACTIVE' | string;
-}
-
-export interface Asset {
-  id: string | number;
-  name: string;
-  category: string;
-  value: number | string;
-  status: 'PERFEITO' | 'BOM' | 'MANUTENÇÃO' | 'DEPRECIADO' | string;
-  date_acquired: string;
-  responsible_id?: string | number;
-}
-
-// --- SRE FIX: Missing Interfaces for Domain Specific Modules ---
-
-/**
- * Interface para Agendamentos de Broadcast (WhatsApp/Email)
- */
 export interface ScheduledBroadcast {
   id: string | number;
   user_id?: string | number;
@@ -212,22 +200,17 @@ export interface ScheduledBroadcast {
   created_at?: string;
 }
 
-/**
- * Interface para Eventos de Agenda/Timeline
- */
 export interface AgendaEvent {
   id: string | number;
   title: string;
   description: string;
   date: string;
-  type: 'MEETING' | 'MAINTENANCE' | 'DEADLINE' | string;
-  status: 'UPCOMING' | 'FINISHED' | string;
+  type: 'MEETING' | 'MAINTENANCE' | 'DEADLINE' | 'EVENT' | string;
+  status: 'UPCOMING' | 'COMPLETED' | 'CANCELLED' | string;
   location?: string;
+  created_at?: string;
 }
 
-/**
- * Interface para Gestão de Obras e Projetos Comunitários
- */
 export interface CommunityProject {
   id: string | number;
   title: string;
@@ -236,33 +219,39 @@ export interface CommunityProject {
   spent: number | string;
   progress: number;
   startDate: string;
-  category: 'INFRA' | 'SOCIAL' | string;
+  category: 'INFRA' | 'LANDMARK' | string;
   status: ProjectStatus | string;
+  created_at?: string;
 }
 
-/**
- * Interface para Itens de Marketplace Local
- */
 export interface MarketItem {
   id: string | number;
   merchant_id?: string | number;
   title: string;
   description: string;
-  category: 'GOODS' | 'FOOD' | 'SERVICE' | string;
   price: number | string;
-  whatsapp?: string;
+  category: 'GOODS' | 'FOOD' | 'SERVICE' | string;
+  whatsapp: string;
   created_at?: string;
   updated_at?: string;
 }
 
-/**
- * Interface para Documentos Oficiais (Ghostwriter/OCR Hub)
- */
-export interface OfficialDocument {
+export interface CameraDevice {
   id: string | number;
-  title: string;
-  content: string;
-  type: DocumentType | string;
-  status: 'DRAFT' | 'SIGNED' | 'ARCHIVED' | string;
-  updated_at: string;
+  name: string;
+  url: string;
+  location: string;
+  status: 'ACTIVE' | 'INACTIVE' | string;
+  created_at?: string;
+}
+
+export interface Asset {
+  id: string | number;
+  name: string;
+  category: string;
+  value: number | string;
+  status: string;
+  date_acquired: string;
+  responsible_id?: string | number;
+  created_at?: string;
 }
