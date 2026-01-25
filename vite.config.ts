@@ -1,4 +1,3 @@
-
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -8,6 +7,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig({
+  // SRE FIX: Força o uso do diretório local para evitar conflitos com node_modules em níveis superiores da VPS
+  cacheDir: './node_modules/.vite',
   plugins: [
     react({
       jsxRuntime: 'automatic',

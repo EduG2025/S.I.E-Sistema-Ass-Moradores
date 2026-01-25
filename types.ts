@@ -66,7 +66,56 @@ export interface SystemInfo {
   management_start?: string;
   management_end?: string;
   president_signature?: string;
-  module_metadata?: Record<string, { title: string; slogan: string }>;
+  module_metadata?: Record<string, { 
+    title?: string; 
+    slogan?: string;
+    greeting?: string;
+    unit_label?: string;
+    badge_label?: string;
+    key_btn?: string;
+    ouvidoria_btn?: string;
+    balance_label?: string;
+    balance_cta?: string;
+    agenda_label?: string;
+    agenda_cta?: string;
+    access_label?: string;
+    access_cta?: string;
+    mural_title?: string;
+    advisor_title?: string;
+    advisor_slogan?: string;
+    advisor_cta?: string;
+    audit_label?: string;
+    audit_slogan?: string;
+    boot_text?: string;
+    sync_text?: string;
+    handshake_label?: string;
+    logout_label?: string;
+    placeholder?: string;
+    residents_label?: string;
+    tactical_label?: string;
+    heatmap_label?: string;
+    incident_label?: string;
+    doc_label?: string;
+    risk_label?: string;
+    dossier_btn?: string;
+    loading_text?: string;
+    concierge_label?: string;
+    finance_label?: string;
+    deliveries_label?: string;
+    watchdog_label?: string;
+    hero_badge?: string;
+    members_stat_label?: string;
+    finance_stat_label?: string;
+    alerts_stat_label?: string;
+    advisor_btn?: string;
+    analytics_btn?: string;
+    map_btn?: string;
+    sanitary_label?: string;
+    occupancy_label?: string;
+    sync_label?: string;
+    stats_label?: string;
+    map_label?: string;
+  }>;
 }
 
 // --- IDENTIDADE & SOCIAL ---
@@ -85,7 +134,7 @@ export interface User {
   cpf_cnpj: string;
   rg?: string;
   issuing_authority?: string;
-  birth_date?: string;
+  birth_date?: string; 
   gender?: 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
   nationality?: string;
   age?: number;
@@ -109,7 +158,7 @@ export interface User {
   updated_at?: string;
 }
 
-// --- IA & AUDITORIA ---
+// --- INFRAESTRUTURA IA ---
 
 export interface AIKey {
   id: string | number;
@@ -124,28 +173,7 @@ export interface AIKey {
   last_checked?: string;
 }
 
-export interface OfficialDocument {
-  id: string | number;
-  title: string;
-  content: string;
-  type: DocumentType | string;
-  status: 'DRAFT' | 'SIGNED' | 'ARCHIVED' | string;
-  updated_at: string;
-}
-
-export interface FinancialRecord {
-  id: string | number;
-  user_id?: string | number;
-  description: string;
-  amount: number | string;
-  type: 'INCOME' | 'EXPENSE';
-  category: string;
-  status: FinancialStatus | string;
-  date: string;
-  next_due_date?: string;
-  is_recurring?: number | boolean;
-  billing_cycle?: string;
-}
+// --- OUTROS MÓDULOS ---
 
 export interface SurveyQuestion {
   id: string;
@@ -163,28 +191,6 @@ export interface Survey {
   type: 'CENSUS' | 'SOCIAL_AID' | 'SATISFACTION' | string;
   status: 'ACTIVE' | 'INACTIVE' | string;
   questions: SurveyQuestion[];
-  created_at?: string;
-}
-
-export interface Incident {
-  id: string | number;
-  title: string;
-  location: string;
-  priority: string;
-  status: IncidentStatus | string;
-  description: string;
-  radius: number;
-  coordinates?: { lat: number; lng: number };
-  reporter_name?: string;
-  created_at?: string;
-}
-
-export interface Notice {
-  id: string | number;
-  title: string;
-  content: string;
-  urgency: 'LOW' | 'MEDIUM' | 'HIGH' | string;
-  date: string;
   created_at?: string;
 }
 
@@ -254,4 +260,49 @@ export interface Asset {
   date_acquired: string;
   responsible_id?: string | number;
   created_at?: string;
+}
+
+export interface OfficialDocument {
+  id: string | number;
+  title: string;
+  content: string;
+  type: DocumentType | string;
+  status: 'DRAFT' | 'SIGNED' | 'ARCHIVED' | string;
+  updated_at: string;
+}
+
+export interface Incident {
+  id: string | number;
+  title: string;
+  location: string;
+  priority: string;
+  status: IncidentStatus | string;
+  description: string;
+  radius: number; 
+  coordinates?: { lat: number; lng: number };
+  reporter_name?: string;
+  created_at?: string;
+}
+
+export interface Notice {
+  id: string | number;
+  title: string;
+  content: string;
+  urgency: 'LOW' | 'MEDIUM' | 'HIGH' | string;
+  date: string;
+  created_at?: string;
+}
+
+export interface FinancialRecord {
+  id: string | number;
+  user_id?: string | number;
+  description: string;
+  amount: number | string;
+  type: 'INCOME' | 'EXPENSE';
+  category: string;
+  status: FinancialStatus | string;
+  date: string;
+  next_due_date?: string;
+  is_recurring?: number | boolean;
+  billing_cycle?: string;
 }

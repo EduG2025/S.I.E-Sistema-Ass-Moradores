@@ -41,6 +41,14 @@ const App = () => {
     
     const isPublicCensus = window.location.pathname.startsWith('/census/');
 
+    // SRE Metadata Audit
+    const appMetadata = useMemo(() => systemInfo?.module_metadata?.['sidebar'] || {
+        handshake_label: "Handshake Active",
+        logout_label: "Sair",
+        boot_text: "BOOTING S.I.E PRO KERNEL...",
+        sync_text: "Syncing Kernel..."
+    }, [systemInfo]);
+
     useEffect(() => {
         const initKernel = async () => {
             const token = localStorage.getItem('sie_auth_token');
@@ -113,7 +121,9 @@ const App = () => {
             <div className="h-screen w-screen flex items-center justify-center bg-[#020617]">
                 <div className="text-center space-y-4">
                     <Loader2 className="animate-spin text-indigo-500 mx-auto" size={48} />
-                    <p className="text-indigo-300 font-black uppercase text-[10px] tracking-widest animate-pulse">BOOTING S.I.E PRO KERNEL...</p>
+                    <p className="text-indigo-300 font-black uppercase text-[10px] tracking-widest animate-pulse">
+                        {appMetadata.boot_text || "BOOTING S.I.E PRO KERNEL..."}
+                    </p>
                 </div>
             </div>
         );
@@ -174,7 +184,9 @@ const App = () => {
                                 </div>
                                 <div className="min-w-0">
                                     <h1 className="text-xs font-black text-white tracking-tight leading-none truncate uppercase">{systemInfo.shortName}</h1>
-                                    <p className="text-[7px] font-black uppercase text-indigo-400 mt-1 tracking-[0.4em]" style={{ color: primaryColor }}>Handshake Active</p>
+                                    <p className="text-[7px] font-black uppercase text-indigo-400 mt-1 tracking-[0.4em]" style={{ color: primaryColor }}>
+                                        {appMetadata.handshake_label || "Handshake Active"}
+                                    </p>
                                 </div>
                              </div>
                         )}
@@ -218,7 +230,9 @@ const App = () => {
                         </div>
                         <button onClick={handleLogout} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-rose-500 hover:bg-rose-500/10 transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}>
                             <LogOut size={16} className="shrink-0" />
-                            {!sidebarCollapsed && <span className="text-[9px] font-black uppercase tracking-widest">Sair</span>}
+                            {!sidebarCollapsed && <span className="text-[9px] font-black uppercase tracking-widest">
+                                {appMetadata.logout_label || "Sair"}
+                            </span>}
                         </button>
                     </div>
                 </div>
@@ -230,7 +244,9 @@ const App = () => {
                     <Suspense fallback={
                         <div className="flex-1 flex flex-col items-center justify-center p-20 h-full">
                             <Loader2 className="animate-spin text-indigo-600" size={48} style={{ color: primaryColor }} />
-                            <p className="mt-4 font-black uppercase text-[10px] tracking-widest text-slate-400 animate-pulse">Syncing Kernel...</p>
+                            <p className="mt-4 font-black uppercase text-[10px] tracking-widest text-slate-400 animate-pulse">
+                                {appMetadata.sync_text || "Syncing Kernel..."}
+                            </p>
                         </div>
                     }>
                         <div className="max-w-[1600px] mx-auto w-full min-h-full">

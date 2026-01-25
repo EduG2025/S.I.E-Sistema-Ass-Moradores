@@ -1,5 +1,5 @@
 -- ---------------------------------------------------------
--- S.I.E PRO - MASTER DATABASE SCHEMA V240.8 (AUDITED)
+-- S.I.E PRO - MASTER DATABASE SCHEMA V242.0 (AUDITED)
 -- PADRÃO DE RESILIÊNCIA SRE - CLUSTER MASTER SOBERANO
 -- ---------------------------------------------------------
 
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `name` VARCHAR(255) NOT NULL,
   `username` VARCHAR(255),
   `cpf_cnpj` VARCHAR(20) NOT NULL UNIQUE,
-  `email?` VARCHAR(255),
+  `email` VARCHAR(255),
   `password_hash` VARCHAR(255),
   `role` VARCHAR(50) DEFAULT 'RESIDENT',
   `status` VARCHAR(20) DEFAULT 'PENDING',
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS `visitors` (
   `name` VARCHAR(255) NOT NULL,
   `document` VARCHAR(50),
   `unit` VARCHAR(50) NOT NULL,
-  `phone?` VARCHAR(50),
+  `phone` VARCHAR(50),
   `status` VARCHAR(20) DEFAULT 'IN_CLUSTER',
   `arrival_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -143,7 +143,7 @@ CREATE TABLE IF NOT EXISTS `notices` (
 CREATE TABLE IF NOT EXISTS `suggestions` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `user_id` INT,
-  `title?` VARCHAR(255) NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
   `content` TEXT,
   `category` VARCHAR(50),
   `status` VARCHAR(20) DEFAULT 'OPEN',

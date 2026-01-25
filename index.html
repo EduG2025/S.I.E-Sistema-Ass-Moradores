@@ -1,12 +1,13 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Carregando Identidade...</title>
+    <title>S.I.E PRO — Sistema Inteligente Ativo</title>
 
-    <!-- ImportMap purificado para ambiente Client-Side -->
+    <!-- SRE Favicon Protocol -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234f46e5'/><path d='M30 70 L50 30 L70 70' stroke='white' stroke-width='8' fill='none'/></svg>">
+
     <script type="importmap">
 {
   "imports": {
@@ -15,10 +16,10 @@
     "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
     "lucide-react": "https://esm.sh/lucide-react@0.474.0",
     "recharts": "https://esm.sh/recharts@2.15.0",
-    "leaflet": "https://esm.sh/leaflet@1.9.4",
     "axios": "https://esm.sh/axios@1.7.9",
     "@google/genai": "https://esm.sh/@google/genai@1.34.0",
     "zod": "https://esm.sh/zod@3.24.1",
+    "leaflet": "https://esm.sh/leaflet@1.9.4",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/",
     "mysql2/": "https://esm.sh/mysql2@^3.16.1/",
@@ -27,13 +28,12 @@
     "url": "https://esm.sh/url@^0.11.4",
     "vite": "https://esm.sh/vite@^7.3.1",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "os": "https://esm.sh/os@^0.1.2",
+    "dotenv/": "https://esm.sh/dotenv@^17.2.3/",
     "express": "https://esm.sh/express@^5.2.1",
-    "cors": "https://esm.sh/cors@^2.8.5",
+    "cors": "https://esm.sh/cors@^2.8.6",
+    "fs": "https://esm.sh/fs@^0.0.1-security",
     "jsonwebtoken": "https://esm.sh/jsonwebtoken@^9.0.3",
     "bcryptjs": "https://esm.sh/bcryptjs@^3.0.3",
-    "fs": "https://esm.sh/fs@^0.0.1-security",
-    "dotenv/": "https://esm.sh/dotenv@^17.2.3/",
     "https": "https://esm.sh/https@^1.0.0"
   }
 }
@@ -41,18 +41,22 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Leaflet Core -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Leaflet Heatmap Plugin (SRE Tactical Vision Add-on) -->
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    
     <link rel="stylesheet" href="/index.css">
     
     <script type="module">
-      window.process = { env: { NODE_ENV: 'production' } };
+      window.process = { env: { NODE_ENV: 'production', API_KEY: '' } };
       window.global = window;
     </script>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 </head>
-  <body class="bg-[#f8fafc] selection:bg-indigo-600 selection:text-white overflow-x-hidden">
+  <body class="bg-[#020617] selection:bg-indigo-600 selection:text-white overflow-hidden">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

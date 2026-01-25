@@ -1,9 +1,9 @@
 #!/bin/bash
-# 🚀 S.I.E PRO - VPS DEPLOYMENT PROTOCOL V240.2 (SRE)
+# 🚀 S.I.E PRO - VPS DEPLOYMENT PROTOCOL V240.3 (SRE)
 # Este script automatiza a instalação e reinicialização do cluster.
 
 echo "--------------------------------------------------------"
-echo "  S.I.E PRO - SISTEMA INTELIGENTE ATIVO V240.2"
+echo "  S.I.E PRO - SISTEMA INTELIGENTE ATIVO V240.3"
 echo "  PROTOCOLO SRE DE DEPLOY EM AMBIENTE DE MISSÃO CRÍTICA"
 echo "--------------------------------------------------------"
 
@@ -13,8 +13,9 @@ sudo chown -R $USER:$USER .
 sudo chmod -R 755 .
 
 # 2. Instalação de Dependências
-echo "📦 [2/5] Sincronizando dependências (npm install)..."
-npm install --quiet
+echo "📦 [2/5] Sincronizando dependências..."
+# Garante que todos os módulos (incluindo plugins de build) sejam instalados
+npm install
 
 # 3. Compilação do Frontend
 echo "🏗️ [3/5] Gerando build otimizado (Vite)..."

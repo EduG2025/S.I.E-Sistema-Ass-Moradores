@@ -75,7 +75,8 @@ export const aiService = {
 };
 
 export const mapService = {
-    getUnits: () => api.get('/users'),
+    // SRE: Carrega até 5000 membros para visualização integral no mapa
+    getUnits: () => api.get('/users', { params: { limit: 5000 } }),
     searchAdvanced: (query: string) => api.post('/users/search-neural', { query }),
 };
 
@@ -97,18 +98,14 @@ export const communicationService = {
     sendNotice: (data: any) => api.post('/communication/notices', data),
     updateNotice: (id: any, data: any) => api.put(`/communication/notices/${id}`, data),
     deleteNotice: (id: any) => api.delete(`/communication/notices/${id}`),
-    
-    // TEMPLATES
     getTemplates: () => api.get('/communication/templates'),
     saveTemplate: (data: any) => api.post('/communication/templates', data),
     deleteTemplate: (id: any) => api.delete(`/communication/templates/${id}`),
-
     getSchedules: () => api.get('/communication/schedules'),
     createSchedule: (data: any) => api.post('/communication/schedules', data),
     deleteSchedule: (id: any) => api.delete(`/communication/schedules/${id}`),
 };
 
-// SRE FIX: Missing exported services added to resolve frontend errors
 export const operationsService = {
     getIncidents: () => api.get('/incidents'),
     getHeatmap: () => api.get('/incidents/heatmap'),

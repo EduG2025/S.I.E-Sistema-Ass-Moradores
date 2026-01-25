@@ -6,19 +6,52 @@
   --sie-border: #e2e8f0;
 }
 
-body {
+/* SRE: Garantia de viewport absoluta */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
   font-family: 'Inter', sans-serif;
-  background-color: var(--sie-bg);
+  background-color: var(--sie-bg-dark);
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
-  min-height: 100vh;
-  width: 100vw;
+  overflow: hidden;
 }
 
 #root {
-  min-height: 100%;
   width: 100%;
+  height: 100%;
+  display: flex;
 }
+
+/* SRE ACTIVE NEURAL EFFECTS */
+@keyframes flicker {
+  0% { opacity: 0.8; }
+  5% { opacity: 0.9; }
+  10% { opacity: 0.8; }
+  15% { opacity: 1; }
+  20% { opacity: 0.8; }
+  100% { opacity: 1; }
+}
+
+@keyframes scan-line {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.neural-glow {
+  box-shadow: 0 0 20px var(--sie-primary-glow);
+  animation: flicker 4s infinite alternate;
+}
+
+.animate-scan-line {
+  animation: scan-line 3s linear infinite;
+}
+
+/* Fix para Google Maps Engine */
+.gm-style img { max-width: none !important; }
+.gm-style-cc { display: none !important; }
+button[title="Keyboard shortcuts"], button[title="Report errors"] { display: none !important; }
 
 .sidebar-glass {
   background: rgba(2, 6, 23, 0.98) !important;
@@ -33,12 +66,11 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(79, 70, 229, 0.15); border-radius: 20px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--sie-primary); }
 
-/* SRE: Modal agora é ABSOLUTE para não cobrir a Sidebar e manter foco no main */
 .sie-editor-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(2, 6, 23, 0.3);
-  backdrop-filter: blur(8px);
+  background: rgba(2, 6, 23, 0.4);
+  backdrop-filter: blur(12px);
   z-index: 60;
   display: flex;
   align-items: center;
@@ -48,23 +80,39 @@ body {
 
 .sie-modal-container {
   width: 100%;
-  max-width: 1200px;
-  height: 85vh;
+  max-width: 1300px;
+  height: 92vh;
   background: white;
-  border-radius: 2.5rem;
-  box-shadow: 0 40px 100px rgba(0,0,0,0.3);
+  border-radius: 3rem;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.4);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes modalSlideUp {
-  from { transform: translateY(50px) scale(0.98); opacity: 0; }
+  from { transform: translateY(60px) scale(0.96); opacity: 0; }
   to { transform: translateY(0) scale(1); opacity: 1; }
 }
 
+@keyframes slideDown {
+  from { transform: translateY(-30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes radar-scan {
+  0% { opacity: 0.1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(1.05); }
+  100% { opacity: 0.1; transform: scale(1); }
+}
+
+.animate-radar-scan { animation: radar-scan 2s infinite ease-in-out; }
+.animate-slide-down { animation: slideDown 0.4s ease-out forwards; }
+.animate-slide-left { animation: slideLeft 0.4s ease-out forwards; }
 .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+.animate-spin-slow { animation: spin 10s linear infinite; }
+
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 .animate-scale-in { animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -79,3 +127,23 @@ body {
 input, select, textarea {
   transition: all 0.2s ease-in-out;
 }
+
+/* SRE DATA VIZ TOOLTIP OVERRIDE */
+.recharts-default-tooltip {
+  background-color: #020617 !important;
+  border-radius: 1.5rem !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: white !important;
+  padding: 12px 18px !important;
+  text-transform: uppercase !important;
+  font-size: 10px !important;
+  font-weight: 900 !important;
+}
+
+/* TACTICAL SEARCH SHAKE */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.animate-shake { animation: shake 0.2s ease-in-out 0s 2; }
