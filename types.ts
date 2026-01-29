@@ -1,5 +1,10 @@
 import React from 'react';
 
+/**
+ * S.I.E NUCLEUS - GLOBAL TYPE DEFINITIONS
+ * Version: 2.6.0 - Full SRE Operational Sync (DocumentHub & RAG Enhanced)
+ */
+
 // --- ENUMS NUCLEARES ---
 
 export enum UserRole {
@@ -24,6 +29,12 @@ export type IncidentPriority = 'INFORMATIVO (NÍVEL 1)' | 'ATENÇÃO (NÍVEL 2)'
 export type IncidentStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
 export type DocumentType = 'OFICIO' | 'ATA' | 'EDITAL' | 'CONTRATO' | 'RELATÓRIO';
 
+// Categorias de Prompt para o Ghostwriter (IA)
+export type PromptCategory = 'JURIDICO' | 'ADM' | 'FINANCEIRO' | 'GERAL' | 'TURISMO' | 'OBRAS' | 'SAÚDE' | 'EDUCAÇÃO';
+
+// Status de Documento (Workflow)
+export type DocStatus = 'DRAFT' | 'REVIEW' | 'APPROVED' | 'SIGNED' | 'SENT' | 'ARCHIVED';
+
 // --- INTERFACES DE CONFIGURAÇÃO ---
 
 export interface ResidentUISetting {
@@ -46,12 +57,23 @@ export interface WhatsAppConfig {
   welcome_msg?: boolean;
 }
 
+export interface SystemSettings {
+  cnpj?: string;
+  phone?: string;
+  logoUrl?: string;
+  president_name?: string;
+  president_signature?: string;
+  email?: string;
+  website?: string;
+  context_rules?: string;
+  [key: string]: any;
+}
+
 export interface SystemInfo {
   id?: number;
   name: string;
-  shortName?: string; 
+  shortName?: string;
   cnpj?: string;
-  address?: string;
   email?: string;
   phone?: string;
   website?: string;
@@ -66,59 +88,51 @@ export interface SystemInfo {
   management_start?: string;
   management_end?: string;
   president_signature?: string;
-  module_metadata?: Record<string, { 
-    title?: string; 
-    slogan?: string;
-    greeting?: string;
-    unit_label?: string;
-    badge_label?: string;
-    key_btn?: string;
-    ouvidoria_btn?: string;
-    balance_label?: string;
-    balance_cta?: string;
-    agenda_label?: string;
-    agenda_cta?: string;
-    access_label?: string;
-    access_cta?: string;
-    mural_title?: string;
-    advisor_title?: string;
-    advisor_slogan?: string;
-    advisor_cta?: string;
-    audit_label?: string;
-    audit_slogan?: string;
-    boot_text?: string;
-    sync_text?: string;
-    handshake_label?: string;
-    logout_label?: string;
-    placeholder?: string;
-    residents_label?: string;
-    tactical_label?: string;
-    heatmap_label?: string;
-    incident_label?: string;
-    doc_label?: string;
-    risk_label?: string;
-    dossier_btn?: string;
-    loading_text?: string;
-    concierge_label?: string;
-    finance_label?: string;
-    deliveries_label?: string;
-    watchdog_label?: string;
-    hero_badge?: string;
-    members_stat_label?: string;
-    finance_stat_label?: string;
-    alerts_stat_label?: string;
-    advisor_btn?: string;
-    analytics_btn?: string;
-    map_btn?: string;
-    sanitary_label?: string;
-    occupancy_label?: string;
-    sync_label?: string;
-    stats_label?: string;
-    map_label?: string;
-  }>;
+  settings?: SystemSettings;
+  context_rules?: string;
+  module_metadata?: Record<string, any>;
+  // SRE FIX: Added missing 'address' property to match usage in constants.tsx
+  address?: string;
+
+  // CAMPOS ATÔMICOS DE ENDEREÇO DA SEDE
+  cep?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
 }
 
 // --- IDENTIDADE & SOCIAL ---
+
+export interface TerritorialUnit {
+  id: string | number;
+  label: string;
+  street_name?: string;
+  is_available?: boolean;
+  occupant_id?: number;
+  coordinates?: { lat: number; lng: number };
+}
+
+export interface SurveyResponse {
+  id: string | number;
+  survey_id: string | number;
+  user_id: string | number;
+  cpf: string;
+  user_name: string;
+  answers: any;
+  created_at?: string;
+}
+
+export interface TacticalAnalysis {
+  user_id: string | number;
+  risk_score: number;
+  vulnerability_level: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  predictions: string[];
+  recommended_actions: string[];
+  last_ai_update: string;
+}
 
 export interface SocialData {
   risk: number;
@@ -128,81 +142,22 @@ export interface SocialData {
   vulnerabilities?: string[];
 }
 
-export interface User {
-  id: string | number;
-  name: string; 
-  cpf_cnpj: string;
-  rg?: string;
-  issuing_authority?: string;
-  birth_date?: string; 
-  gender?: 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT_TO_SAY';
-  nationality?: string;
-  age?: number;
-  avatar_url?: string; 
-  unit?: string; 
-  resident_type?: ResidentType;
-  role: UserRole | string; 
-  voting_rights?: boolean | number;
-  status: UserStatus;
-  active: boolean | number;
-  socialData?: SocialData;
-  username: string;
-  email?: string;
-  phone?: string;
-  whatsapp?: string;
-  preferred_channel?: PreferredChannel;
-  coordinates?: { lat: number; lng: number };
-  address?: string;
-  profession?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-// --- INFRAESTRUTURA IA ---
-
-export interface AIKey {
-  id: string | number;
-  label: string;
-  key_value: string;
-  provider: string;
-  model: string;
-  tier: string;
-  status: string;
-  priority: number;
-  error_count: number;
-  last_checked?: string;
-}
-
-// --- OUTROS MÓDULOS ---
-
 export interface SurveyQuestion {
   id: string;
   text: string;
   type: 'text' | 'number' | 'boolean' | 'select' | 'date' | 'repeater' | string;
   options?: string[];
-  required: number | boolean;
-  mapping_tag: string;
+  required?: number | boolean;
+  mapping_tag?: string;
 }
 
 export interface Survey {
   id: string | number;
   title: string;
   description: string;
-  type: 'CENSUS' | 'SOCIAL_AID' | 'SATISFACTION' | string;
-  status: 'ACTIVE' | 'INACTIVE' | string;
+  type: string;
+  status: string;
   questions: SurveyQuestion[];
-  created_at?: string;
-}
-
-export interface ScheduledBroadcast {
-  id: string | number;
-  user_id?: string | number;
-  target_type: 'ROLE' | 'USER' | 'DIRECT' | string;
-  target_value: string;
-  message_body: string;
-  template_id?: number;
-  scheduled_at: string;
-  status: 'PENDING' | 'SENT' | 'FAILED' | string;
   created_at?: string;
 }
 
@@ -212,7 +167,7 @@ export interface AgendaEvent {
   description: string;
   date: string;
   type: 'MEETING' | 'MAINTENANCE' | 'DEADLINE' | 'EVENT' | string;
-  status: 'UPCOMING' | 'COMPLETED' | 'CANCELLED' | string;
+  status: 'UPCOMING' | 'COMPLETED' | string;
   location?: string;
   created_at?: string;
 }
@@ -225,29 +180,8 @@ export interface CommunityProject {
   spent: number | string;
   progress: number;
   startDate: string;
-  category: 'INFRA' | 'LANDMARK' | string;
+  category: string;
   status: ProjectStatus | string;
-  created_at?: string;
-}
-
-export interface MarketItem {
-  id: string | number;
-  merchant_id?: string | number;
-  title: string;
-  description: string;
-  price: number | string;
-  category: 'GOODS' | 'FOOD' | 'SERVICE' | string;
-  whatsapp: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface CameraDevice {
-  id: string | number;
-  name: string;
-  url: string;
-  location: string;
-  status: 'ACTIVE' | 'INACTIVE' | string;
   created_at?: string;
 }
 
@@ -262,14 +196,123 @@ export interface Asset {
   created_at?: string;
 }
 
+export interface User {
+  id: string | number;
+  name: string;
+  cpf_cnpj: string;
+  username: string;
+  email?: string;
+  password_hash?: string;
+  role: UserRole | string;
+  status: UserStatus;
+  active: boolean | number;
+  unit?: string;
+  age?: number;
+  birth_date?: string;
+  rg?: string;
+  issuing_authority?: string;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER' | 'PREFER_NOT-TO-SAY';
+  nationality?: string;
+  phone?: string;
+  whatsapp?: string;
+  preferred_channel?: PreferredChannel;
+  avatar_url?: string;
+  document_front_url?: string;
+  document_back_url?: string;
+  ocr_payload?: any;
+  coordinates?: { lat: number; lng: number };
+  profession?: string;
+  voting_rights?: boolean | number;
+  resident_type?: ResidentType;
+  parent_id?: number | string;
+  last_login?: string;
+  created_by?: string | number;
+  created_at?: string;
+  updated_at?: string;
+  socialData?: SocialData;
+  // SRE FIX: Added missing 'address' property to match usage in UserModal.tsx
+  address?: string;
+
+  // CAMPOS ATÔMICOS DE ENDEREÇO DO USUÁRIO
+  cep?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+}
+
+// --- INFRAESTRUTURA IA ---
+
+export interface AIKey {
+  id: number;
+  label: string;
+  key_value: string;
+  provider: 'GOOGLE' | 'OPENAI' | string;
+  model: string;
+  tier: 'FREE' | 'PAID' | string;
+  status: 'ACTIVE' | 'INACTIVE';
+  priority: number;
+  error_count: number;
+  last_checked: string;
+  created_at: string;
+}
+
+export interface AIPromptTemplate {
+  id: string | number;
+  title: string;
+  content: string;
+  category: PromptCategory | string;
+  is_favorite?: boolean | number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// --- GOVERNANÇA & DOCUMENTOS ---
+
+export interface AssemblyTopic {
+  id: number | string;
+  title: string;
+  votes: {
+    yes: number;
+    no: number;
+    abstain: number;
+  };
+}
+
+export interface Assembly {
+  id: string | number;
+  title: string;
+  description: string;
+  date: string;
+  status: 'SCHEDULED' | 'FINISHED' | string;
+  topics: AssemblyTopic[] | string;
+  ata_content?: string;
+  created_at?: string;
+}
+
 export interface OfficialDocument {
   id: string | number;
   title: string;
   content: string;
   type: DocumentType | string;
-  status: 'DRAFT' | 'SIGNED' | 'ARCHIVED' | string;
+  status: DocStatus | string;
+  created_at?: string;
   updated_at: string;
+  created_by?: string | number;
 }
+
+export interface DocumentVersion {
+  id: string | number;
+  document_id: string | number;
+  content: string;
+  created_at: string;
+  created_by: string;
+  reason?: string;
+}
+
+// --- OPERACIONAL & SEGURANÇA ---
 
 export interface Incident {
   id: string | number;
@@ -278,9 +321,78 @@ export interface Incident {
   priority: string;
   status: IncidentStatus | string;
   description: string;
-  radius: number; 
+  radius: number;
   coordinates?: { lat: number; lng: number };
   reporter_name?: string;
+  created_at?: string;
+}
+
+export interface CameraDevice {
+  id: string | number;
+  name: string;
+  url: string;
+  location: string;
+  status: 'ACTIVE' | 'INACTIVE' | string;
+  created_at?: string;
+}
+
+export interface Visitor {
+  id: string | number;
+  name: string;
+  document?: string;
+  unit: string;
+  phone?: string;
+  status: 'IN_CLUSTER' | 'COMPLETED' | string;
+  arrival_time: string;
+  created_at?: string;
+}
+
+export interface Delivery {
+  id: string | number;
+  courier?: string;
+  company?: string;
+  unit: string;
+  recipient: string;
+  status: 'PENDING' | 'PICKED_UP' | string;
+  arrival_time: string;
+  created_at?: string;
+}
+
+// --- SUSTENTABILIDADE & BI ---
+
+export interface ConsumptionData {
+  date: string;
+  value: number;
+}
+
+export interface SustainabilityStats {
+  energy: ConsumptionData[];
+  water: ConsumptionData[];
+  waste: Array<{ name: string; value: number; color: string }>;
+}
+
+// --- COMUNIDADE ---
+
+export interface MarketItem {
+  id: string | number;
+  merchant_id?: string | number;
+  title: string;
+  description: string;
+  price: number | string;
+  category: 'GOODS' | 'FOOD' | 'SERVICE' | string;
+  whatsapp: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Reservation {
+  id: string | number;
+  user_id: string | number;
+  area_name: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  userName?: string;
   created_at?: string;
 }
 
@@ -292,6 +404,19 @@ export interface Notice {
   date: string;
   created_at?: string;
 }
+
+export interface Suggestion {
+  id: string | number;
+  user_id?: string | number;
+  userName?: string;
+  title: string;
+  content: string;
+  category: 'SUGGESTION' | 'COMPLAINT' | 'PRAISE' | 'OTHERS' | string;
+  status: 'OPEN' | 'RESOLVED' | string;
+  created_at?: string;
+}
+
+// --- FINANCEIRO ---
 
 export interface FinancialRecord {
   id: string | number;
@@ -305,4 +430,64 @@ export interface FinancialRecord {
   next_due_date?: string;
   is_recurring?: number | boolean;
   billing_cycle?: string;
+}
+
+// --- MENSAGERIA ---
+
+export interface MessageTemplate {
+  id: string | number;
+  event_trigger: string;
+  name: string;
+  content: string;
+  is_active: boolean | number;
+  attach_logo: boolean | number; // SRE V15: Flag para anexar logotipo do sistema
+  variables_available?: string[] | string;
+  created_at?: string;
+  // --- CORREÇÕES V18 (Para satisfazer MessengerBridge.tsx) ---
+  media_url?: string; // Adicionado para resolver erros de 'media_url'
+  media_type?: 'IMAGE' | 'VIDEO' | 'FILE' | string; // Adicionado para resolver erros de 'media_type'
+}
+
+// --- DESIGN DE IDENTIDADES (STUDIO) ---
+
+export interface CardElement {
+  id: string;
+  type: 'text-static' | 'text-dynamic' | 'image' | 'shape' | 'qrcode';
+  field?: string;
+  value?: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation?: number;
+  style: React.CSSProperties;
+}
+
+// --- AUDITORIA & SISTEMA ---
+
+export interface AuditLog {
+  id: string | number;
+  action: string;
+  user_id?: string | number;
+  table_name: string;
+  record_id?: string | number;
+  details?: string;
+  created_at: string;
+}
+
+export interface ScheduledBroadcast {
+  id: string | number;
+  user_id?: string | number;
+  target_type: 'ROLE' | 'USER' | 'DIRECT' | string;
+  target_value: string;
+  message_body: string;
+  template_id?: number;
+  scheduled_at: string;
+  status: 'PENDING' | 'SENT' | 'FAILED' | string;
+  created_at?: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
 }

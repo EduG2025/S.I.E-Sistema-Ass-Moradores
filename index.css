@@ -2,12 +2,22 @@
   --sie-primary: #4f46e5;
   --sie-primary-glow: rgba(79, 70, 229, 0.4);
   --sie-bg: #f8fafc;
+  --sie-success: #10b981;
+  --sie-danger: #ef4444;
+  --sie-warning: #f59e0b;
   --sie-bg-dark: #020617;
+  --sie-card-bg: #ffffff;
   --sie-border: #e2e8f0;
+  --sie-text-main: #1e293b;
+  --sie-text-muted: #64748b;
+  --sie-radius: 1.5rem;
+  --sie-radius-lg: 2.5rem;
+  --sidebar-width: 280px;
 }
 
-/* SRE: Garantia de viewport absoluta */
-html, body {
+/* SRE: Garantia de viewport absoluta e layout flexível */
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -22,21 +32,155 @@ html, body {
   width: 100%;
   height: 100%;
   display: flex;
+  overflow: hidden;
+}
+
+/* Layout Principal (Main Content) */
+main {
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Sidebar Glass Effect */
+.sidebar-glass {
+  width: var(--sidebar-width);
+  height: 100%;
+  flex-shrink: 0;
+  background: rgba(2, 6, 23, 0.98) !important;
+  backdrop-filter: blur(30px) saturate(150%) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 10px 0 50px rgba(0, 0, 0, 0.3) !important;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+/* Responsividade Mobile */
+@media (max-width: 768px) {
+  #root {
+    flex-direction: column;
+  }
+
+  .sidebar-glass {
+    position: fixed;
+    left: -100%;
+    transition: left 0.3s ease;
+    width: 80%;
+    z-index: 200;
+  }
+
+  .sidebar-glass.open {
+    left: 0;
+  }
+
+  .sie-modal-container {
+    height: 100dvh !important;
+    border-radius: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .grid-cols-2,
+  .grid-cols-3,
+  .grid-cols-4,
+  .grid-cols-12 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sie-editor-overlay {
+    padding: 0;
+    position: fixed;
+    z-index: 9999;
+  }
+}
+
+/* Scrollbar Customizada */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(79, 70, 229, 0.2);
+  border-radius: 20px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--sie-primary);
+}
+
+/* Editor Overlay & Modal - EXPANSÃO ULTRA-WIDE V11.1 */
+.sie-editor-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.4);
+  backdrop-filter: blur(12px);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  /* Reduzido para ganhar espaço */
+}
+
+.sie-modal-container {
+  width: 100%;
+  max-width: 1920px;
+  /* Expandido para resoluções Ultra-Wide */
+  height: 96vh;
+  /* Aumentado para ocupar quase toda a altura */
+  background: white;
+  border-radius: 2rem;
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* SRE ACTIVE NEURAL EFFECTS */
 @keyframes flicker {
-  0% { opacity: 0.8; }
-  5% { opacity: 0.9; }
-  10% { opacity: 0.8; }
-  15% { opacity: 1; }
-  20% { opacity: 0.8; }
-  100% { opacity: 1; }
+  0% {
+    opacity: 0.8;
+  }
+
+  5% {
+    opacity: 0.9;
+  }
+
+  10% {
+    opacity: 0.8;
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  20% {
+    opacity: 0.8;
+  }
+
+  100% {
+    opacity: 1;
+  }
 }
 
 @keyframes scan-line {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100%); }
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100%);
+  }
 }
 
 .neural-glow {
@@ -48,102 +192,142 @@ html, body {
   animation: scan-line 3s linear infinite;
 }
 
-/* Fix para Google Maps Engine */
-.gm-style img { max-width: none !important; }
-.gm-style-cc { display: none !important; }
-button[title="Keyboard shortcuts"], button[title="Report errors"] { display: none !important; }
-
-.sidebar-glass {
-  background: rgba(2, 6, 23, 0.98) !important;
-  backdrop-filter: blur(30px) saturate(150%) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 10px 0 50px rgba(0, 0, 0, 0.3) !important;
-  z-index: 100;
-}
-
-.custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(79, 70, 229, 0.15); border-radius: 20px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--sie-primary); }
-
-.sie-editor-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(2, 6, 23, 0.4);
-  backdrop-filter: blur(12px);
-  z-index: 60;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-}
-
-.sie-modal-container {
-  width: 100%;
-  max-width: 1300px;
-  height: 92vh;
-  background: white;
-  border-radius: 3rem;
-  box-shadow: 0 40px 100px rgba(0,0,0,0.4);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
 @keyframes modalSlideUp {
-  from { transform: translateY(60px) scale(0.96); opacity: 0; }
-  to { transform: translateY(0) scale(1); opacity: 1; }
+  from {
+    transform: translateY(60px) scale(0.96);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes slideDown {
-  from { transform: translateY(-30px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
-@keyframes radar-scan {
-  0% { opacity: 0.1; transform: scale(1); }
-  50% { opacity: 0.3; transform: scale(1.05); }
-  100% { opacity: 0.1; transform: scale(1); }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
-.animate-radar-scan { animation: radar-scan 2s infinite ease-in-out; }
-.animate-slide-down { animation: slideDown 0.4s ease-out forwards; }
-.animate-slide-left { animation: slideLeft 0.4s ease-out forwards; }
-.animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
-.animate-spin-slow { animation: spin 10s linear infinite; }
+@keyframes scaleIn {
+  from {
+    transform: scale(0.98);
+    opacity: 0;
+  }
 
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-.animate-scale-in { animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-@keyframes scaleIn { from { transform: scale(0.98); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-@media (max-width: 768px) {
-  .sie-modal-container { height: 100dvh; border-radius: 0; }
-  .grid-cols-2, .grid-cols-3, .grid-cols-4, .grid-cols-12 { grid-template-columns: 1fr !important; }
-  .sie-editor-overlay { padding: 0; position: fixed; }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
-input, select, textarea {
+.animate-slide-down {
+  animation: slideDown 0.4s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+input,
+select,
+textarea {
   transition: all 0.2s ease-in-out;
 }
 
-/* SRE DATA VIZ TOOLTIP OVERRIDE */
-.recharts-default-tooltip {
-  background-color: #020617 !important;
-  border-radius: 1.5rem !important;
-  border: 1px solid rgba(255,255,255,0.1) !important;
-  color: white !important;
-  padding: 12px 18px !important;
-  text-transform: uppercase !important;
-  font-size: 10px !important;
-  font-weight: 900 !important;
+/* Fix para Google Maps */
+.gm-style img {
+  max-width: none !important;
 }
 
-/* TACTICAL SEARCH SHAKE */
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-4px); }
-  75% { transform: translateX(4px); }
+.gm-style-cc {
+  display: none !important;
 }
-.animate-shake { animation: shake 0.2s ease-in-out 0s 2; }
+
+button[title="Keyboard shortcuts"],
+button[title="Report errors"] {
+  display: none !important;
+}
+
+/* Visual de Página no Editor */
+.sie-document-page {
+  background: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  margin: 0 auto 2rem auto;
+}
+
+/* Impressão Limpa */
+@media print {
+  @page {
+    margin: 0;
+    size: auto;
+  }
+
+  body {
+    background: white;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  #root,
+  .sie-editor-overlay,
+  .sie-modal-container,
+  main {
+    display: block;
+    position: static;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    background: white;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  header,
+  .sidebar-glass,
+  .h-16,
+  .border-b,
+  .hidden,
+  button,
+  .absolute,
+  .sie-variable-tag,
+  .fixed,
+  .sie-image-toolbar,
+  .ToastNotification {
+    display: none !important;
+  }
+
+  #printable-canvas {
+    display: block !important;
+    transform: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+}

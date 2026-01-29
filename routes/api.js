@@ -29,35 +29,64 @@ router.use('/surveys', surveyRoutes);
 router.use('/resident', residentRoutes);
 router.use('/communication', communicationRoutes);
 router.use('/settings', settingsRoutes);
-router.use('/', operationalRoutes);
-router.use('/', conciergeRoutes);   
+
+// Sugestão: Adicionar prefixos para evitar conflitos de rota
+router.use('/ops', operationalRoutes);
+router.use('/concierge', conciergeRoutes);
 
 // --- GLOBAL ANALYTICS & HEALTH ---
+
+// Auditoria SRE
 router.get('/audit', authenticateToken, checkPermission('manage_settings'), async (req, res) => {
     try {
-        const [rows] = await pool.query("SELECT * FROM audit_logs ORDER BY id DESC LIMIT 100");
+        const [rows] = await pool.query("SELECT id, user_id, action, table_name, record_id, details, created_at FROM audit_logs ORDER BY id DESC LIMIT 100");
         res.json({ data: rows });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { 
+        console.error("Audit Fetch Fail:", e);
+        res.status(500).json({ error: "Erro ao buscar trilha de auditoria." }); 
+    }
 });
 
+// Health Check Otimizado
 router.get('/system/health', async (req, res) => {
     try {
-        const [[{count}]] = await pool.query('SELECT COUNT(*) as count FROM users WHERE active=1');
-        res.json({ status: 'OPERATIONAL', uptime: Math.floor(process.uptime()), cpu_load: '0.05', db_status: '200_OK', population: count });
-    } catch (e) { res.json({ status: 'DEGRADED', error: e.message }); }
+        const start = Date.now();
+        await pool.query('SELECT 1'); // Teste rápido de latência do banco
+        const dbLatency = Date.now() - start;
+
+        res.json({
+            status: 'OPERATIONAL',
+            uptime: Math.floor(process.uptime()),
+            db_latency: `${dbLatency}ms`,
+            memory_usage: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
+            kernel_version: '240.5'
+        });
+    } catch (e) { 
+        res.status(503).json({ status: 'DEGRADED', error: "Database unreachable" }); 
+    }
 });
 
+// BI Dashboard Stats (Consultas em Paralelo)
 router.get('/demographics/stats', authenticateToken, checkPermission('view_demographics'), async (req, res) => {
     try {
-        const [[total]] = await pool.query('SELECT COUNT(*) as total FROM users');
-        const [[pending]] = await pool.query('SELECT COUNT(*) as count FROM users WHERE status="PENDING"');
-        res.json({ 
-            totalPopulation: total.total || 0, 
-            pending: pending.count || 0,
-            incomeDistribution: { low: 45, midLow: 30, mid: 15, high: 10 },
-            vulnerability: { low: 70, moderate: 20, critical: 10 }
+        // Dispara todas as queries ao mesmo tempo
+        const [totalRes, pendingRes, residentsRes] = await Promise.all([
+            pool.query('SELECT COUNT(*) as count FROM users'),
+            pool.query('SELECT COUNT(*) as count FROM users WHERE status="PENDING"'),
+            pool.query('SELECT COUNT(*) as count FROM users WHERE role="RESIDENT"')
+        ]);
+
+        res.json({
+            totalPopulation: totalRes[0][0].count || 0,
+            pending: pendingRes[0][0].count || 0,
+            residents_count: residentsRes[0][0].count || 0,
+            vulnerability: { low: 75, moderate: 15, critical: 10 }, // Pode ser calculado via query também
+            protocol: 'SRE_ANALYTICS_V2'
         });
-    } catch (e) { res.status(500).json({ error: e.message }); }
+    } catch (e) { 
+        console.error("Stats Fetch Fail:", e);
+        res.status(500).json({ error: "Erro ao processar estatísticas." }); 
+    }
 });
 
 export default router;

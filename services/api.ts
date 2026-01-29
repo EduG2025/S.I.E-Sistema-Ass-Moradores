@@ -48,6 +48,7 @@ export const aiKeyService = {
 export const userService = {
     getAll: (page = 1, limit = 50, search = '') => api.get('/users', { params: { page, limit, search } }),
     update: (id: any, data: any) => api.put(`/users/${id}`, data),
+    updateAvatar: (id: any, avatar_url: string) => api.patch(`/users/${id}/avatar`, { avatar_url }),
     create: (data: any) => api.post('/users', data),
     activate: (id: any) => api.post(`/users/${id}/activate`),
     delete: (id: any) => api.delete(`/users/${id}`),
@@ -78,6 +79,8 @@ export const mapService = {
     // SRE: Carrega até 5000 membros para visualização integral no mapa
     getUnits: () => api.get('/users', { params: { limit: 5000 } }),
     searchAdvanced: (query: string) => api.post('/users/search-neural', { query }),
+    // SRE FIX: Added missing method getSurveyResponses to resolve compilation error in SmartMap.tsx
+    getSurveyResponses: () => api.get('/surveys/responses/all'),
 };
 
 export const demographicsService = {

@@ -18,87 +18,130 @@ export const chat = async (req, res) => {
                 tools: tools
             }
         });
-        
+
         res.json(result);
-    } catch (e) { 
-        res.status(500).json({ error: e.message }); 
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
 };
 
 /**
  * ANALISTA DE RISCO (DOSSIÊ PREDITIVO)
- * Versão v700: Integração Profunda de Ledger Financeiro e Social.
+ * Versão v8.0: Suporte a Endereçamento Atômico e BI Social MySQL
  */
 export const generateDossier = async (req, res) => {
-    try {
-        // 1. Coleta de Bio-dados
-        const [users] = await pool.query("SELECT * FROM users WHERE id = ?", [req.params.id]);
-        if (!users.length) return res.status(404).json({ error: 'Membro não localizado no cluster.' });
-        const user = users[0];
 
-        // 2. Coleta de Ledger Financeiro (Últimos 24 meses)
-        const [financials] = await pool.query(
-            "SELECT description, amount, type, category, status, date FROM financials WHERE user_id = ? ORDER BY date DESC LIMIT 100", 
+    try {
+        const [users] = await pool.query(
+            "SELECT id, name, cpf_cnpj, unit, age, role, status, cep, street, number, complement, neighborhood, city, state, socialData FROM users WHERE id = ?",
             [req.params.id]
         );
 
-        // 3. Coleta de Histórico de Participação (Ouvidoria/Censo)
+        if (!users.length) return res.status(404).json({ error: 'Membro não localizado no cluster.' });
+        const user = users[0];
+
+        const [financials] = await pool.query(
+            "SELECT description, amount, type, category, status, date FROM financials WHERE user_id = ? ORDER BY date DESC LIMIT 50",
+            [req.params.id]
+        );
+
         const [censos] = await pool.query(
             "SELECT answers, created_at FROM survey_responses WHERE cpf = ? ORDER BY created_at DESC LIMIT 1",
             [user.cpf_cnpj]
         );
 
         const context = {
-            identidade: {
-                nome: user.name,
-                unidade: user.unit,
-                idade: user.age,
-                role: user.role,
-                status: user.status
+            membro: {
+                identidade: {
+                    nome: user.name,
+                    papel: user.role,
+                    estado: user.status,
+                    idade: user.age
+                },
+                localizacao: {
+                    unidade: user.unit,
+                    cep: user.cep,
+                    logradouro: user.street,
+                    numero: user.number,
+                    bairro: user.neighborhood,
+                    cidade_uf: `${user.city}/${user.state}`
+                }
             },
             ledger_financeiro: financials,
-            ledger_social: censos[0]?.answers || {},
-            audit_meta: {
-                tags: user.socialData?.tags || [],
-                risk_score_prev: user.socialData?.risk || 0
-            }
+            censo_social: censos[0]?.answers || user.socialData || {},
+            historico_social: user.socialData || {}
         };
 
+
         const result = await IAProviderManager.execute('dossier', {
-            contents: `Realize uma ANÁLISE PREDITIVA DE GOVERNANÇA para o membro: ${JSON.stringify(context)}. 
+            contents: `Gere um DOSSIÊ TÁTICO DE GOVERNANÇA para o membro baseado nos dados: ${JSON.stringify(context)}. 
             
-            ESTRUTURA OBRIGATÓRIA DO RELATÓRIO:
-            1. PERFIL BIOGRÁFICO: Resumo do papel do membro no cluster.
-            2. ANÁLISE DE SOLVÊNCIA: Baseada no histórico de pagamentos (adimplência vs inadimplência).
-            3. ENGAJAMENTO SOCIAL: Análise das respostas de censo e participação.
-            4. DIAGNÓSTICO DE RISCO (0-100%): Justifique o score baseado em evidências dos dados fornecidos.
-            5. RECOMENDAÇÕES SRE: Ações preventivas para a administração.
-            
-            SEJA RIGOROSO E IMPARCIAL. RETORNE APENAS TEXTO FORMAL EM CAIXA ALTA PARA FACILITAR A LEITURA EM PROTOCOLOS OFICIAIS.`,
+            DIRETRIZES SRE:
+            - Calcule o SCORE DE RISCO (0-100) baseado em inadimplência e vulnerabilidade habitacional.
+            - Analise o ENGAJAMENTO do membro (se respondeu ao censo ou possui ouvidorias).
+            - Formate o texto em CAIXA ALTA com tópicos claros para leitura em tablets de monitoramento.
+            - Caso o endereço esteja incompleto, sugira o protocolo de atualização cadastral.`,
             config: {
-                systemInstruction: "Você é o Neural Analyst Core da S.I.E PRO. Sua função é transformar dados brutos em inteligência preditiva de governança. Não invente dados; se o ledger estiver vazio, reporte 'DADOS INSUFICIENTES PARA CONCLUSÃO'."
+                systemInstruction: "Analista Neural S.I.E PRO. Foco em precisão administrativa e compliance LGPD."
             }
         });
-        
+
         res.json({ text: result.text });
-    } catch (e) { 
-        res.status(500).json({ error: "DOSSIER_ENGINE_FAULT: " + e.message }); 
+    } catch (e) {
+        console.error("[SRE DOSSIER FAIL]", e.message);
+        res.status(500).json({ error: "AI_GENERATION_FAULT" });
     }
 };
 
 /**
- * GHOSTWRITER JURÍDICO
+ * GHOSTWRITER JURÍDICO (DOCUMENT HUB)
+ * Versão v213.0: Suporte Completo a RAG (Contexto e Regimento)
  */
 export const generateDocument = async (req, res) => {
-    const { prompt } = req.body;
+    // ✅ ADICIONADO: Extração do context do body
+    const { prompt, context } = req.body;
+
     try {
+        // ✅ ADICIONADO: Construção do Prompt Enriquecido (RAG)
+        let enrichedPrompt = `
+        ATUE COMO: Um especialista jurídico e administrativo experiente (Secretário Geral).
+        OBJETIVO: Redigir um documento oficial ou texto formal solicitado abaixo.
+        TOM DE VOZ: Formal, Respeitoso, Institucional, Juridicamente Seguro.
+        
+        INSTRUÇÕES DE FORMATAÇÃO (RIGOROSO):
+        - Retorne APENAS o conteúdo do documento em HTML semântico limpo.
+        - Use tags: <p>, <b>, <i>, <br>, <ul>, <li>, <table>.
+        - NÃO USE Markdown (nada de **negrito** ou ### Titulo). USE HTML.
+        - Se o usuário pedir um Ofício, siga a estrutura padrão (Cabeçalho, Destinatário, Corpo, Fechamento).
+        `;
+
+        if (context) {
+            enrichedPrompt += `
+            
+            === CONTEXTO E REGRAS DA ORGANIZAÇÃO (RAG) ===
+            O documento deve respeitar estritamente as seguintes informações e regras:
+            ${context}
+            === FIM DO CONTEXTO ===
+            `;
+        }
+
+        enrichedPrompt += `
+        
+        === SOLICITAÇÃO DO USUÁRIO ===
+        ${prompt}
+        `;
+
         const result = await IAProviderManager.execute('ghostwriter', {
-            contents: prompt,
+            contents: enrichedPrompt, // Envia o prompt enriquecido
             config: {
-                systemInstruction: "Ghostwriter SRE. Retorne apenas HTML semântico puro.",
+                systemInstruction: "Ghostwriter SRE. Você é um assistente de redação jurídica. Sua saída deve ser HTML puro pronto para ser injetado em um editor WYSIWYG. Não inclua ```html no início.",
             }
         });
-        res.json({ text: result.text });
+
+        // Limpeza de segurança (caso a IA coloque blocos de código)
+        const cleanText = result.text.replace(/```html/g, '').replace(/```/g, '').trim();
+
+        res.json({ text: cleanText });
     } catch (e) { res.status(500).json({ error: e.message }); }
 };
 

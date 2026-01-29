@@ -13,6 +13,7 @@ router.put('/:id', authenticateToken, checkPermission('manage_surveys'), generic
 router.delete('/:id', authenticateToken, checkPermission('manage_surveys'), generic.delete);
 
 // Auditoria de Respostas
+router.get('/responses/all', authenticateToken, checkPermission('manage_surveys'), surveyController.getAllSurveyResponses);
 router.get('/:id/responses', authenticateToken, checkPermission('manage_surveys'), surveyController.getResponses);
 router.get('/responses/cpf/:cpf', authenticateToken, checkPermission('manage_surveys'), surveyController.getResponsesByCpf);
 

@@ -132,7 +132,7 @@ const Dashboard = ({ onNavigate, systemInfo }: DashboardProps) => {
                                <span className="text-[8px] font-black text-emerald-400 uppercase">99.2%</span>
                            </div>
                            <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                               <div className="h-full bg-emerald-500 w-[99%]" style={{ backgroundColor: primaryColor }}></div>
+                               <div className="h-full bg-emerald-50 w-[99%]" style={{ backgroundColor: primaryColor }}></div>
                            </div>
                       </div>
                   </div>
@@ -147,7 +147,7 @@ const Dashboard = ({ onNavigate, systemInfo }: DashboardProps) => {
                               <div key={inc.id} className="p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors cursor-pointer group" onClick={() => onNavigate('operations')}>
                                   <div className="flex justify-between items-start mb-1">
                                       <h6 className="text-[10px] font-black text-white uppercase truncate">{inc.title}</h6>
-                                      <span className={`px-1.5 py-0.5 rounded text-[7px] font-black ${inc.priority?.includes('NÍVEL 4') ? 'bg-rose-500 text-white' : 'bg-amber-500 text-black'}`}>!</span>
+                                      <span className={`px-1.5 py-0.5 rounded text-[7px] font-black ${inc.priority?.includes('NÍVEL 4') ? 'bg-rose-50 text-white' : 'bg-amber-50 text-black'}`}>!</span>
                                   </div>
                                   <p className="text-[8px] font-bold text-slate-500 uppercase flex items-center gap-2"><Clock size={10}/> {new Date(inc.created_at || '').toLocaleTimeString()} • {inc.location}</p>
                               </div>
@@ -174,7 +174,8 @@ const Dashboard = ({ onNavigate, systemInfo }: DashboardProps) => {
                   }>
                       <SmartMap 
                         systemInfo={systemInfo} 
-                        activeLayers={{ residents: true, incidents: true, heatmap: true }}
+                        // SRE FIX: Added missing surveys property to activeLayers to satisfy SmartMap requirement
+                        activeLayers={{ residents: true, incidents: true, heatmap: true, surveys: true }}
                         onSelectEntity={(e) => console.log("SitRoom Insight:", e)}
                       />
                   </Suspense>

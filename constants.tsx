@@ -1,14 +1,17 @@
+
 import { 
   LayoutDashboard, Wallet, Users, Bell, ShieldAlert, CalendarClock, 
   Settings, ClipboardList, BarChart3, Shield, FileText, Gavel, 
   MessageSquareText, Calendar, Camera, Leaf, ShoppingBag, 
-  Megaphone, HelpCircle, Box, Monitor, Brain, Fingerprint
+  Megaphone, HelpCircle, Box, Monitor, Brain, Fingerprint, Smartphone,
+  UserCheck, ShieldCheck, Archive
 } from 'lucide-react';
 import { SystemInfo } from './types';
 
 export const MENU_ITEMS = [
   // ESTRATÉGICO
   { id: 'dashboard', label: 'Visão Geral', icon: LayoutDashboard, permissionId: 'view_dashboard', category: 'ESTRATÉGICO' },
+  { id: 'messenger_bridge', label: 'Messenger Hub', icon: Smartphone, permissionId: 'manage_communication', category: 'ESTRATÉGICO' },
   { id: 'neural_chat', label: 'IA Especialista', icon: Brain, permissionId: 'use_ai_chat', category: 'ESTRATÉGICO' },
   { id: 'id_system', label: 'Módulo ID (Bridge)', icon: Fingerprint, permissionId: 'manage_users', category: 'ESTRATÉGICO' },
   
@@ -21,9 +24,12 @@ export const MENU_ITEMS = [
 
   // OPERACIONAL
   { id: 'watchdog', label: 'Central de Vigilância', icon: Camera, permissionId: 'view_operations', category: 'OPERACIONAL' },
+  { id: 'concierge', label: 'Portaria & Acesso', icon: UserCheck, permissionId: 'view_operations', category: 'OPERACIONAL' },
   { id: 'finance', label: 'ERP Financeiro', icon: Wallet, permissionId: 'view_finances', category: 'OPERACIONAL' },
   { id: 'operations', label: 'Ocorrências', icon: ShieldAlert, permissionId: 'view_operations', category: 'OPERACIONAL' },
-  { id: 'projects', label: 'Obras & Projetos', icon: Box, permissionId: 'view_projects', category: 'OPERACIONAL' },
+  { id: 'assets', label: 'Inventário Patrimonial', icon: Box, permissionId: 'manage_assets', category: 'OPERACIONAL' },
+  { id: 'projects', label: 'Obras & Projetos', icon: Archive, permissionId: 'view_projects', category: 'OPERACIONAL' },
+  { id: 'timeline', label: 'Agenda & Marcos', icon: CalendarClock, permissionId: 'view_timeline', category: 'OPERACIONAL' },
   { id: 'sustainability', label: 'Sustentabilidade', icon: Leaf, permissionId: 'view_dashboard', category: 'OPERACIONAL' },
 
   // COMUNIDADE
@@ -49,18 +55,22 @@ export const SYSTEM_PERMISSIONS = [
   { id: 'view_dashboard', label: 'Visualizar Dashboard' },
   { id: 'manage_users', label: 'Gerenciar Membros' },
   { id: 'view_finances', label: 'Visualizar Financeiro' },
-  { id: 'view_operations', label: 'Visualizar Operações/Câmeras' },
+  { id: 'view_operations', label: 'Visualizar Operações/Câmeras/Portaria' },
   { id: 'use_ai_chat', label: 'Usar IA Advisor' },
   { id: 'view_documents', label: 'Ver Documentos' },
   { id: 'manage_assemblies', label: 'Gerenciar Assembleias' },
   { id: 'manage_surveys', label: 'Gerenciar Pesquisas/Censo' },
   { id: 'manage_communication', label: 'Gerenciar Comunicados' },
-  { id: 'view_timeline', label: 'Ver Agenda' },
+  { id: 'view_timeline', label: 'Ver Agenda/Marcos' },
   { id: 'view_projects', label: 'Ver Projetos' },
-  { id: 'send_suggestions', label: 'Enviar Sugestões' },
   { id: 'view_demographics', label: 'Ver Observatório Social' },
   { id: 'manage_settings', label: 'Gerenciar Configurações' },
   { id: 'manage_ai_keys', label: 'Gerenciar Chaves de IA' },
+  { id: 'manage_assets', label: 'Gerenciar Patrimônio' },
+  // Permissões de Comunidade (Sync com MENU_ITEMS)
+  { id: 'use_marketplace', label: 'Acessar Marketplace' },
+  { id: 'use_reservations', label: 'Realizar Reservas' },
+  { id: 'send_suggestions', label: 'Enviar Ouvidoria' },
 ];
 
 export const FINANCIAL_CATEGORIES = ['CONDOMÍNIO', 'DOAÇÃO', 'MANUTENÇÃO', 'SEGURANÇA', 'ADMINISTRATIVO', 'EVENTOS', 'OUTROS'];

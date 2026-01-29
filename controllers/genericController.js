@@ -37,15 +37,14 @@ export const createHandlers = (table) => ({
         try {
             const { id, created_at, updated_at, ...rawPayload } = req.body;
             const payload = {};
-            
+
             const allowedFieldsMap = {
                 'users': [
-                    'name', 'username', 'email', 'role', 'status', 'active', 'unit', 'age', 'phone', 
-                    'avatar_url', 'socialData', 'coordinates', 'address', 'neighborhood', 'city', 
-                    'state', 'zip_code', 'profession', 'password_hash', 'rg', 'issuing_authority',
+                    'name', 'username', 'email', 'role', 'status', 'active', 'unit', 'age', 'phone',
+                    'avatar_url', 'socialData', 'coordinates', 'address', 'profession', 'password_hash', 'rg', 'issuing_authority',
                     'birth_date', 'gender', 'nationality', 'whatsapp', 'preferred_channel',
                     'document_front_url', 'document_back_url', 'ocr_payload', 'voting_rights',
-                    'resident_type', 'created_by'
+                    'resident_type', 'created_by', 'cep', 'street', 'number', 'complement', 'neighborhood', 'city', 'state'
                 ],
                 'financials': ['user_id', 'description', 'amount', 'type', 'category', 'status', 'is_recurring', 'billing_cycle', 'date'],
                 'incidents': ['title', 'location', 'priority', 'status', 'description', 'radius', 'coordinates', 'reporter_name'],
@@ -64,18 +63,18 @@ export const createHandlers = (table) => ({
                     }
                 }
             }
-            
+
             if (Object.keys(payload).length === 0) return res.json({ success: true });
 
             await pool.query(`UPDATE ${table} SET ? WHERE id = ?`, [payload, req.params.id]);
-            
+
             if (req.user) {
                 await pool.query('INSERT INTO audit_logs (user_id, action, table_name, record_id, details) VALUES (?, "UPDATE", ?, ?, ?)',
                     [req.user.id, table, req.params.id, JSON.stringify(payload)]);
             }
             res.json({ success: true });
-        } catch (e) { 
-            res.status(500).json({ error: e.message }); 
+        } catch (e) {
+            res.status(500).json({ error: e.message });
         }
     },
     delete: async (req, res) => {

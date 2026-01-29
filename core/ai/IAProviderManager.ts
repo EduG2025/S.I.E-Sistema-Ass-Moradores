@@ -1,1 +1,0 @@
-// Removido para evitar conflito com a versão .js homologada SRE.

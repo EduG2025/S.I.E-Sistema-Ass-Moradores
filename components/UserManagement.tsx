@@ -62,7 +62,7 @@ const UserManagement = ({ systemInfo }: UserManagementProps) => {
                 </div>
                 <div className="relative z-10">
                     <button
-                        onClick={() => setEditingUser({ id: `temp_${Date.now()}`, name: '', role: 'RESIDENT', status: 'ACTIVE', active: 1, cpf_cnpj: '', username: '', phone: '', email: '', unit: '', address: '', coordinates: { lat: -23.5505, lng: -46.6333 } } as any)}
+                        onClick={() => setEditingUser({ id: `temp_${Date.now()}`, name: '', role: 'MORADOR', status: 'ACTIVE', active: 1, cpf_cnpj: '', username: '', phone: '', email: '', unit: '', address: '', coordinates: { lat: -23.5505, lng: -46.6333 } } as any)}
                         className="px-4 py-2.5 md:px-8 md:py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl md:rounded-2xl font-black text-[9px] md:text-[11px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-xl active:scale-95"
                         style={{ backgroundColor: primaryColor }}
                     >
@@ -85,7 +85,7 @@ const UserManagement = ({ systemInfo }: UserManagementProps) => {
                         />
                     </div>
                     <div className="flex gap-2 w-full md:w-auto overflow-x-auto no-scrollbar">
-                        {['ALL', 'ADMIN', 'RESIDENT', 'COUNCIL'].map(role => (
+                        {['ALL', 'ADMIN', 'MORADOR', 'DIRETORIA'].map(role => (
                             <button
                                 key={role}
                                 onClick={() => setFilterRole(role)}
